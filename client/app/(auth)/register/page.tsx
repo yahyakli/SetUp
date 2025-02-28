@@ -10,6 +10,9 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { USERS_SERVICE_URL } from "@/constants/API_URLS";
+import { useDispatch } from "react-redux";
+import { register } from "@/lib/features/userSlice";
 
 interface FormData {
   firstName: string;
@@ -37,6 +40,8 @@ export default function RegisterPage() {
     password: "",
     confirmPassword: "",
   });
+
+  const dispatch = useDispatch();
 
   const [errors, setErrors] = useState<FormErrors>({});
 
@@ -97,25 +102,20 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      // Exclude confirmPassword from the data sent to API
-      // const {...dataToSend } = formData;
+      const {...dataToSend } = formData;
+      const response = await axios.post(USERS_SERVICE_URL + "/api/auth/register", dataToSend);
 
-      // Replace with your actual API endpoint
-      // const response = await axios.post("/api/auth/register", dataToSend);
-
-      toast.success("You have successfully registered");
-
-      // Redirect to login page
-      router.push("/auth/login");
+      if(response.status === 200) {
+        const { token, user } = response.data;
+        toast.success("You have successfully registered");
+        dispatch(register({ token, user }));
+        router.push("/");
+      }
     } catch (error) {
       console.error("Registration error:", error);
-
-      // Narrow down the type of error
       if (axios.isAxiosError(error)) {
-        // Handle Axios-specific errors
         toast.error(error.response?.data?.message || "Failed to register");
       } else {
-        // Handle generic errors
         toast.error("An unexpected error occurred");
       }
     } finally {
