@@ -1,7 +1,7 @@
 // components/theme-toggle.tsx
 "use client";
 
-import { useTheme } from "@/components/theme-provider";
+import { useTheme } from "next-themes"; // Import useTheme from next-themes
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function ThemeToggle() {
-  const { setTheme } = useTheme();
+  const { setTheme } = useTheme(); // Use the useTheme hook from next-themes
 
   return (
     <DropdownMenu>

@@ -18,7 +18,6 @@ const initialState: AuthState = {
   isLoading: false,
 };
 
-// Async thunk to fetch user data
 export const fetchUser = createAsyncThunk(
   'user/fetchUser',
   async (_, { getState, dispatch }) => {

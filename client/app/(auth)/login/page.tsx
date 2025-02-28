@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, ChangeEvent, FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,6 @@ interface FormData {
 }
 
 export default function LoginPage() {
-  const router = useRouter();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [formData, setFormData] = useState<FormData>({
     email: "",
@@ -56,7 +55,7 @@ export default function LoginPage() {
         const { token, user } = response.data;
         toast.success("You have successfully logged in");
         dispatch(login({ token, user, rememberMe: formData.rememberMe }));
-        router.push("/");
+        redirect("/");
       } else {
         toast.error("Failed to login");
       }
@@ -95,15 +94,7 @@ export default function LoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-                <Link
-                  href="/auth/forgot-password"
-                  className="text-sm text-primary hover:underline"
-                >
-                  Forgot password?
-                </Link>
-              </div>
+              <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 name="password"

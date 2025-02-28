@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, ChangeEvent, FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,6 @@ interface FormErrors {
 }
 
 export default function RegisterPage() {
-  const router = useRouter();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [formData, setFormData] = useState<FormData>({
     firstName: "",
@@ -109,12 +108,13 @@ export default function RegisterPage() {
         const { token, user } = response.data;
         toast.success("You have successfully registered");
         dispatch(register({ token, user }));
-        router.push("/");
+        redirect("/");
       }
     } catch (error) {
+      console.log(error)
       console.error("Registration error:", error);
       if (axios.isAxiosError(error)) {
-        toast.error(error.response?.data?.message || "Failed to register");
+        toast.error(error.response?.data?.password || "Failed to register");
       } else {
         toast.error("An unexpected error occurred");
       }
