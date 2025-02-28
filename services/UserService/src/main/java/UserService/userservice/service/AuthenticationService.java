@@ -51,8 +51,7 @@ public class AuthenticationService {
 
         return AuthResponse.builder()
                 .token(jwtToken)
-                .id(user.getId())
-                .email(user.getEmail())
+                .user(user)
                 .build();
     }
 
@@ -75,8 +74,7 @@ public class AuthenticationService {
 
         return AuthResponse.builder()
                 .token(jwtToken)
-                .id(user.getId())
-                .email(user.getEmail())
+                .user(user)
                 .build();
     }
 }

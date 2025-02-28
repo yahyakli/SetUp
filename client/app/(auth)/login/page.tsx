@@ -10,6 +10,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { USERS_SERVICE_URL } from "@/constants/API_URLS";
+import { useDispatch } from "react-redux";
+import { login } from "@/lib/features/userSlice";
 
 interface FormData {
   email: string;
@@ -25,6 +28,7 @@ export default function LoginPage() {
     password: "",
     rememberMe: false,
   });
+  const dispatch = useDispatch();
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -44,31 +48,24 @@ export default function LoginPage() {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
-  
+
     try {
-      // Replace with your actual API endpoint
-      const response = await axios.post("/api/auth/login", formData);
-  
-      // Store token in localStorage or cookies based on rememberMe
-      if (formData.rememberMe) {
-        localStorage.setItem("token", response.data.token);
+      const response = await axios.post(USERS_SERVICE_URL + "/api/auth/login", formData);
+
+      if (response.status === 200) {
+        const { token, user } = response.data;
+        toast.success("You have successfully logged in");
+        dispatch(login({ token, user, rememberMe: formData.rememberMe }));
+        router.push("/");
       } else {
-        sessionStorage.setItem("token", response.data.token);
+        toast.error("Failed to login");
       }
-  
-      toast.success("You have successfully logged in");
-  
-      // Redirect to dashboard
-      router.push("/dashboard");
     } catch (error) {
       console.error("Login error:", error);
-  
-      // Narrow down the type of error
+
       if (axios.isAxiosError(error)) {
-        // Handle Axios-specific errors
         toast.error(error.response?.data?.message || "Failed to login");
       } else {
-        // Handle generic errors
         toast.error("An unexpected error occurred");
       }
     } finally {
@@ -100,7 +97,7 @@ export default function LoginPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
-                <Link 
+                <Link
                   href="/auth/forgot-password"
                   className="text-sm text-primary hover:underline"
                 >
@@ -118,8 +115,8 @@ export default function LoginPage() {
               />
             </div>
             <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="rememberMe" 
+              <Checkbox
+                id="rememberMe"
                 checked={formData.rememberMe}
                 onCheckedChange={handleCheckboxChange}
               />
@@ -134,8 +131,8 @@ export default function LoginPage() {
             </Button>
             <p className="mt-2 text-center text-sm text-muted-foreground">
               Don&apos;t have an account?{" "}
-              <Link 
-                href="/register" 
+              <Link
+                href="/register"
                 className="text-primary hover:underline"
               >
                 Create an account

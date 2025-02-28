@@ -1,5 +1,6 @@
 package UserService.userservice.dto;
 
+import UserService.userservice.model.User;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -58,19 +59,14 @@ public class AuthDto {
     @NoArgsConstructor
     public static class AuthResponse {
         private String token;
-        private String id;
-        private String email;
+        private User user;
 
         public String getToken() {
             return token;
         }
 
-        public String getId() {
-            return id;
-        }
-
-        public String getEmail() {
-            return email;
+        public User getUser() {
+            return user;
         }
     }
 }
