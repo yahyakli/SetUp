@@ -115,8 +115,6 @@ export default function RegisterPage() {
       console.error("Registration error:", error);
       if (axios.isAxiosError(error)) {
         toast.error(error.response?.data?.password || "Failed to register");
-      } else {
-        toast.error("An unexpected error occurred");
       }
     } finally {
       setIsLoading(false);

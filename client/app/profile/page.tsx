@@ -554,19 +554,19 @@ const Page = () => {
                 </Card>
 
                 {/* Danger Zone */}
-                <Card className="border-destructive/20">
-                  <CardHeader className="text-red-500">
+                <Card className="border-destructive/40 dark:border-destructive/60">
+                  <CardHeader className="text-red-500 dark:text-red-400">
                     <CardTitle>Danger Zone</CardTitle>
-                    <CardDescription className="text-red-600">
+                    <CardDescription className="text-primary/80 dark:text-primary/60">
                       Permanently delete your account and all associated data
                     </CardDescription>
                   </CardHeader>
 
                   <CardContent>
-                    <Alert variant="destructive">
+                    <Alert className='text-red-500 dark:text-red-400'>
                       <AlertTriangle className="h-4 w-4" />
-                      <AlertTitle>Warning</AlertTitle>
-                      <AlertDescription>
+                      <AlertTitle className='text-red-500 dark:text-red-400'>Warning</AlertTitle>
+                      <AlertDescription className='text-primary/80 dark:text-primary/60'>
                         This action cannot be undone. All your data will be permanently removed
                         from our servers.
                       </AlertDescription>
@@ -587,13 +587,13 @@ const Page = () => {
                       <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                           <DialogTitle>Delete Account</DialogTitle>
-                          <DialogDescription>
+                          <DialogDescription className="text-primary/80 dark:text-primary/60">
                             This action cannot be undone. To confirm, please enter the verification code below.
                           </DialogDescription>
                         </DialogHeader>
 
                         <div className="py-4">
-                          <div className="mb-4 p-3 bg-muted rounded-md font-mono text-center tracking-wider">
+                          <div className="mb-4 p-3 bg-muted rounded-md font-mono text-center tracking-wider dark:bg-muted/50">
                             {verificationCode}
                           </div>
 
@@ -605,7 +605,7 @@ const Page = () => {
                             disabled={isLoading}
                           />
 
-                          <p className="text-sm text-muted-foreground mt-2">
+                          <p className="text-sm text-muted-foreground mt-2 dark:text-muted-foreground/70">
                             Please type the verification code exactly as shown above to confirm deletion.
                           </p>
                         </div>
