@@ -14,6 +14,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -178,7 +179,27 @@ public class UserService {
             throw new AccessDeniedException("You don't have permission to delete this user");
         }
 
-        userRepository.deleteById(id);
+        // Fetch the user to be deleted
+        User userToDelete = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Delete the user's avatar file if it exists
+        if (StringUtils.hasText(userToDelete.getAvatar())) {
+            String avatarFileName = userToDelete.getAvatar();
+            Path avatarFilePath = Paths.get(uploadDir, avatarFileName);
+
+            try {
+                // Delete the file
+                Files.deleteIfExists(avatarFilePath);
+            } catch (Exception e) {
+                // Log the error and continue with user deletion
+                System.err.println("Failed to delete avatar file: " + avatarFilePath);
+                e.printStackTrace();
+            }
+        }
+
+        // Delete the user from the database
+        userRepository.delete(userToDelete);
     }
 
     private User getCurrentUserEntity() {
