@@ -1,65 +1,107 @@
-import Link from "next/link";
 
 export const Footer = () => {
   return (
-    <footer className="border-t border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-950">
-      <div className="container px-4 py-8 md:px-6">
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-          {/* Brand and description */}
+    <footer className="py-12 bg-gray-900 text-gray-300">
+      <div className="container mx-auto px-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
-            <Link href="/" className="flex items-center">
-              <span className="text-xl font-bold text-gray-900 dark:text-white">SetUp</span>
-            </Link>
-            <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">
-              Creating amazing products and experiences for modern customers.
+            <div className="text-2xl font-bold mb-4">
+              <span className="text-blue-400">Set</span>
+              <span className="text-white">Up</span>
+            </div>
+            <p className="mb-4">
+              Streamline your workflow and boost productivity with our powerful project management solution.
             </p>
           </div>
-
-          {/* Links section 1 */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Company</h3>
-            <ul className="mt-4 space-y-2">
+            <h3 className="text-lg font-semibold mb-4">Products</h3>
+            <ul className="space-y-2">
               <li>
-                <Link href="/about" className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
-                  About
-                </Link>
+                <a href="#" className="hover:text-white">
+                  Features
+                </a>
               </li>
               <li>
-                <Link href="/careers" className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
-                  Careers
-                </Link>
+                <a href="#" className="hover:text-white">
+                  Pricing
+                </a>
               </li>
               <li>
-                <Link href="/contact" className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
-                  Contact
-                </Link>
+                <a href="#" className="hover:text-white">
+                  Integrations
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:text-white">
+                  Enterprise
+                </a>
               </li>
             </ul>
           </div>
-
-          {/* Links section 2 */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Legal</h3>
-            <ul className="mt-4 space-y-2">
+            <h3 className="text-lg font-semibold mb-4">Resources</h3>
+            <ul className="space-y-2">
               <li>
-                <Link href="/privacy" className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
-                  Privacy
-                </Link>
+                <a href="#" className="hover:text-white">
+                  Documentation
+                </a>
               </li>
               <li>
-                <Link href="/terms" className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
-                  Terms
-                </Link>
+                <a href="#" className="hover:text-white">
+                  Blog
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:text-white">
+                  Community
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:text-white">
+                  Support
+                </a>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold mb-4">Company</h3>
+            <ul className="space-y-2">
+              <li>
+                <a href="#" className="hover:text-white">
+                  About
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:text-white">
+                  Careers
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:text-white">
+                  Contact
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:text-white">
+                  Legal
+                </a>
               </li>
             </ul>
           </div>
         </div>
-        
-        {/* Copyright */}
-        <div className="mt-8 border-t border-gray-200 pt-6 dark:border-gray-800">
-          <p className="text-center text-xs text-gray-600 dark:text-gray-400">
-            &copy; {new Date().getFullYear()} SetUp. All rights reserved.
-          </p>
+        <div className="border-t border-gray-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
+          <div className="mb-4 md:mb-0">&copy; 2025 SetUp. All rights reserved.</div>
+          <div className="flex gap-4">
+            <a href="#" className="hover:text-white">
+              Privacy Policy
+            </a>
+            <a href="#" className="hover:text-white">
+              Terms of Service
+            </a>
+            <a href="#" className="hover:text-white">
+              Cookie Policy
+            </a>
+          </div>
         </div>
       </div>
     </footer>
