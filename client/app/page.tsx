@@ -2,6 +2,7 @@
 
 import React, { useRef } from 'react';
 import Banner from '@/public/banner.jpg';
+
 import {
   Card,
   CardContent,
@@ -14,7 +15,7 @@ import {
   NavigationMenuItem,
   NavigationMenuList,
 } from '@/components/ui/navigation-menu';
-import { BarChart, Clock, Users, CheckCircle, Shield } from 'lucide-react';
+import { BarChart, Clock, Users, CheckCircle, Shield, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NavigationMenu } from '@radix-ui/react-navigation-menu';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -24,6 +25,7 @@ import { LineChart, Line } from 'recharts';
 import { Footer } from '@/components/Footer';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 
 interface ChartData {
   name: string;
@@ -39,14 +41,14 @@ interface Testimonial {
 const Page: React.FC = () => {
   const getLastSixMonths = (): ChartData[] => {
     const months = [
-      "Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
       "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
     ];
     const today = new Date();
     const chartData: ChartData[] = [];
-  
+
     const growingValues = [1520, 1270, 1460, 1530, 1800, 1900];
-  
+
     for (let i = 5; i >= 0; i--) {
       const date = new Date(today);
       date.setMonth(today.getMonth() - i);
@@ -62,6 +64,7 @@ const Page: React.FC = () => {
   const princingRef = useRef<HTMLDivElement>(null);
   const featuresRef = useRef<HTMLDivElement>(null);
   const testimonialsRef = useRef<HTMLDivElement>(null);
+  const statusRef = useRef<HTMLDivElement>(null);
 
   const scrollToTop = () => {
     window.scrollTo({
@@ -94,37 +97,80 @@ const Page: React.FC = () => {
       {/* Navigation Bar */}
       <nav className="sticky top-0 z-50 w-full bg-white dark:bg-gray-800 shadow-sm px-18">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between cursor-pointer">
+          {/* Logo on the left */}
           <div onClick={scrollToTop} className="text-2xl font-bold flex items-center">
             <span className="text-blue-600 dark:text-blue-400">Set</span>
             <span className="text-gray-900 dark:text-white">Up</span>
           </div>
 
-          <NavigationMenu>
-            <NavigationMenuList className="hidden md:flex space-x-4">
+          {/* Desktop Navigation Links (hidden on small devices) */}
+          <NavigationMenu className="hidden md:flex">
+            <NavigationMenuList className="flex space-x-4">
               <NavigationMenuItem>
-                <button  className="px-4 py-2 cursor-pointer text-sm font-medium hover:text-blue-600 dark:hover:text-blue-400" onClick={() => {princingRef.current?.scrollIntoView({ behavior: "smooth" })}}>
-                  Pricing
-                </button>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                <button className="px-4 py-2 cursor-pointer text-sm font-medium hover:text-blue-600 dark:hover:text-blue-400" onClick={() => {featuresRef.current?.scrollIntoView({ behavior: "smooth" })}}>
+                <button className="px-4 py-2 cursor-pointer text-sm font-medium hover:text-blue-600 dark:hover:text-blue-400" onClick={() => { featuresRef.current?.scrollIntoView({ behavior: "smooth" }) }}>
                   Features
                 </button>
               </NavigationMenuItem>
               <NavigationMenuItem>
-                <button className="px-4 py-2 cursor-pointer text-sm font-medium hover:text-blue-600 dark:hover:text-blue-400" onClick={() => {testimonialsRef.current?.scrollIntoView({ behavior: "smooth" })}}>
+                <button className="px-4 py-2 cursor-pointer text-sm font-medium hover:text-blue-600 dark:hover:text-blue-400" onClick={() => { statusRef.current?.scrollIntoView({ behavior: "smooth" }) }}>
+                  Status
+                </button>
+              </NavigationMenuItem>
+              <NavigationMenuItem>
+                <button className="px-4 py-2 cursor-pointer text-sm font-medium hover:text-blue-600 dark:hover:text-blue-400" onClick={() => { princingRef.current?.scrollIntoView({ behavior: "smooth" }) }}>
+                  Pricing
+                </button>
+              </NavigationMenuItem>
+              <NavigationMenuItem>
+                <button className="px-4 py-2 cursor-pointer text-sm font-medium hover:text-blue-600 dark:hover:text-blue-400" onClick={() => { testimonialsRef.current?.scrollIntoView({ behavior: "smooth" }) }}>
                   Testimonials
                 </button>
               </NavigationMenuItem>
             </NavigationMenuList>
           </NavigationMenu>
 
+          {/* Right-side buttons (theme toggle and get started) */}
           <div className="flex items-center gap-4">
-            <ThemeToggle />
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => (redirect("/dashboard"))}>
+            <div className="hidden md:flex">
+              <ThemeToggle />
+            </div>
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white hidden md:inline-block" onClick={() => (redirect("/dashboard"))}>
               get started
             </Button>
           </div>
+
+          {/* Mobile Menu Trigger (visible on small devices) */}
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" className="md:hidden">
+                <Menu className="h-6 w-6" />
+              </Button>
+            </SheetTrigger>
+            <SheetTitle className="sr-only">Mobile Menu</SheetTitle>
+            <SheetContent side="right" className="w-[300px] pt-10">
+              <div className="flex flex-col space-y-4 mt-6">
+                <SheetClose asChild>
+                  <button className="px-4 py-2 cursor-pointer text-sm font-medium hover:text-blue-600 dark:hover:text-blue-400" onClick={() => { princingRef.current?.scrollIntoView({ behavior: "smooth" }) }}>
+                    Pricing
+                  </button>
+                </SheetClose>
+                <SheetClose asChild>
+                  <button className="px-4 py-2 cursor-pointer text-sm font-medium hover:text-blue-600 dark:hover:text-blue-400" onClick={() => { featuresRef.current?.scrollIntoView({ behavior: "smooth" }) }}>
+                    Features
+                  </button>
+                </SheetClose>
+                <SheetClose asChild>
+                  <button className="px-4 py-2 cursor-pointer text-sm font-medium hover:text-blue-600 dark:hover:text-blue-400" onClick={() => { testimonialsRef.current?.scrollIntoView({ behavior: "smooth" }) }}>
+                    Testimonials
+                  </button>
+                </SheetClose>
+                {/* Add ThemeToggle inside the mobile sheet */}
+                <div className='absolute top-4 left-4'>
+                  <ThemeToggle />
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </nav>
 
@@ -212,7 +258,7 @@ const Page: React.FC = () => {
       </section>
 
       {/* Charts Section */}
-      <section className="py-20 px-18 bg-white dark:bg-gray-900">
+      <section className="py-20 px-18 bg-white dark:bg-gray-900" ref={statusRef}>
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12">Data-Driven Project Management</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -279,10 +325,6 @@ const Page: React.FC = () => {
                     <CheckCircle className="h-5 w-5 text-green-500" />
                     <span>1 GB storage</span>
                   </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <span>Email notifications</span>
-                  </li>
                 </ul>
               </CardContent>
               <CardFooter>
@@ -319,10 +361,6 @@ const Page: React.FC = () => {
                     <CheckCircle className="h-5 w-5 text-green-500" />
                     <span>10 GB storage</span>
                   </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <span>Email & in-app notifications</span>
-                  </li>
                 </ul>
               </CardContent>
               <CardFooter>
@@ -357,10 +395,6 @@ const Page: React.FC = () => {
                   <li className="flex items-center gap-2">
                     <CheckCircle className="h-5 w-5 text-green-500" />
                     <span>50 GB storage</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <span>All notification types</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle className="h-5 w-5 text-green-500" />

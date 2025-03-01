@@ -108,7 +108,7 @@ export default function RegisterPage() {
         const { token, user } = response.data;
         toast.success("You have successfully registered");
         dispatch(register({ token, user }));
-        redirect("/");
+        redirect("/dashboard");
       }
     } catch (error) {
       console.log(error)

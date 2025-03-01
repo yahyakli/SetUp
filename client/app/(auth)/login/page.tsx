@@ -55,7 +55,7 @@ export default function LoginPage() {
         const { token, user } = response.data;
         toast.success("You have successfully logged in");
         dispatch(login({ token, user, rememberMe: formData.rememberMe }));
-        redirect("/");
+        redirect("/dashboard");
       } else {
         toast.error("Failed to login");
       }

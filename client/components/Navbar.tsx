@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation'; // Import usePathname
 import { Menu, LogOut, UserCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,34 +25,46 @@ import { logout } from '@/lib/features/userSlice';
 export const Navbar = () => {
   const dispatch = useDispatch();
   const { user } = useSelector((state: RootState) => state.user);
+  const pathname = usePathname(); // Get the current path
 
   const handleLogout = () => {
     dispatch(logout());
   }
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Function to determine if the link is active
+  const isActive = (path: string) => pathname === path;
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between px-4 md:px-6 lg:px-8 mx-auto">
         {/* Logo and brand */}
         <div className="flex items-center">
-          <Link href="/" className="flex items-center space-x-2">
-            <span className="text-xl font-bold">SetUp</span>
-          </Link>
+          <div onClick={scrollToTop} className="text-2xl font-bold flex items-center cursor-pointer">
+            <span className="text-blue-600 dark:text-blue-400">Set</span>
+            <span className="text-gray-900 dark:text-white">Up</span>
+          </div>
         </div>
 
         {/* Desktop Nav Items */}
         <nav className="hidden md:flex items-center space-x-6">
-          <Link href="/" className="text-sm font-medium text-foreground hover:text-foreground/80 transition-colors py-2">
+          <Link href="/" className={`text-sm font-medium text-muted-foreground hover:text-foreground/80 transition-colors py-2`}>
             Home
           </Link>
-          <Link href="/about" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-2">
-            About
+          <Link href="/dashboard" className={`text-sm font-medium ${isActive('/dashboard') ? 'text-foreground' : 'text-muted-foreground'} hover:text-foreground/80 transition-colors py-2`}>
+            Dashboard
           </Link>
-          <Link href="/products" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-2">
-            Products
+          <Link href="/projects" className={`text-sm font-medium ${isActive('/projects') ? 'text-foreground' : 'text-muted-foreground'} hover:text-foreground transition-colors py-2`}>
+            My Projects
           </Link>
-          <Link href="/contact" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-2">
-            Contact
+          <Link href="/teams" className={`text-sm font-medium ${isActive('/teams') ? 'text-foreground' : 'text-muted-foreground'} hover:text-foreground transition-colors py-2`}>
+            My Teams
+          </Link>
+          <Link href="/chat" className={`text-sm font-medium ${isActive('/chat') ? 'text-foreground' : 'text-muted-foreground'} hover:text-foreground transition-colors py-2`}>
+            Chat
           </Link>
         </nav>
 
@@ -116,17 +129,20 @@ export const Navbar = () => {
             <SheetTitle className="sr-only">Mobile Menu</SheetTitle>
 
             <div className="flex flex-col space-y-6 pt-10">
-              <Link href="/" className="text-base font-medium text-foreground hover:text-foreground/80 transition-colors">
+              <Link href="/" className={`text-base font-medium text-muted-foreground hover:text-foreground/80 transition-colors`}>
                 Home
               </Link>
-              <Link href="/about" className="text-base font-medium text-muted-foreground hover:text-foreground transition-colors">
-                About
+              <Link href="/dashboard" className={`text-base font-medium ${isActive('/dashboard') ? 'text-foreground' : 'text-muted-foreground'} hover:text-foreground/80 transition-colors`}>
+                Dashboard
               </Link>
-              <Link href="/products" className="text-base font-medium text-muted-foreground hover:text-foreground transition-colors">
-                Products
+              <Link href="/projects" className={`text-base font-medium ${isActive('/projects') ? 'text-foreground' : 'text-muted-foreground'} hover:text-foreground transition-colors`}>
+                My Projects
               </Link>
-              <Link href="/contact" className="text-base font-medium text-muted-foreground hover:text-foreground transition-colors">
-                Contact
+              <Link href="/teams" className={`text-base font-medium ${isActive('/teams') ? 'text-foreground' : 'text-muted-foreground'} hover:text-foreground transition-colors`}>
+                My teams
+              </Link>
+              <Link href="/chat" className={`text-base font-medium ${isActive('/chat') ? 'text-foreground' : 'text-muted-foreground'} hover:text-foreground transition-colors`}>
+                Chat
               </Link>
 
               {/* User options in mobile menu */}

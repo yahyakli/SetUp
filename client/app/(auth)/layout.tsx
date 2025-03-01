@@ -30,7 +30,7 @@ export default function AuthLayout({
   
   // Only redirect after client-side hydration
   if (token) {
-    redirect("/");
+    redirect("/dashboard");
   }
 
   return (
