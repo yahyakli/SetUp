@@ -16,6 +16,8 @@ return [
     |
     */
 
+    'jwt_secret' => env('JWT_SECRET'),
+
     'name' => env('APP_NAME', 'Laravel'),
 
     /*
@@ -184,5 +186,4 @@ return [
     'aliases' => Facade::defaultAliases()->merge([
         // 'Example' => App\Facades\Example::class,
     ])->toArray(),
-
 ];
