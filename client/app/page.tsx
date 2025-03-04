@@ -23,9 +23,9 @@ import Image from 'next/image';
 import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { LineChart, Line } from 'recharts';
 import { Footer } from '@/components/Footer';
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { useRouter } from 'next/navigation';
 
 interface ChartData {
   name: string;
@@ -48,7 +48,6 @@ const Page: React.FC = () => {
     const chartData: ChartData[] = [];
 
     const growingValues = [1520, 1270, 1460, 1530, 1800, 1900];
-
     for (let i = 5; i >= 0; i--) {
       const date = new Date(today);
       date.setMonth(today.getMonth() - i);
@@ -58,6 +57,7 @@ const Page: React.FC = () => {
     }
     return chartData;
   };
+  const router = useRouter();
 
   const chartData: ChartData[] = getLastSixMonths();
 
@@ -134,7 +134,7 @@ const Page: React.FC = () => {
             <div className="hidden md:flex">
               <ThemeToggle />
             </div>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white hidden md:inline-block" onClick={() => (redirect("/dashboard"))}>
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white hidden md:inline-block" onClick={() => router.push("/dashboard")}>
               get started
             </Button>
           </div>
@@ -186,7 +186,6 @@ const Page: React.FC = () => {
             </p>
             <div className="flex gap-4">
               <Button className="bg-blue-600 hover:bg-blue-700 text-white">Get Started Free</Button>
-              <Button variant="outline">Book a Demo</Button>
             </div>
           </div>
           <div className="md:w-1/2">

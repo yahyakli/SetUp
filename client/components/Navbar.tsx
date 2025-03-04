@@ -49,25 +49,6 @@ export const Navbar = () => {
           </div>
         </div>
 
-        {/* Desktop Nav Items */}
-        <nav className="hidden md:flex items-center space-x-6">
-          <Link href="/" className={`text-sm font-medium text-muted-foreground hover:text-foreground/80 transition-colors py-2`}>
-            Home
-          </Link>
-          <Link href="/dashboard" className={`text-sm font-medium ${isActive('/dashboard') ? 'text-foreground' : 'text-muted-foreground'} hover:text-foreground/80 transition-colors py-2`}>
-            Dashboard
-          </Link>
-          <Link href="/projects" className={`text-sm font-medium ${isActive('/projects') ? 'text-foreground' : 'text-muted-foreground'} hover:text-foreground transition-colors py-2`}>
-            My Projects
-          </Link>
-          <Link href="/teams" className={`text-sm font-medium ${isActive('/teams') ? 'text-foreground' : 'text-muted-foreground'} hover:text-foreground transition-colors py-2`}>
-            My Teams
-          </Link>
-          <Link href="/chat" className={`text-sm font-medium ${isActive('/chat') ? 'text-foreground' : 'text-muted-foreground'} hover:text-foreground transition-colors py-2`}>
-            Chat
-          </Link>
-        </nav>
-
         {/* Desktop Right Actions */}
         <div className="hidden md:flex items-center space-x-4">
           <ThemeToggle />
