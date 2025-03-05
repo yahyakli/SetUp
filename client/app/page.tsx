@@ -185,7 +185,7 @@ const Page: React.FC = () => {
               SetUp is an all-in-one project management solution designed to simplify your workflow and boost team productivity.
             </p>
             <div className="flex gap-4">
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white">Get Started Free</Button>
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => router.push("/dashboard")}>Get Started Free</Button>
             </div>
           </div>
           <div className="md:w-1/2">
