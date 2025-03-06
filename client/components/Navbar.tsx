@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Menu, LogOut, UserCircle, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,6 +28,7 @@ export const Navbar = () => {
   const dispatch = useDispatch();
   const { user } = useSelector((state: RootState) => state.user);
   const pathname = usePathname();
+  const router = useRouter();
 
   // Mock recent projects (replace with actual data from your state/context)
   const recentProjects = [
@@ -41,7 +42,11 @@ export const Navbar = () => {
   }
 
   const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if(pathname !== '/dashboard'){
+      router.push('/dashboard');
+    }else{
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   const isActive = (path: string) => pathname === path;

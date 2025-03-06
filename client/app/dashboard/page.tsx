@@ -3,13 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
-import { 
-  Clock, 
-  CheckCircle2, 
-  Folder, 
-  Users 
+import {
+  Clock,
+  CheckCircle2,
+  Folder,
+  Users
 } from 'lucide-react'
 import AppLayout from '../AppLayout'
+import Link from 'next/link'
 
 // Fake Data Interfaces
 interface Project {
@@ -102,32 +103,34 @@ export default function Page() {
           <h2 className="text-2xl font-bold mb-4 dark:text-white">Your Work</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {recentProjects.map((project) => (
-              <Card key={project.id} className="hover:shadow-lg transition-all">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">{project.name}</CardTitle>
-                  <Folder className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between mb-2">
-                    <Badge 
-                      variant={
-                        project.status === 'Completed' ? 'default' : 
-                        project.status === 'On Hold' ? 'destructive' : 'secondary'
-                      }
-                    >
-                      {project.status}
-                    </Badge>
-                    <div className="text-xs text-muted-foreground">{project.team}</div>
-                  </div>
-                  <Progress value={project.progress} className="w-full" />
-                  <div className="flex justify-between items-center mt-2">
-                    <span className="text-xs text-muted-foreground">
-                      Due: {project.dueDate}
-                    </span>
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                </CardContent>
-              </Card>
+              <Link key={project.id} href={`/projects/${project.id}`}>
+                <Card className="hover:shadow-lg transition-all">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">{project.name}</CardTitle>
+                    <Folder className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between mb-2">
+                      <Badge
+                        variant={
+                          project.status === 'Completed' ? 'default' :
+                            project.status === 'On Hold' ? 'destructive' : 'secondary'
+                        }
+                      >
+                        {project.status}
+                      </Badge>
+                      <div className="text-xs text-muted-foreground">{project.team}</div>
+                    </div>
+                    <Progress value={project.progress} className="w-full" />
+                    <div className="flex justify-between items-center mt-2">
+                      <span className="text-xs text-muted-foreground">
+                        Due: {project.dueDate}
+                      </span>
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
             ))}
           </div>
         </section>
@@ -157,10 +160,10 @@ export default function Page() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Badge 
+                    <Badge
                       variant={
-                        task.priority === 'High' ? 'destructive' : 
-                        task.priority === 'Medium' ? 'secondary' : 'outline'
+                        task.priority === 'High' ? 'destructive' :
+                          task.priority === 'Medium' ? 'secondary' : 'outline'
                       }
                     >
                       {task.priority}
