@@ -23,6 +23,7 @@ import { RootState } from '@/lib/store';
 import UserAvatar from './UserAvatar';
 import { logout } from '@/lib/features/userSlice';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import CreateTeamDialog from './CreateTeamDialog';
 
 export const Navbar = () => {
   const dispatch = useDispatch();
@@ -37,14 +38,20 @@ export const Navbar = () => {
     { id: '3', name: 'Customer CRM' }
   ];
 
+
+  const recentTeams = [
+    { id: '1', name: 'E-commerce Team' },
+    { id: '2', name: 'Marketing Team' },
+  ];
+
   const handleLogout = () => {
     dispatch(logout());
   }
 
   const scrollToTop = () => {
-    if(pathname !== '/dashboard'){
+    if (pathname !== '/dashboard') {
       router.push('/dashboard');
-    }else{
+    } else {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
@@ -115,6 +122,33 @@ export const Navbar = () => {
                 <Link href="/projects/create" className="cursor-pointer">
                   Create New Project
                 </Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Teams Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger className={`cursor-pointer p-1 text-sm font-medium ${isActive('/teams') ? 'text-foreground' : 'text-muted-foreground'} hover:text-foreground/80 transition-colors py-2 flex items-center`}>
+              Teams
+              <ChevronDown className="ml-2 h-4 w-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-64">
+              <DropdownMenuLabel className='font-light text-xs dark:text-gray-300 text-gray-500'>Recent Teams</DropdownMenuLabel>
+              {recentTeams.map((team) => (
+                <DropdownMenuItem key={team.id} asChild>
+                  <Link href={`/teams/${team.id}`} className="cursor-pointer">
+                    {team.name}
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/teams" className="font-semibold cursor-pointer">
+                  Show All Your Teams
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <CreateTeamDialog />
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
