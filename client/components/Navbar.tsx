@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Menu, LogOut, UserCircle, ChevronDown } from 'lucide-react';
@@ -30,6 +30,9 @@ export const Navbar = () => {
   const { user } = useSelector((state: RootState) => state.user);
   const pathname = usePathname();
   const router = useRouter();
+
+  const [createTeamDialogOpen, setCreateTeamDialogOpen] = useState(false);
+
 
   // Mock recent projects (replace with actual data from your state/context)
   const recentProjects = [
@@ -147,8 +150,11 @@ export const Navbar = () => {
                   Show All Your Teams
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <CreateTeamDialog />
+              <DropdownMenuItem onSelect={(e) => {
+                e.preventDefault();
+                setCreateTeamDialogOpen(true);
+              }}>
+                Create New Team
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -441,6 +447,10 @@ export const Navbar = () => {
           </SheetContent>
         </Sheet>
       </div>
+      <CreateTeamDialog
+        open={createTeamDialogOpen}
+        onOpenChange={setCreateTeamDialogOpen}
+      />
     </header>
   );
 };

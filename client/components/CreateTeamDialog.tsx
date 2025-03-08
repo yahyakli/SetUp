@@ -7,7 +7,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,8 +18,13 @@ import axios from 'axios';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/lib/store';
 
-const CreateTeamDialog = () => {
-  const [open, setOpen] = useState(false);
+// Instead of being self-contained with its own trigger, the component accepts props
+interface CreateTeamDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+const CreateTeamDialog: React.FC<CreateTeamDialogProps> = ({ open, onOpenChange }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -41,48 +45,38 @@ const CreateTeamDialog = () => {
     e.preventDefault();
 
     if (!formData.name.trim()) {
-      toast.error("Team name is required")
+      toast.error("Team name is required");
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      // Replace with your actual API call
       const response = await axios.post(PROJECT_SERVICE_URL + '/api/teams', formData, {
         headers: {
-          Authorization: "Bearer "+ token,
+          Authorization: "Bearer " + token,
         }
       });
 
-      if (response.status !== 200) {
-        toast.error("Failed to create team. Please try again.") 
+      if (response.status !== 201) {
+        toast.error("Failed to create team. Please try again.");
         return;
       }
-      
-      toast.success(`Team "${formData.name}" has been created.`)
 
-      setOpen(false);
+      toast.success(`Team "${formData.name}" has been created.`);
+      onOpenChange(false);
       setFormData({ name: '', description: '' });
 
-      // Optional: Redirect to the new team page
-      // const data = await response.json();
-      // router.push(`/teams/${data.id}`);
     } catch (error) {
-      toast.error("Failed to create team. Please try again.")
-      console.log(error)
+      toast.error("Failed to create team. Please try again.");
+      console.log(error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" className="cursor-pointer">
-          Create New Team
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">Create New Team</DialogTitle>
@@ -126,7 +120,7 @@ const CreateTeamDialog = () => {
             <Button
               type="button"
               variant="outline"
-              onClick={() => setOpen(false)}
+              onClick={() => onOpenChange(false)}
               className="mt-0"
             >
               Cancel
@@ -142,7 +136,7 @@ const CreateTeamDialog = () => {
         </form>
 
         <button
-          onClick={() => setOpen(false)}
+          onClick={() => onOpenChange(false)}
           className="absolute top-4 right-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
         >
           <X className="h-4 w-4" />
