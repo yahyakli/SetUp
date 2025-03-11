@@ -1,9 +1,11 @@
 import { configureStore } from '@reduxjs/toolkit';
 import userReducer from './features/userSlice';
+import TeamsReducer from './features/TeamsSlice';
 
 export const store = configureStore({
   reducer: {
     user: userReducer,
+    teams: TeamsReducer
   },
 });
 

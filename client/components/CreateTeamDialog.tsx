@@ -25,13 +25,14 @@ interface CreateTeamDialogProps {
 }
 
 const CreateTeamDialog: React.FC<CreateTeamDialogProps> = ({ open, onOpenChange }) => {
+  const { token, user } = useSelector((state: RootState) => state.user);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
-    description: ''
+    description: '',
+    user_id: user?.id,
   });
 
-  const { token } = useSelector((state: RootState) => state.user);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -65,7 +66,7 @@ const CreateTeamDialog: React.FC<CreateTeamDialogProps> = ({ open, onOpenChange 
 
       toast.success(`Team "${formData.name}" has been created.`);
       onOpenChange(false);
-      setFormData({ name: '', description: '' });
+      setFormData({ name: '', description: '', user_id: user?.id });
 
     } catch (error) {
       toast.error("Failed to create team. Please try again.");
@@ -103,15 +104,16 @@ const CreateTeamDialog: React.FC<CreateTeamDialogProps> = ({ open, onOpenChange 
 
           <div className="space-y-2">
             <Label htmlFor="description" className="text-sm font-medium">
-              Description
+              Description <span className="text-destructive">*</span>
             </Label>
             <Textarea
               id="description"
               name="description"
               value={formData.description}
               onChange={handleChange}
-              placeholder="Team description (optional)"
+              placeholder="Team description"
               className="w-full min-h-24"
+              required
               rows={3}
             />
           </div>

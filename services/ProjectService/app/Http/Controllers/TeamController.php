@@ -27,6 +27,7 @@ class TeamController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'description' => 'required|string',
+            'user_id' => 'required|string',
         ]);
 
         if ($validator->fails()) {
@@ -34,6 +35,11 @@ class TeamController extends Controller
         }
 
         $team = Team::create($request->all());
+        TeamMember::create([
+            'team_id' => $team->id,
+            'user_id' => $request->user_id,
+            'role' => 'owner',
+        ]);
         return response()->json($team, 201);
     }
 
@@ -42,7 +48,7 @@ class TeamController extends Controller
      */
     public function show($id)
     {
-        $team = Team::findOrFail($id);
+        $team = Team::findOrFail($id)->load('members');
         return response()->json(['team' => $team], 200);
     }
 

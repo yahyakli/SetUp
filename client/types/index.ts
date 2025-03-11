@@ -10,6 +10,22 @@ export interface User {
   updatedAt: Date;
 }
 
+export interface TeamMember {
+  id: number;
+  team_id: number;
+  user_id: string;
+  role: string
+}
+
+export interface Team {
+  id: string;
+  name: string;
+  description: string;
+  members: TeamMember[];
+  created_at: Date;
+  updated_at: Date;
+}
+
 
 export interface AuthState {
   token: string | null;
