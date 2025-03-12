@@ -16,7 +16,6 @@ import {
   TabsTrigger
 } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -25,7 +24,6 @@ import {
   Calendar,
   Settings,
   ClipboardList,
-  Mail,
   UserPlus
 } from 'lucide-react'
 import AppLayout from '../../AppLayout'
@@ -37,16 +35,22 @@ import { toast } from 'sonner'
 import { PROJECT_SERVICE_URL, USERS_SERVICE_URL } from '@/constants/API_URLS'
 import { Team, User } from '@/types'
 import UserAvatar from '@/components/UserAvatar'
+import DeleteTeamModal from '@/components/DeleteTeamModal'
+import InviteMembersModal from '@/components/InviteMembersModal'
 
 export default function Page() {
   const { id } = useParams()
   const router = useRouter()
   const dispatch = useDispatch()
+  const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
   const { user, token } = useSelector((state: RootState) => state.user)
   const [team, setTeam] = useState<Team | null>(null)
   const [usersData, setUsersData] = useState<Record<string, User>>({})
   const [isPending, setIsPending] = useState(true)
   const [activeTab, setActiveTab] = useState('members')
+  const [teamOwner, setTeamOwner] = useState<string | undefined>('');
+  const [showInviteModal, setShowInviteModal] = useState<boolean>(false);
+
 
   useEffect(() => {
     if (token && user?.id && id) {
@@ -111,14 +115,10 @@ export default function Page() {
     }
   }, [id, user?.id, token, router, dispatch]);
 
-  // Gets initials from name
-  const getInitials = (userId: string) => {
-    const userData = usersData[userId];
-    if (userData && userData.firstName && userData.lastName) {
-      return `${userData.firstName.charAt(0)}${userData.lastName.charAt(0)}`.toUpperCase();
-    }
-    return 'XX'; // Fallback initials
-  }
+  useEffect(() => {
+    const temp = team?.members.find(member => member.role === 'owner');
+    setTeamOwner(temp?.user_id);
+  }, [team]);
 
   // Format date helper
   const formatDate = (dateString: Date) => {
@@ -253,15 +253,17 @@ export default function Page() {
                   <ClipboardList className="h-4 w-4 mr-2" />
                   Projects
                 </TabsTrigger>
-                <TabsTrigger value="settings">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Settings
-                </TabsTrigger>
+                {teamOwner === user?.id && (
+                  <TabsTrigger value="settings">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Settings
+                  </TabsTrigger>
+                )}
               </TabsList>
 
               <TabsContent value="members" className="space-y-4">
                 <div className="mb-6 flex justify-end">
-                  <Button>
+                  <Button onClick={() => setShowInviteModal(true)}>
                     <UserPlus className="h-4 w-4 mr-2" />
                     Invite Members
                   </Button>
@@ -296,6 +298,72 @@ export default function Page() {
                     );
                   })}
                 </div>
+
+                {/* Invite Members Modal */}
+                {team && (
+                  <InviteMembersModal
+                    teamId={id as string}
+                    isOpen={showInviteModal}
+                    onClose={() => setShowInviteModal(false)}
+                    token={token}
+                    existingMembers={team.members.map(member => member.user_id)}
+                    onMemberAdded={() => {
+                      // Reload team data after adding members
+                      const loadTeam = async () => {
+                        try {
+                          const res = await axios.get(PROJECT_SERVICE_URL + `/api/teams/${id}`, {
+                            headers: {
+                              Authorization: `Bearer ${token}`
+                            }
+                          });
+
+                          if (res.status === 200) {
+                            const teamData: Team = res.data.team;
+                            setTeam(teamData);
+
+                            // Update user data for new members
+                            const newMemberIds = teamData.members
+                              .map(member => member.user_id)
+                              .filter(memberId => !Object.keys(usersData).includes(memberId));
+
+                            if (newMemberIds.length > 0) {
+                              const userResponses = await Promise.all(
+                                newMemberIds.map(async (memberId) => {
+                                  try {
+                                    const userRes = await axios.get(USERS_SERVICE_URL + `/api/users/${memberId}`, {
+                                      headers: {
+                                        Authorization: `Bearer ${token}`
+                                      }
+                                    });
+                                    return userRes.data;
+                                  } catch (error) {
+                                    console.error(`Failed to fetch user ${memberId}`, error);
+                                    return null;
+                                  }
+                                })
+                              );
+
+                              const newUserData = userResponses.filter(Boolean).reduce((acc, userData) => {
+                                acc[userData.id] = userData;
+                                return acc;
+                              }, {});
+
+                              setUsersData({
+                                ...usersData,
+                                ...newUserData
+                              });
+                            }
+                          }
+                        } catch (error) {
+                          console.error('Error reloading team:', error);
+                          toast.error('Failed to refresh team data');
+                        }
+                      };
+
+                      loadTeam();
+                    }}
+                  />
+                )}
               </TabsContent>
 
               <TabsContent value="projects">
@@ -304,41 +372,60 @@ export default function Page() {
                     <div className="text-center py-8">
                       <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                       <h3 className="text-lg font-medium mb-2">No Projects Yet</h3>
-                      <p className="text-muted-foreground mb-4">This team doesn't have any active projects.</p>
+                      <p className="text-muted-foreground mb-4">This team doesn&#39;t have any active projects.</p>
                     </div>
                   </CardContent>
                 </Card>
               </TabsContent>
 
-              <TabsContent value="settings">
-                <Card className="dark:bg-gray-800 dark:border-gray-700">
-                  <CardHeader>
-                    <CardTitle>Team Settings</CardTitle>
-                    <CardDescription>
-                      Manage your team settings and permissions
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="dark:text-gray-300 mb-4">
-                      Team settings can only be managed by team administrators.
-                    </p>
 
-                    <div className="space-y-6">
-                      <div>
-                        <h3 className="text-lg font-medium mb-2">Danger Zone</h3>
-                        <Button variant="destructive">Delete Team</Button>
+              {teamOwner === user?.id && (
+                <TabsContent value="settings">
+                  <Card className="dark:bg-gray-800 dark:border-gray-700">
+                    <CardHeader>
+                      <CardTitle>Team Settings</CardTitle>
+                      <CardDescription>
+                        Manage your team settings and permissions
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="dark:text-gray-300 mb-4">
+                        Team settings can only be managed by team administrators.
+                      </p>
+
+                      <div className="space-y-6">
+                        <div>
+                          <h3 className="text-lg font-medium mb-2">Danger Zone</h3>
+                          <Button
+                            onClick={() => setShowDeleteModal(true)}
+                            variant="destructive"
+                          >
+                            Delete Team
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                    </CardContent>
+                  </Card>
+
+                  {/* Delete Team Modal */}
+                  {team && (
+                    <DeleteTeamModal
+                      teamId={id as string}
+                      teamName={team.name}
+                      isOpen={showDeleteModal}
+                      onClose={() => setShowDeleteModal(false)}
+                      token={token}
+                    />
+                  )}
+                </TabsContent>
+              )}
             </Tabs>
           </>
         ) : (
           <div className="text-center py-12">
             <h2 className="text-2xl font-bold mb-2">Team Not Found</h2>
             <p className="text-muted-foreground mb-6">
-              The team you're looking for doesn't exist or you don't have permission to view it.
+              The team you&#39;re looking for doesn&#39;t exist or you don&#39;t have permission to view it.
             </p>
             <Link href="/teams">
               <Button>

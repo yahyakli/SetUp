@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Project;
 use App\Models\Team;
+use App\Models\TeamMember;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Carbon;
@@ -246,5 +247,24 @@ class ProjectController extends Controller
         ];
 
         return response()->json(['statistics' => $stats], 200);
+    }
+
+    public function getUserProjectsWithTeams($userId)
+    {
+        // Fetch team IDs where the user is a member
+        $teamIds = TeamMember::where('user_id', $userId)->pluck('team_id');
+
+        // Fetch projects linked to these teams
+        $teamProjects = Project::whereHas('teams', function ($query) use ($teamIds) {
+            $query->whereIn('teams.id', $teamIds);
+        });
+
+        // Fetch projects where the user is the owner
+        $ownedProjects = Project::where('owner_id', $userId);
+
+        // Merge both queries using `union`
+        $projects = $teamProjects->union($ownedProjects)->with('teams')->get();
+
+        return response()->json(['projects' => $projects], 200);
     }
 }

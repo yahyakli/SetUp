@@ -15,8 +15,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { PROJECT_SERVICE_URL } from '@/constants/API_URLS';
 import axios from 'axios';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/lib/store';
+import { addTeam } from '@/lib/features/TeamsSlice';
 
 // Instead of being self-contained with its own trigger, the component accepts props
 interface CreateTeamDialogProps {
@@ -26,6 +27,7 @@ interface CreateTeamDialogProps {
 
 const CreateTeamDialog: React.FC<CreateTeamDialogProps> = ({ open, onOpenChange }) => {
   const { token, user } = useSelector((state: RootState) => state.user);
+  const dispatch = useDispatch();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -61,6 +63,7 @@ const CreateTeamDialog: React.FC<CreateTeamDialogProps> = ({ open, onOpenChange 
 
       if (response.status !== 201) {
         toast.error("Failed to create team. Please try again.");
+        dispatch(addTeam(response.data));
         return;
       }
 

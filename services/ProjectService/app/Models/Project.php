@@ -40,7 +40,7 @@ class Project extends Model
     public function teams(): BelongsToMany
     {
         return $this->belongsToMany(Team::class, 'project_teams')
-                  ->withTimestamps();
+            ->withTimestamps();
     }
 
     /**

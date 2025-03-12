@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Menu, LogOut, UserCircle, ChevronDown } from 'lucide-react';
@@ -24,28 +24,31 @@ import UserAvatar from './UserAvatar';
 import { logout } from '@/lib/features/userSlice';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import CreateTeamDialog from './CreateTeamDialog';
+import { Project, Team } from '@/types';
 
 export const Navbar = () => {
+  const { teams } = useSelector((state: RootState) => state.teams);
+  const { projects } = useSelector((state: RootState) => state.projects)
   const dispatch = useDispatch();
   const { user } = useSelector((state: RootState) => state.user);
   const pathname = usePathname();
   const router = useRouter();
+  const [recentTeams, setRecentTeams] = useState<Team[]>([]);
+  const [recentProjects, setRecentProjects] = useState<Project[]>([]);
 
   const [createTeamDialogOpen, setCreateTeamDialogOpen] = useState(false);
 
+  useEffect(() => {
+    if (teams.length > 0) {
+      setRecentTeams(teams.slice(0, 3));
+    }
+  }, [teams]);
 
-  // Mock recent projects (replace with actual data from your state/context)
-  const recentProjects = [
-    { id: '1', name: 'E-commerce Platform' },
-    { id: '2', name: 'Marketing Dashboard' },
-    { id: '3', name: 'Customer CRM' }
-  ];
-
-
-  const recentTeams = [
-    { id: '1', name: 'E-commerce Team' },
-    { id: '2', name: 'Marketing Team' },
-  ];
+  useEffect(() => {
+    if (projects.length > 0) {
+      setRecentProjects(projects.slice(0, 3));
+    }
+  }, [projects]);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -74,31 +77,9 @@ export const Navbar = () => {
 
         {/* Desktop Nav Items */}
         <nav className="hidden md:flex items-center space-x-6">
-          <DropdownMenu>
-            <DropdownMenuTrigger className={`cursor-pointer p-1 text-sm font-medium ${isActive('/dashboard') ? 'text-foreground' : 'text-muted-foreground'} hover:text-foreground/80 transition-colors py-2 flex items-center`}>
-              Dashboard
-              <ChevronDown className="ml-2 h-4 w-4" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-64">
-              <DropdownMenuLabel className='font-light text-xs dark:text-gray-300 text-gray-500'>Quick Create</DropdownMenuLabel>
-              <DropdownMenuItem asChild>
-                <Link href="/projects/create" className="cursor-pointer">
-                  Create New Project
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/tasks/create" className="cursor-pointer">
-                  Create New Task
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/dashboard" className="font-semibold cursor-pointer">
-                  Dashboard Home
-                </Link>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Link href="/dashboard" className={`cursor-pointer p-1 text-sm font-medium ${isActive('/dashboard') ? 'text-foreground' : 'text-muted-foreground'} hover:text-foreground/80 transition-colors py-2 flex items-center`}>
+            Dashboard
+          </Link>
 
           {/* Projects Dropdown */}
           <DropdownMenu>

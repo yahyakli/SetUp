@@ -96,9 +96,9 @@ const Page: React.FC = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
       {/* Navigation Bar */}
       <nav className="sticky top-0 z-50 w-full bg-white dark:bg-gray-800 shadow-sm px-18">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between cursor-pointer">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           {/* Logo on the left */}
-          <div onClick={scrollToTop} className="text-2xl font-bold flex items-center">
+          <div onClick={scrollToTop} className="text-2xl font-bold flex items-center cursor-pointer">
             <span className="text-blue-600 dark:text-blue-400">Set</span>
             <span className="text-gray-900 dark:text-white">Up</span>
           </div>
@@ -134,7 +134,7 @@ const Page: React.FC = () => {
             <div className="hidden md:flex">
               <ThemeToggle />
             </div>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white hidden md:inline-block" onClick={() => router.push("/dashboard")}>
+            <Button className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white hidden md:inline-block" onClick={() => router.push("/dashboard")}>
               get started
             </Button>
           </div>
@@ -142,7 +142,7 @@ const Page: React.FC = () => {
           {/* Mobile Menu Trigger (visible on small devices) */}
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" className="md:hidden">
+              <Button variant="ghost" className="cursor-pointer md:hidden">
                 <Menu className="h-6 w-6" />
               </Button>
             </SheetTrigger>
@@ -185,7 +185,7 @@ const Page: React.FC = () => {
               SetUp is an all-in-one project management solution designed to simplify your workflow and boost team productivity.
             </p>
             <div className="flex gap-4">
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => router.push("/dashboard")}>Get Started Free</Button>
+              <Button className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white" onClick={() => router.push("/dashboard")}>Get Started Free</Button>
             </div>
           </div>
           <div className="md:w-1/2">

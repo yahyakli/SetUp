@@ -1,7 +1,5 @@
-import { Team } from "@/types";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-
-
+import { Team } from "@/types";
 
 // Define the initial state
 interface TeamsState {
@@ -17,12 +15,14 @@ const initialState: TeamsState = {
 };
 
 
-
 // Create slice
 const teamSlice = createSlice({
   name: "teams",
   initialState,
   reducers: {
+    setTeamsLoading: (state, action: PayloadAction<boolean>) => {
+      state.teamLoading = action.payload;
+    },
     initTeams: (state, action: PayloadAction<Team[]>) => {
       state.teams = action.payload;
     },
@@ -41,5 +41,5 @@ const teamSlice = createSlice({
   },
 });
 
-export const { addTeam, updateTeamInState, deleteTeamInState, initTeams } = teamSlice.actions;
+export const { addTeam, updateTeamInState, deleteTeamInState, initTeams, setTeamsLoading } = teamSlice.actions;
 export default teamSlice.reducer;

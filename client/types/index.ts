@@ -10,6 +10,19 @@ export interface User {
   updatedAt: Date;
 }
 
+export interface Project {
+  id: number;
+  name: string;
+  description: string;
+  start_date: Date;
+  end_date: Date;
+  status: string;
+  owner_id: string;
+  teams: Team[];
+  created_at: Date;
+  updated_at: Date;
+}
+
 export interface TeamMember {
   id: number;
   team_id: number;

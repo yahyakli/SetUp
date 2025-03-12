@@ -32,6 +32,7 @@ Route::middleware('verify.token')->group(function () {
         Route::get('/owner/{ownerId}', [ProjectController::class, 'getByOwner']);
         Route::get('/ending-soon', [ProjectController::class, 'getEndingSoon']);
         Route::get('/with-teams', [ProjectController::class, 'getProjectsWithTeams']);
+        Route::get('/user-with-teams/{userId}', [ProjectController::class, 'getUserProjectsWithTeams']);
         Route::post('/assign-team', [ProjectController::class, 'assignTeam']);
         Route::post('/remove-team', [ProjectController::class, 'removeTeam']);
         Route::patch('/{id}/status', [ProjectController::class, 'updateStatus']);

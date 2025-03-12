@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function ThemeToggle() {
-  const { setTheme } = useTheme(); // Use the useTheme hook from next-themes
+  const { setTheme } = useTheme();
 
   return (
     <DropdownMenu>

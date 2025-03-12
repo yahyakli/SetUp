@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo } from 'react'
 import {
   Card,
   CardContent,
@@ -25,83 +25,15 @@ import {
 } from 'lucide-react'
 import AppLayout from '../AppLayout'
 import Link from 'next/link'
-import { useDispatch, useSelector } from 'react-redux'
+import { useSelector } from 'react-redux'
 import { RootState } from '@/lib/store'
-import axios, { AxiosError } from 'axios'
-import { toast } from 'sonner'
-import { PROJECT_SERVICE_URL, USERS_SERVICE_URL } from '@/constants/API_URLS'
-import { Team, User } from '@/types'
-import UserAvatar from '@/components/UserAvatar'
+
 
 export default function Page() {
-  const dispatch = useDispatch();
-  const { user, token } = useSelector((state: RootState) => state.user);
-  const [teams, setTeams] = useState<Team[]>([]);
+  const { teams, teamLoading } = useSelector((state: RootState) => state.teams);
   const [searchTerm, setSearchTerm] = useState('')
   const [memberCountFilter, setMemberCountFilter] = useState('All')
-  const [isPending, setIsPending] = useState(true)
-  const [usersData, setUsersData] = useState<Record<string, User>>({})
 
-  useEffect(() => {
-    if (token && user?.id) {
-      const initTeamsfunc = async () => {
-        setIsPending(true);
-        try {
-          // Fetch teams for the user
-          const res = await axios.get(PROJECT_SERVICE_URL + '/api/teams/member/' + user?.id, {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          });
-
-          if (res.status === 200) {
-            const teams: Team[] = res.data.teams;
-
-            // Collect all unique member IDs from teams
-            const memberIds = Array.from(
-              new Set(teams.flatMap(team => team.members.map(member => member.user_id)))
-            );
-
-            // Fetch full user data for each member
-            const userResponses = await Promise.all(
-              memberIds.map(async (memberId) => {
-                try {
-                  const userRes = await axios.get(USERS_SERVICE_URL + `/api/users/${memberId}`, {
-                    headers: {
-                      Authorization: `Bearer ${token}`
-                    }
-                  });
-                  return userRes.data;
-                } catch (error) {
-                  console.error(`Failed to fetch user ${memberId}`, error);
-                  return null;
-                }
-              })
-            );
-
-            // Create a map of userId -> fullUserData
-            const userDataMap = userResponses.filter(Boolean).reduce((acc, userData) => {
-              acc[userData.id] = userData;
-              return acc;
-            }, {});
-
-            setUsersData(userDataMap);
-            setTeams(teams);
-          }
-        } catch (err) {
-          console.log(err);
-          if (err instanceof AxiosError) {
-            toast.error(err.response?.data.message);
-          }
-        } finally {
-          setIsPending(false);
-        }
-      };
-
-      initTeamsfunc();
-    }
-  }, [user?.id, token, dispatch]);
-  
 
   // Filtered and Searched Teams
   const filteredTeams = useMemo(() => {
@@ -134,11 +66,6 @@ export default function Page() {
       </CardHeader>
       <CardContent className="space-y-3">
         <Skeleton className="h-5 w-1/4" />
-        <div className="flex gap-1">
-          <Skeleton className="h-8 w-8 rounded-full" />
-          <Skeleton className="h-8 w-8 rounded-full" />
-          <Skeleton className="h-8 w-8 rounded-full" />
-        </div>
         <Skeleton className="h-3 w-1/2" />
       </CardContent>
     </Card>
@@ -160,14 +87,14 @@ export default function Page() {
               className="pl-10"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              disabled={isPending}
+              disabled={teamLoading}
             />
           </div>
 
           <Select
             value={memberCountFilter}
             onValueChange={(value) => setMemberCountFilter(value)}
-            disabled={isPending}
+            disabled={teamLoading}
           >
             <SelectTrigger className="w-full sm:w-[180px]">
               <Filter className="mr-2 h-4 w-4 text-muted-foreground" />
@@ -183,7 +110,7 @@ export default function Page() {
         </div>
 
         {/* Skeleton Loader or Teams Grid */}
-        {isPending ? (
+        {teamLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array(6).fill(0).map((_, index) => (
               <TeamCardSkeleton key={index} />
@@ -217,22 +144,9 @@ export default function Page() {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <Badge variant="outline">
+                      <Badge variant="default">
                         {team.members.length} {team.members.length === 1 ? 'Member' : 'Members'}
                       </Badge>
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {team.members.slice(0, 5).map((member) => {
-                        const memberData = usersData[member.user_id] || {};
-                        return (
-                          <UserAvatar user={memberData} key={member.user_id} />
-                        );
-                      })}
-                      {team.members.length > 5 && (
-                        <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
-                          +{team.members.length - 5}
-                        </div>
-                      )}
                     </div>
                     <div className="text-xs text-muted-foreground mt-2">
                       Last updated: {new Date().toLocaleDateString()}

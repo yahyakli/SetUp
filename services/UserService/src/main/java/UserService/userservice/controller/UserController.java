@@ -36,9 +36,9 @@ public class UserController {
         return ResponseEntity.ok(userService.getUser(id));
     }
 
-    @GetMapping("/search")
-    public ResponseEntity<List<UserResponse>> searchUsers(@RequestParam String query) {
-        return ResponseEntity.ok(userService.searchUsers(query));
+    @GetMapping("/search/{term}")
+    public ResponseEntity<List<UserResponse>> searchUsersByTerm(@PathVariable String term) {
+        return ResponseEntity.ok(userService.searchUsers(term));
     }
 
     @GetMapping("/me")
