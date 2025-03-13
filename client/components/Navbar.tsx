@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, LogOut, UserCircle, ChevronDown } from 'lucide-react';
+import { Menu, LogOut, UserCircle, ChevronDown, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -29,8 +29,8 @@ import { Project, Team } from '@/types';
 export const Navbar = () => {
   const { teams } = useSelector((state: RootState) => state.teams);
   const { projects } = useSelector((state: RootState) => state.projects)
-  const dispatch = useDispatch();
   const { user } = useSelector((state: RootState) => state.user);
+  const dispatch = useDispatch();
   const pathname = usePathname();
   const router = useRouter();
   const [recentTeams, setRecentTeams] = useState<Team[]>([]);
@@ -241,6 +241,13 @@ export const Navbar = () => {
                 </Link>
               </DropdownMenuItem>
 
+              <DropdownMenuItem asChild>
+                <Link href="/notifications" className="flex cursor-pointer items-center">
+                  <Bell className="mr-2 h-4 w-4" />
+                  <span>Notifications</span>
+                </Link>
+              </DropdownMenuItem>
+
               <DropdownMenuItem onClick={handleLogout} className="focus:text-destructive duration-300">
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Logout</span>
@@ -404,6 +411,14 @@ export const Navbar = () => {
                   </div>
 
                   <div className="space-y-2">
+                    <Link
+                      href="/notifications"
+                      className="flex items-center text-sm text-muted-foreground hover:text-foreground"
+                    >
+                      <Bell className="mr-2 h-4 w-4" />
+                      Notifications
+                    </Link>
+
                     <Link
                       href="/profile"
                       className="flex items-center text-sm text-muted-foreground hover:text-foreground"

@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { Team } from "@/types";
+import { createAction } from "@reduxjs/toolkit";
 
 // Define the initial state
 interface TeamsState {

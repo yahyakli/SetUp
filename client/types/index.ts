@@ -10,6 +10,20 @@ export interface User {
   updatedAt: Date;
 }
 
+export interface Invitation {
+  id: number;
+  team_id: number;
+  user_id: number;
+  team: Team;
+  role: string;
+  token: string;
+  status: string;
+  accepted_at: string;
+  declined_at: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
 export interface Project {
   id: number;
   name: string;

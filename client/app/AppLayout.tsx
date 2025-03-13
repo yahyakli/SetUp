@@ -4,6 +4,7 @@ import { Footer } from "@/components/Footer";
 import Loader from "@/components/Loader";
 import { Navbar } from "@/components/Navbar";
 import { PROJECT_SERVICE_URL } from "@/constants/API_URLS";
+import { initInvitations } from "@/lib/features/InvitationsSlice";
 import { initProjects, setProjectLoading } from "@/lib/features/ProjectsSlice";
 import { initTeams, setTeamsLoading } from "@/lib/features/TeamsSlice";
 import { fetchUser } from "@/lib/features/userSlice";
@@ -61,7 +62,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
 
       const initProjectFunc = async () => {
         dispatch(setProjectLoading(true));
-        try{
+        try {
           const res = await axios.get(PROJECT_SERVICE_URL + "/api/projects/user-with-teams/" + user.id, {
             headers: {
               Authorization: "Bearer " + token
@@ -71,14 +72,35 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
           if (res.status === 200) {
             dispatch(initProjects(res.data.projects));
           }
-        }catch(err){
+        } catch (err) {
           console.log(err)
           if (err instanceof AxiosError) {
             toast.error(err.message);
           }
-        }finally{
+        } finally {
           dispatch(setProjectLoading(false));
         }
+      }
+
+      const getUserInvitations = async () => {
+        try {
+          const res = await axios.get(PROJECT_SERVICE_URL + "/api/invitations/user/" + user.id, {
+            headers: {
+              Authorization: "Bearer " + token
+            }
+          });
+
+          if (res.status === 200) {
+            console.log(res.data);
+            dispatch(initInvitations(res.data));
+          }
+        } catch (err) {
+          console.log(err);
+        }
+      }
+
+      if (user?.id) {
+        getUserInvitations();
       }
 
       initTeamsFunc();

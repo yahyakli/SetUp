@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Invitation;
 use App\Models\Team;
 use App\Models\TeamMember;
 use App\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;;
 
 class TeamController extends Controller
 {
@@ -115,19 +117,35 @@ class TeamController extends Controller
         if ($existingMember) {
             return response()->json(['message' => 'User is already a member of this team'], 422);
         }
+        
+        // Check if there's already a pending invitation
+        $existingInvitation = Invitation::where('team_id', $request->team_id)
+            ->where('user_id', $request->user_id)
+            ->where('status', 'pending')
+            ->first();
 
-        $teamMember = new TeamMember();
-        $teamMember->team_id = $request->team_id;
-        $teamMember->user_id = $request->user_id;
-        $teamMember->role = $request->role;
-        $teamMember->joined_at = now();
-        $teamMember->save();
+        if ($existingInvitation) {
+            return response()->json([
+                'message' => 'An invitation is already pending for this user',
+                'invitation' => $existingInvitation,
+            ], 422);
+        }
 
-        $team = Team::with('members')->find($request->team_id);
+        // Create new invitation
+        $invitation = new Invitation();
+        $invitation->team_id = $request->team_id;
+        $invitation->user_id = $request->user_id;
+        $invitation->role = $request->role;
+        $invitation->token = Str::random(32);
+        $invitation->status = 'pending';
+        $invitation->save();
+
+        // Here you could send an email notification to the user
+        // You might want to create a dedicated job or notification for this
 
         return response()->json([
-            'message' => 'Member added to team successfully',
-            'team' => $team
+            'message' => 'Invitation sent successfully',
+            'invitation' => $invitation,
         ], 201);
     }
 

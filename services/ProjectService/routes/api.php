@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\InvitationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProjectController;
@@ -59,6 +60,13 @@ Route::middleware('verify.token')->group(function () {
         Route::get('/{id}/projects', [TeamController::class, 'getTeamProjects']);
         Route::get('/statistics', [TeamController::class, 'statistics']);
         Route::post('/search', [TeamController::class, 'search']);
+    });
+
+    Route::prefix('invitations')->group(function () {
+        Route::post('/accept', [InvitationController::class, 'accept']);
+        Route::post('/decline', [InvitationController::class, 'decline']);
+        Route::get('/team/{teamId}', [InvitationController::class, 'listTeamInvitations']);
+        Route::get('/user/{userId}', [InvitationController::class, 'listUserInvitations']);
     });
 
     // Team Member Routes

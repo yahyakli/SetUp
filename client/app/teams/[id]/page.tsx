@@ -24,7 +24,8 @@ import {
   Calendar,
   Settings,
   ClipboardList,
-  UserPlus
+  UserPlus,
+  Shield
 } from 'lucide-react'
 import AppLayout from '../../AppLayout'
 import Link from 'next/link'
@@ -51,6 +52,7 @@ export default function Page() {
   const [teamOwner, setTeamOwner] = useState<string | undefined>('');
   const [showInviteModal, setShowInviteModal] = useState<boolean>(false);
 
+  const isTeamMember = team?.members.some(member => member.user_id === user?.id);
 
   useEffect(() => {
     if (token && user?.id && id) {
@@ -159,6 +161,23 @@ export default function Page() {
     </div>
   );
 
+  // Unauthorized screen component
+  const UnauthorizedScreen = () => (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] p-6">
+      <Shield className="h-16 w-16 text-muted-foreground mb-4" />
+      <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
+      <p className="text-muted-foreground text-center mb-6 max-w-md">
+        You don&#39;t have permission to view this team&#39;s details. Only team members can access this page.
+      </p>
+      <Link href="/teams">
+        <Button>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Teams
+        </Button>
+      </Link>
+    </div>
+  );
+
   return (
     <AppLayout>
       <div className="p-6 space-y-6 dark:bg-gray-900 bg-gray-50 min-h-screen">
@@ -175,252 +194,258 @@ export default function Page() {
         {isPending ? (
           <TeamDetailsSkeleton />
         ) : team ? (
-          <>
-            {/* Team Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-              <div className="flex items-center">
-                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary text-lg font-bold mr-4">
-                  {team.name.charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <h1 className="text-3xl font-bold dark:text-white">{team.name}</h1>
-                  <p className="text-muted-foreground">
-                    {team.members.length} {team.members.length === 1 ? 'Member' : 'Members'} • Created {team.created_at ? formatDate(team.created_at) : 'Recently'}
-                  </p>
+          isTeamMember ? (
+            <>
+              {/* Team Header */}
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+                <div className="flex items-center">
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary text-lg font-bold mr-4">
+                    {team.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <h1 className="text-3xl font-bold dark:text-white">{team.name}</h1>
+                    <p className="text-muted-foreground">
+                      {team.members.length} {team.members.length === 1 ? 'Member' : 'Members'} • Created {team.created_at ? formatDate(team.created_at) : 'Recently'}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Team Description Card */}
-            <Card className="dark:bg-gray-800 dark:border-gray-700 mb-8">
-              <CardHeader>
-                <CardTitle className="text-lg">About</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="dark:text-gray-300">
-                  {team.description || 'No description provided.'}
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Team Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-              <Card className="dark:bg-gray-800 dark:border-gray-700">
-                <CardContent className="pt-6">
-                  <div className="flex items-center">
-                    <Users className="h-8 w-8 text-primary mr-3" />
-                    <div>
-                      <p className="text-2xl font-bold">{team.members.length}</p>
-                      <p className="text-muted-foreground">Team Members</p>
-                    </div>
-                  </div>
+              {/* Team Description Card */}
+              <Card className="dark:bg-gray-800 dark:border-gray-700 mb-8">
+                <CardHeader>
+                  <CardTitle className="text-lg">About</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="dark:text-gray-300">
+                    {team.description || 'No description provided.'}
+                  </p>
                 </CardContent>
               </Card>
 
-              <Card className="dark:bg-gray-800 dark:border-gray-700">
-                <CardContent className="pt-6">
-                  <div className="flex items-center">
-                    <ClipboardList className="h-8 w-8 text-primary mr-3" />
-                    <div>
-                      <p className="text-2xl font-bold">0</p>
-                      <p className="text-muted-foreground">Active Projects</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="dark:bg-gray-800 dark:border-gray-700">
-                <CardContent className="pt-6">
-                  <div className="flex items-center">
-                    <Calendar className="h-8 w-8 text-primary mr-3" />
-                    <div>
-                      <p className="text-2xl font-bold">{team.created_at ? formatDate(team.created_at).split(',')[0] : 'N/A'}</p>
-                      <p className="text-muted-foreground">Created</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Tabs for Team Content */}
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="mb-6 w-full justify-start">
-                <TabsTrigger value="members">
-                  <Users className="h-4 w-4 mr-2" />
-                  Members
-                </TabsTrigger>
-                <TabsTrigger value="projects">
-                  <ClipboardList className="h-4 w-4 mr-2" />
-                  Projects
-                </TabsTrigger>
-                {teamOwner === user?.id && (
-                  <TabsTrigger value="settings">
-                    <Settings className="h-4 w-4 mr-2" />
-                    Settings
-                  </TabsTrigger>
-                )}
-              </TabsList>
-
-              <TabsContent value="members" className="space-y-4">
-                <div className="mb-6 flex justify-end">
-                  <Button onClick={() => setShowInviteModal(true)}>
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Invite Members
-                  </Button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {team.members.map((member) => {
-                    const memberData = usersData[member.user_id] || {};
-                    const isCurrentUser = member.user_id === user?.id;
-
-                    return (
-                      <Card key={member.user_id} className="dark:bg-gray-800 dark:border-gray-700">
-                        <CardContent className="p-4 flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <UserAvatar user={memberData} />
-                            <div>
-                              <p className="font-medium">
-                                {memberData.firstName && memberData.lastName ?
-                                  `${memberData.firstName} ${memberData.lastName}` : 'Unknown Member'}
-                                {isCurrentUser && <span className="ml-2 text-sm text-muted-foreground">(You)</span>}
-                              </p>
-                              <p className="text-sm text-muted-foreground">{memberData.email || 'No email available'}</p>
-                              <div className="mt-1">
-                                <Badge variant={member.role === 'owner' ? "default" : "outline"}>
-                                  {member.role}
-                                </Badge>
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-
-                {/* Invite Members Modal */}
-                {team && (
-                  <InviteMembersModal
-                    teamId={id as string}
-                    isOpen={showInviteModal}
-                    onClose={() => setShowInviteModal(false)}
-                    token={token}
-                    existingMembers={team.members.map(member => member.user_id)}
-                    onMemberAdded={() => {
-                      // Reload team data after adding members
-                      const loadTeam = async () => {
-                        try {
-                          const res = await axios.get(PROJECT_SERVICE_URL + `/api/teams/${id}`, {
-                            headers: {
-                              Authorization: `Bearer ${token}`
-                            }
-                          });
-
-                          if (res.status === 200) {
-                            const teamData: Team = res.data.team;
-                            setTeam(teamData);
-
-                            // Update user data for new members
-                            const newMemberIds = teamData.members
-                              .map(member => member.user_id)
-                              .filter(memberId => !Object.keys(usersData).includes(memberId));
-
-                            if (newMemberIds.length > 0) {
-                              const userResponses = await Promise.all(
-                                newMemberIds.map(async (memberId) => {
-                                  try {
-                                    const userRes = await axios.get(USERS_SERVICE_URL + `/api/users/${memberId}`, {
-                                      headers: {
-                                        Authorization: `Bearer ${token}`
-                                      }
-                                    });
-                                    return userRes.data;
-                                  } catch (error) {
-                                    console.error(`Failed to fetch user ${memberId}`, error);
-                                    return null;
-                                  }
-                                })
-                              );
-
-                              const newUserData = userResponses.filter(Boolean).reduce((acc, userData) => {
-                                acc[userData.id] = userData;
-                                return acc;
-                              }, {});
-
-                              setUsersData({
-                                ...usersData,
-                                ...newUserData
-                              });
-                            }
-                          }
-                        } catch (error) {
-                          console.error('Error reloading team:', error);
-                          toast.error('Failed to refresh team data');
-                        }
-                      };
-
-                      loadTeam();
-                    }}
-                  />
-                )}
-              </TabsContent>
-
-              <TabsContent value="projects">
+              {/* Team Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                 <Card className="dark:bg-gray-800 dark:border-gray-700">
                   <CardContent className="pt-6">
-                    <div className="text-center py-8">
-                      <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-medium mb-2">No Projects Yet</h3>
-                      <p className="text-muted-foreground mb-4">This team doesn&#39;t have any active projects.</p>
+                    <div className="flex items-center">
+                      <Users className="h-8 w-8 text-primary mr-3" />
+                      <div>
+                        <p className="text-2xl font-bold">{team.members.length}</p>
+                        <p className="text-muted-foreground">Team Members</p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
-              </TabsContent>
 
-
-              {teamOwner === user?.id && (
-                <TabsContent value="settings">
-                  <Card className="dark:bg-gray-800 dark:border-gray-700">
-                    <CardHeader>
-                      <CardTitle>Team Settings</CardTitle>
-                      <CardDescription>
-                        Manage your team settings and permissions
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="dark:text-gray-300 mb-4">
-                        Team settings can only be managed by team administrators.
-                      </p>
-
-                      <div className="space-y-6">
-                        <div>
-                          <h3 className="text-lg font-medium mb-2">Danger Zone</h3>
-                          <Button
-                            onClick={() => setShowDeleteModal(true)}
-                            variant="destructive"
-                          >
-                            Delete Team
-                          </Button>
-                        </div>
+                <Card className="dark:bg-gray-800 dark:border-gray-700">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center">
+                      <ClipboardList className="h-8 w-8 text-primary mr-3" />
+                      <div>
+                        <p className="text-2xl font-bold">0</p>
+                        <p className="text-muted-foreground">Active Projects</p>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </CardContent>
+                </Card>
 
-                  {/* Delete Team Modal */}
+                <Card className="dark:bg-gray-800 dark:border-gray-700">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center">
+                      <Calendar className="h-8 w-8 text-primary mr-3" />
+                      <div>
+                        <p className="text-2xl font-bold">{team.created_at ? formatDate(team.created_at).split(',')[0] : 'N/A'}</p>
+                        <p className="text-muted-foreground">Created</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Tabs for Team Content */}
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="mb-6 w-full justify-start">
+                  <TabsTrigger value="members">
+                    <Users className="h-4 w-4 mr-2" />
+                    Members
+                  </TabsTrigger>
+                  <TabsTrigger value="projects">
+                    <ClipboardList className="h-4 w-4 mr-2" />
+                    Projects
+                  </TabsTrigger>
+                  {teamOwner === user?.id && (
+                    <TabsTrigger value="settings">
+                      <Settings className="h-4 w-4 mr-2" />
+                      Settings
+                    </TabsTrigger>
+                  )}
+                </TabsList>
+
+                <TabsContent value="members" className="space-y-4">
+                  {user?.id === teamOwner && (
+                    <div className="mb-6 flex justify-end">
+                      <Button onClick={() => setShowInviteModal(true)}>
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Invite Members
+                      </Button>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {team.members.map((member) => {
+                      const memberData = usersData[member.user_id] || {};
+                      const isCurrentUser = member.user_id === user?.id;
+
+                      return (
+                        <Card key={member.user_id} className="dark:bg-gray-800 dark:border-gray-700">
+                          <CardContent className="p-4 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <UserAvatar user={memberData} />
+                              <div>
+                                <p className="font-medium">
+                                  {memberData.firstName && memberData.lastName ?
+                                    `${memberData.firstName} ${memberData.lastName}` : 'Unknown Member'}
+                                  {isCurrentUser && <span className="ml-2 text-sm text-muted-foreground">(You)</span>}
+                                </p>
+                                <p className="text-sm text-muted-foreground">{memberData.email || 'No email available'}</p>
+                                <div className="mt-1">
+                                  <Badge variant={member.role === 'owner' ? "default" : "outline"}>
+                                    {member.role}
+                                  </Badge>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+
+                  {/* Invite Members Modal */}
                   {team && (
-                    <DeleteTeamModal
+                    <InviteMembersModal
                       teamId={id as string}
-                      teamName={team.name}
-                      isOpen={showDeleteModal}
-                      onClose={() => setShowDeleteModal(false)}
+                      isOpen={showInviteModal}
+                      onClose={() => setShowInviteModal(false)}
                       token={token}
+                      existingMembers={team.members.map(member => member.user_id)}
+                      onMemberAdded={() => {
+                        // Reload team data after adding members
+                        const loadTeam = async () => {
+                          try {
+                            const res = await axios.get(PROJECT_SERVICE_URL + `/api/teams/${id}`, {
+                              headers: {
+                                Authorization: `Bearer ${token}`
+                              }
+                            });
+
+                            if (res.status === 200) {
+                              const teamData: Team = res.data.team;
+                              setTeam(teamData);
+
+                              // Update user data for new members
+                              const newMemberIds = teamData.members
+                                .map(member => member.user_id)
+                                .filter(memberId => !Object.keys(usersData).includes(memberId));
+
+                              if (newMemberIds.length > 0) {
+                                const userResponses = await Promise.all(
+                                  newMemberIds.map(async (memberId) => {
+                                    try {
+                                      const userRes = await axios.get(USERS_SERVICE_URL + `/api/users/${memberId}`, {
+                                        headers: {
+                                          Authorization: `Bearer ${token}`
+                                        }
+                                      });
+                                      return userRes.data;
+                                    } catch (error) {
+                                      console.error(`Failed to fetch user ${memberId}`, error);
+                                      return null;
+                                    }
+                                  })
+                                );
+
+                                const newUserData = userResponses.filter(Boolean).reduce((acc, userData) => {
+                                  acc[userData.id] = userData;
+                                  return acc;
+                                }, {});
+
+                                setUsersData({
+                                  ...usersData,
+                                  ...newUserData
+                                });
+                              }
+                            }
+                          } catch (error) {
+                            console.error('Error reloading team:', error);
+                            toast.error('Failed to refresh team data');
+                          }
+                        };
+
+                        loadTeam();
+                      }}
                     />
                   )}
                 </TabsContent>
-              )}
-            </Tabs>
-          </>
+
+                <TabsContent value="projects">
+                  <Card className="dark:bg-gray-800 dark:border-gray-700">
+                    <CardContent className="pt-6">
+                      <div className="text-center py-8">
+                        <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                        <h3 className="text-lg font-medium mb-2">No Projects Yet</h3>
+                        <p className="text-muted-foreground mb-4">This team doesn&#39;t have any active projects.</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+
+                {teamOwner === user?.id && (
+                  <TabsContent value="settings">
+                    <Card className="dark:bg-gray-800 dark:border-gray-700">
+                      <CardHeader>
+                        <CardTitle>Team Settings</CardTitle>
+                        <CardDescription>
+                          Manage your team settings and permissions
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="dark:text-gray-300 mb-4">
+                          Team settings can only be managed by team administrators.
+                        </p>
+
+                        <div className="space-y-6">
+                          <div>
+                            <h3 className="text-lg font-medium mb-2">Danger Zone</h3>
+                            <Button
+                              onClick={() => setShowDeleteModal(true)}
+                              variant="destructive"
+                            >
+                              Delete Team
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Delete Team Modal */}
+                    {team && (
+                      <DeleteTeamModal
+                        teamId={id as string}
+                        teamName={team.name}
+                        isOpen={showDeleteModal}
+                        onClose={() => setShowDeleteModal(false)}
+                        token={token}
+                      />
+                    )}
+                  </TabsContent>
+                )}
+              </Tabs>
+            </>
+          ) : (
+            <UnauthorizedScreen />
+          )
         ) : (
           <div className="text-center py-12">
             <h2 className="text-2xl font-bold mb-2">Team Not Found</h2>

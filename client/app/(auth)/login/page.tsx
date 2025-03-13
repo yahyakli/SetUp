@@ -63,7 +63,7 @@ export default function LoginPage() {
       console.error("Login error:", error);
 
       if (axios.isAxiosError(error)) {
-        toast.error(error.response?.data?.message || "Failed to login");
+        toast.error(error.response?.data?.error || "Failed to login");
       }
     } finally {
       setIsLoading(false);

@@ -16,7 +16,7 @@ import { Search, X, Plus, CheckCircle, Loader2 } from 'lucide-react'
 import axios from 'axios'
 import { toast } from 'sonner'
 import { USERS_SERVICE_URL, PROJECT_SERVICE_URL } from '@/constants/API_URLS'
-import { User } from '@/types'
+import { Invitation, User } from '@/types'
 import UserAvatar from '@/components/UserAvatar'
 import {
   Select,
@@ -61,6 +61,7 @@ const InviteMembersModal: React.FC<InviteMembersModalProps> = ({
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [pendingInvites, setPendingInvites] = useState<string[]>([]);
 
   useEffect(() => {
     // Reset state when modal opens
@@ -93,7 +94,7 @@ const InviteMembersModal: React.FC<InviteMembersModalProps> = ({
 
           if (response.status === 200) {
             const filteredResults = response.data.filter(
-              (user: User) => !existingMembers.includes(user.id)
+              (user: User) => !existingMembers.includes(user.id) && !pendingInvites.includes(user.id)
             );
             setSearchResults(filteredResults);
           }
@@ -114,7 +115,32 @@ const InviteMembersModal: React.FC<InviteMembersModalProps> = ({
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [searchQuery, token, existingMembers]);
+  }, [searchQuery, token, existingMembers, pendingInvites]);
+
+  useEffect(() => {
+    // Fetch pending invitations when modal opens
+    const fetchPendingInvites = async () => {
+      try {
+        const response = await axios.get(
+          `${PROJECT_SERVICE_URL}/api/invitations/team/${teamId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        // Extract user IDs from pending invitations
+        const pendingUserIds = response.data.map((invite: Invitation) => invite.user_id);
+        setPendingInvites(pendingUserIds);
+      } catch (error) {
+        console.error("Error fetching pending invites:", error);
+      }
+    };
+
+    if (isOpen && token) {
+      fetchPendingInvites();
+    }
+  }, [isOpen, teamId, token]);
 
   const handleSelectUser = (user: User) => {
     if (selectedUsers.some(selected => selected.id === user.id)) {
@@ -182,7 +208,7 @@ const InviteMembersModal: React.FC<InviteMembersModalProps> = ({
             </div>
             <Input
               type="text"
-              placeholder="Search users by name or email..."
+              placeholder="Search users by First or Last Name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 pr-10"
