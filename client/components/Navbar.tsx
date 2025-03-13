@@ -30,6 +30,7 @@ export const Navbar = () => {
   const { teams } = useSelector((state: RootState) => state.teams);
   const { projects } = useSelector((state: RootState) => state.projects)
   const { user } = useSelector((state: RootState) => state.user);
+  const { invitations } = useSelector((state: RootState) => state.Invitations);
   const dispatch = useDispatch();
   const pathname = usePathname();
   const router = useRouter();
@@ -63,6 +64,10 @@ export const Navbar = () => {
   };
 
   const isActive = (path: string) => pathname === path;
+
+  const getPendingInvitationsCount = () => {
+    return invitations.filter(inv => inv.status === 'pending').length;
+  };
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -210,9 +215,14 @@ export const Navbar = () => {
           <ThemeToggle />
           {/* User Dropdown */}
           <DropdownMenu>
-            <DropdownMenuTrigger className='cursor-pointer' asChild>
+            <DropdownMenuTrigger className='cursor-pointer relative' asChild>
               <Button variant="ghost" size="icon" className="rounded-full h-10 w-10">
                 <UserAvatar user={user} />
+                {getPendingInvitationsCount() > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {getPendingInvitationsCount()}
+                  </span>
+                )}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="max-w-72">
@@ -242,9 +252,16 @@ export const Navbar = () => {
               </DropdownMenuItem>
 
               <DropdownMenuItem asChild>
-                <Link href="/notifications" className="flex cursor-pointer items-center">
-                  <Bell className="mr-2 h-4 w-4" />
-                  <span>Notifications</span>
+                <Link href="/notifications" className="flex cursor-pointer items-center justify-between">
+                  <div className="flex items-center">
+                    <Bell className="mr-2 h-4 w-4" />
+                    <span>Notifications</span>
+                  </div>
+                  {getPendingInvitationsCount() > 0 && (
+                    <span className="bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center ml-2">
+                      {getPendingInvitationsCount()}
+                    </span>
+                  )}
                 </Link>
               </DropdownMenuItem>
 
@@ -259,8 +276,13 @@ export const Navbar = () => {
         {/* Mobile Menu */}
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="md:hidden rounded-full h-10 w-10">
+            <Button variant="ghost" size="icon" className="md:hidden rounded-full h-10 w-10 relative">
               <Menu className="h-5 w-5" />
+              {getPendingInvitationsCount() > 0 && (
+                <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {getPendingInvitationsCount()}
+                </span>
+              )}
             </Button>
           </SheetTrigger>
           <SheetContent side="right" className="p-0 w-4/5 max-w-xs">
@@ -413,10 +435,17 @@ export const Navbar = () => {
                   <div className="space-y-2">
                     <Link
                       href="/notifications"
-                      className="flex items-center text-sm text-muted-foreground hover:text-foreground"
+                      className="flex items-center justify-between text-sm text-muted-foreground hover:text-foreground"
                     >
-                      <Bell className="mr-2 h-4 w-4" />
-                      Notifications
+                      <div className="flex items-center">
+                        <Bell className="mr-2 h-4 w-4" />
+                        Notifications
+                      </div>
+                      {getPendingInvitationsCount() > 0 && (
+                        <span className="bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                          {getPendingInvitationsCount()}
+                        </span>
+                      )}
                     </Link>
 
                     <Link
