@@ -53,9 +53,18 @@ const projectSlice = createSlice({
         }
         return project;
       });
-    }
+    },
+    removeTeamFromProject: (state, action: PayloadAction<{ projectId: number; teamId: number }>) => {
+      const { projectId, teamId } = action.payload;
+      state.projects = state.projects.map((project) => {
+        if (project.id === projectId) {
+          project.teams = project.teams.filter((team) => team.id !== teamId);
+        }
+        return project;
+      });
+    },
   },
 });
 
-export const { initProjects, addProject, updateProject, deleteProject, addTeamToProject, setProjectLoading } = projectSlice.actions;
+export const { initProjects, addProject, updateProject, deleteProject, addTeamToProject, removeTeamFromProject, setProjectLoading } = projectSlice.actions;
 export default projectSlice.reducer;

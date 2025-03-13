@@ -225,21 +225,26 @@ export default function ProjectPage() {
                     {project.teams.map((team) => (
                       <Card key={team.id} className="dark:bg-gray-800 group relative">
                         <CardHeader>
-                          <CardTitle className="text-lg">{team.name}</CardTitle>
-                          <CardDescription>{team.description}</CardDescription>
-                          {project.owner_id === user?.id && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={() => {
-                                setTeamToRemove({ id: team.id, name: team.name })
-                                setVerificationCode(generateVerificationCode())
-                              }}
-                            >
-                              <X className="h-4 w-4 text-destructive" />
-                            </Button>
-                          )}
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <CardTitle className="text-lg">{team.name}</CardTitle>
+                              <CardDescription>{team.description}</CardDescription>
+                            </div>
+                            {project.owner_id === user?.id && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => {
+                                  setTeamToRemove({ id: team.id, name: team.name })
+                                  setVerificationCode(generateVerificationCode())
+                                }}
+                              >
+                                <X className="h-4 w-4 mr-1" />
+                                Remove
+                              </Button>
+                            )}
+                          </div>
                         </CardHeader>
                       </Card>
                     ))}

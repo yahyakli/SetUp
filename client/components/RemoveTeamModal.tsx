@@ -2,12 +2,11 @@ import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { X } from 'lucide-react'
 import axios from 'axios'
 import { PROJECT_SERVICE_URL } from '@/constants/API_URLS'
 import { toast } from 'sonner'
 import { useDispatch } from 'react-redux'
-import { updateProject } from '@/lib/features/ProjectsSlice'
+import { removeTeamFromProject } from '@/lib/features/ProjectsSlice'
 
 interface RemoveTeamModalProps {
   isOpen: boolean
@@ -15,7 +14,7 @@ interface RemoveTeamModalProps {
   projectId: number
   teamId: number
   teamName: string
-  token: string
+  token: string | null
   verificationCode: string
 }
 
@@ -42,7 +41,7 @@ export default function RemoveTeamModal({
     setIsPending(true)
     try {
       const response = await axios.post(
-        `${PROJECT_SERVICE_URL}/api/remove-team`,
+        `${PROJECT_SERVICE_URL}/api/projects/remove-team`,
         {
           project_id: projectId,
           team_id: teamId
@@ -55,7 +54,7 @@ export default function RemoveTeamModal({
       )
 
       if (response.status === 200) {
-        dispatch(updateProject(response.data))
+        dispatch(removeTeamFromProject({ projectId, teamId }))
         toast.success('Team removed successfully')
         onClose()
       }
@@ -78,7 +77,7 @@ export default function RemoveTeamModal({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
+          <div className="flex flex-col gap-4">
             <label className="text-sm font-medium">
               Verification Code: <span className="font-mono">{verificationCode}</span>
             </label>
@@ -93,7 +92,7 @@ export default function RemoveTeamModal({
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" variant="destructive" disabled={isPending}>
+            <Button type="submit" variant="destructive" disabled={isPending || code !== verificationCode}>
               {isPending ? "Removing..." : "Remove Team"}
             </Button>
           </div>
