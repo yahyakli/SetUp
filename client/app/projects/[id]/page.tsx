@@ -1,7 +1,7 @@
 "use client"
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import { useSelector } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '@/lib/store'
 import AppLayout from '../../AppLayout'
 import {
@@ -22,14 +22,57 @@ import {
   Users,
   Settings,
   CheckSquare,
-  Info
+  Info,
+  Plus,
+  X
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
+import AssignTeamsModal from '@/components/AssignTeamsModal'
+import DeleteProjectDialog from '@/components/DeleteProjectDialog'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import axios from 'axios'
+import { PROJECT_SERVICE_URL } from '@/constants/API_URLS'
+import { toast } from 'sonner'
+import { format } from "date-fns"
+import { Calendar as CalendarIcon } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { Calendar } from "@/components/ui/calendar"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { updateProject } from '@/lib/features/ProjectsSlice'
+import RemoveTeamModal from '@/components/RemoveTeamModal'
 
 export default function ProjectPage() {
+  const dispatch = useDispatch()
   const { id } = useParams()
-  const { projects, projectLoading } = useSelector((state: RootState) => state.projects)
+  const { projects, projectLoading } = useSelector((state: RootState) => state.projects);
+  const { user, token } = useSelector((state: RootState) => state.user);
   const project = projects.find(p => p.id === parseInt(id as string, 10))
+  const [showAssignModal, setShowAssignModal] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [updatePending, setUpdatePending] = useState(false)
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [teamToRemove, setTeamToRemove] = useState<{ id: number, name: string } | null>(null)
+  const [verificationCode, setVerificationCode] = useState('')
+
+  // Update selectedDate when project data changes
+  useEffect(() => {
+    if (project?.end_date) {
+      setSelectedDate(new Date(project.end_date));
+    }
+  }, [project]);
 
   // Format date helper
   const formatDate = (dateString: string | Date) => {
@@ -38,6 +81,12 @@ export default function ProjectPage() {
       month: 'long',
       day: 'numeric'
     })
+  }
+
+  // Add this function to generate verification code
+  const generateVerificationCode = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz123456789'
+    return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
   }
 
   // Loading skeleton
@@ -65,8 +114,8 @@ export default function ProjectPage() {
               The project you&#39;re looking for doesn&#39;t exist or you may not have access to it.
             </p>
             <div className="pt-4">
-              <a 
-                href="/projects" 
+              <a
+                href="/projects"
                 className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
               >
                 Return to Projects
@@ -151,9 +200,20 @@ export default function ProjectPage() {
           {/* Teams Tab */}
           <TabsContent value="teams">
             <Card>
-              <CardHeader>
-                <CardTitle>Project Teams</CardTitle>
-                <CardDescription>Teams working on this project</CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Project Teams</CardTitle>
+                  <CardDescription>Teams working on this project</CardDescription>
+                </div>
+                {project.owner_id === user?.id && (
+                  <Button
+                    onClick={() => setShowAssignModal(true)}
+                    className="flex items-center gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Teams
+                  </Button>
+                )}
               </CardHeader>
               <CardContent>
                 {project.teams.length === 0 ? (
@@ -163,10 +223,23 @@ export default function ProjectPage() {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {project.teams.map((team) => (
-                      <Card key={team.id} className="dark:bg-gray-800">
+                      <Card key={team.id} className="dark:bg-gray-800 group relative">
                         <CardHeader>
                           <CardTitle className="text-lg">{team.name}</CardTitle>
                           <CardDescription>{team.description}</CardDescription>
+                          {project.owner_id === user?.id && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => {
+                                setTeamToRemove({ id: team.id, name: team.name })
+                                setVerificationCode(generateVerificationCode())
+                              }}
+                            >
+                              <X className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
                         </CardHeader>
                       </Card>
                     ))}
@@ -174,6 +247,12 @@ export default function ProjectPage() {
                 )}
               </CardContent>
             </Card>
+
+            <AssignTeamsModal
+              isOpen={showAssignModal}
+              onClose={() => setShowAssignModal(false)}
+              projectId={project.id}
+            />
           </TabsContent>
 
           {/* Tasks Tab */}
@@ -193,19 +272,165 @@ export default function ProjectPage() {
 
           {/* Settings Tab */}
           <TabsContent value="settings">
-            <Card>
-              <CardHeader>
-                <CardTitle>Project Settings</CardTitle>
-                <CardDescription>Manage project configuration</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground text-center py-4">
-                  Project settings coming soon...
-                </p>
-              </CardContent>
-            </Card>
+            {project.owner_id === user?.id ? (
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Project Settings</CardTitle>
+                    <CardDescription>Update project details</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={async (e) => {
+                      e.preventDefault()
+                      setUpdatePending(true)
+                      const formData = new FormData(e.currentTarget)
+                      const data = {
+                        name: formData.get('name'),
+                        description: formData.get('description'),
+                        end_date: selectedDate ? format(selectedDate, "yyyy-MM-dd") : null,
+                        status: formData.get('status'),
+                      }
+
+                      try {
+                        const res = await axios.put(
+                          `${PROJECT_SERVICE_URL}/api/projects/${project.id}`,
+                          data,
+                          {
+                            headers: {
+                              'Authorization': `Bearer ${token}`
+                            }
+                          }
+                        )
+                        if (res.status === 200) {
+                          dispatch(updateProject(res.data))
+                          toast.success('Project updated successfully')
+                        }
+                      } catch (error) {
+                        toast.error('Failed to update project')
+                        console.error('Error updating project:', error)
+                      } finally {
+                        setUpdatePending(false)
+                      }
+                    }} className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Project Name</label>
+                        <Input
+                          name="name"
+                          defaultValue={project.name}
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Description</label>
+                        <Textarea
+                          name="description"
+                          defaultValue={project.description}
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">End Date</label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !selectedDate && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {selectedDate ? (
+                                format(selectedDate, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={selectedDate}
+                              onSelect={setSelectedDate}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <input 
+                          type="hidden" 
+                          name="end_date" 
+                          value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : ''} 
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Status</label>
+                        <Select name="status" defaultValue={project.status}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="archived">Archived</SelectItem>
+                            <SelectItem value="completed">Completed</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <Button type="submit" className="w-full" disabled={updatePending}>
+                        {updatePending ? "Updating..." : "Update Project"}
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-destructive">
+                  <CardHeader>
+                    <CardTitle className="text-destructive">Danger Zone</CardTitle>
+                    <CardDescription>
+                      Irreversible and destructive actions
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button
+                      variant="destructive"
+                      onClick={() => setShowDeleteDialog(true)}
+                    >
+                      Delete Project
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <DeleteProjectDialog
+                  isOpen={showDeleteDialog}
+                  onClose={() => setShowDeleteDialog(false)}
+                  projectId={project.id}
+                  token={token}
+                />
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="p-6">
+                  <p className="text-muted-foreground text-center">
+                    Only the project owner can access settings
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
+
+        <RemoveTeamModal
+          isOpen={teamToRemove !== null}
+          onClose={() => setTeamToRemove(null)}
+          projectId={project.id}
+          teamId={teamToRemove?.id || 0}
+          teamName={teamToRemove?.name || ''}
+          token={token}
+          verificationCode={verificationCode}
+        />
       </div>
     </AppLayout>
   )

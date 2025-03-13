@@ -72,7 +72,7 @@ class ProjectController extends Controller
         $project = Project::findOrFail($id);
         $project->update($request->all());
 
-        return response()->json(['project' => $project, 'message' => 'Project updated successfully'], 200);
+        return response()->json($project, 200);
     }
 
     /**
