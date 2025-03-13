@@ -92,6 +92,10 @@ export default function NotificationsPage() {
     }
   };
 
+  const getPendingInvitationsCount = () => {
+    return invitations.filter(inv => inv.status === 'pending').length;
+  };
+
   console.log(activeTab);
 
   return (
@@ -113,10 +117,15 @@ export default function NotificationsPage() {
               <TabsTrigger
                 value="invitations"
                 onClick={() => setActiveTab("invitations")}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 relative"
               >
                 <UserPlus className="h-4 w-4" />
                 Invitations
+                {getPendingInvitationsCount() > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-black text-white dark:bg-white dark:text-black text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {getPendingInvitationsCount()}
+                  </span>
+                )}
               </TabsTrigger>
             </TabsList>
 

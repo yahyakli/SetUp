@@ -219,7 +219,7 @@ export const Navbar = () => {
               <Button variant="ghost" size="icon" className="rounded-full h-10 w-10">
                 <UserAvatar user={user} />
                 {getPendingInvitationsCount() > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 bg-black text-white dark:bg-white dark:text-black text-xs rounded-full h-5 w-5 flex items-center justify-center">
                     {getPendingInvitationsCount()}
                   </span>
                 )}
@@ -258,7 +258,7 @@ export const Navbar = () => {
                     <span>Notifications</span>
                   </div>
                   {getPendingInvitationsCount() > 0 && (
-                    <span className="bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center ml-2">
+                    <span className="bg-black text-white dark:bg-white dark:text-black text-xs rounded-full h-5 w-5 flex items-center justify-center ml-2">
                       {getPendingInvitationsCount()}
                     </span>
                   )}
