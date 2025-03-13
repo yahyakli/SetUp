@@ -35,7 +35,7 @@ class Team extends Model
     public function projects(): BelongsToMany
     {
         return $this->belongsToMany(Project::class, 'project_teams')
-                  ->withTimestamps();
+            ->withTimestamps();
     }
 
     /**
@@ -72,7 +72,7 @@ class Team extends Model
     {
         return $this->members()->where('user_id', $userId)->exists();
     }
-    
+
     /**
      * Get a team member by user ID.
      * 

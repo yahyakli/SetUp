@@ -9,7 +9,6 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
 import {
   Select,
   SelectContent,
@@ -26,89 +25,61 @@ import {
 } from 'lucide-react'
 import AppLayout from '../AppLayout'
 import Link from 'next/link'
+import { Project } from '@/types'
+import { useSelector } from 'react-redux'
+import { RootState } from '@/lib/store'
+import { Skeleton } from '@/components/ui/skeleton'
 
-// Project Interface
-interface Project {
-  id: string
-  name: string
-  description: string
-  status: 'Planning' | 'In Progress' | 'On Hold' | 'Completed'
-  progress: number
-  startDate: string
-  endDate: string
-  team: string
-}
-
-// Fake Projects Data
-const projectsData: Project[] = [
-  {
-    id: 'proj1',
-    name: 'Customer Portal Redesign',
-    description: 'Comprehensive redesign of customer-facing web application',
-    status: 'In Progress',
-    progress: 65,
-    startDate: '2024-01-15',
-    endDate: '2024-04-30',
-    team: 'Design Team',
-  },
-  {
-    id: 'proj2',
-    name: 'Marketing Automation Platform',
-    description: 'Building an integrated marketing communication system',
-    status: 'Planning',
-    progress: 25,
-    startDate: '2024-03-01',
-    endDate: '2024-06-30',
-    team: 'Marketing Team',
-  },
-  {
-    id: 'proj3',
-    name: 'Internal Communication App',
-    description: 'Enterprise-grade communication and collaboration tool',
-    status: 'In Progress',
-    progress: 90,
-    startDate: '2024-02-01',
-    endDate: '2024-03-20',
-    team: 'Engineering Team',
-  },
-  {
-    id: 'proj4',
-    name: 'Product Analytics Dashboard',
-    description: 'Advanced analytics platform for product insights',
-    status: 'Completed',
-    progress: 100,
-    startDate: '2024-01-01',
-    endDate: '2024-02-28',
-    team: 'Data Team',
-  },
-  {
-    id: 'proj5',
-    name: 'E-commerce Platform Upgrade',
-    description: 'Upgrading existing e-commerce platform with new features',
-    status: 'On Hold',
-    progress: 40,
-    startDate: '2024-02-15',
-    endDate: '2024-05-15',
-    team: 'Engineering Team',
-  }
-]
 
 export default function Page() {
+
   const [searchTerm, setSearchTerm] = useState('')
+  const { projects, projectLoading } = useSelector((state: RootState) => state.projects)
   const [statusFilter, setStatusFilter] = useState<Project['status'] | 'All'>('All')
 
   // Filtered and Searched Projects
   const filteredProjects = useMemo(() => {
-    return projectsData.filter(project => {
+    return projects.filter(project => {
       const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        project.description.toLowerCase().includes(searchTerm.toLowerCase())
+        project.description.toLowerCase().includes(searchTerm.toLowerCase())  
 
       const matchesStatus = statusFilter === 'All' || project.status === statusFilter
 
 
       return matchesSearch && matchesStatus
     })
-  }, [searchTerm, statusFilter])
+  }, [searchTerm, statusFilter, projects]);
+
+  // Add formatDate helper function
+  const formatDate = (dateString: string | Date) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  }
+
+  // Add ProjectSkeleton component
+  const ProjectSkeleton = () => (
+    <Card className="dark:bg-gray-800 dark:border-gray-700">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <div className="flex-grow pr-4 space-y-2">
+          <Skeleton className="h-6 w-3/4" />
+          <Skeleton className="h-4 w-full" />
+        </div>
+        <Skeleton className="h-5 w-5 rounded" />
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex justify-between items-center">
+          <Skeleton className="h-5 w-20" />
+        </div>
+        <div className="flex justify-between items-center">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-24" />
+        </div>
+      </CardContent>
+    </Card>
+  )
 
   return (
     <AppLayout>
@@ -139,16 +110,21 @@ export default function Page() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="All">All Statuses</SelectItem>
-              <SelectItem value="Planning">Planning</SelectItem>
-              <SelectItem value="In Progress">In Progress</SelectItem>
-              <SelectItem value="On Hold">On Hold</SelectItem>
-              <SelectItem value="Completed">Completed</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="archived">Archived</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        {/* Projects Grid */}
-        {filteredProjects.length === 0 ? (
+        {/* Projects Grid with Loading State */}
+        {projectLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[...Array(8)].map((_, index) => (
+              <ProjectSkeleton key={index} />
+            ))}
+          </div>
+        ) : filteredProjects.length === 0 ? (
           <div className="text-center text-muted-foreground py-10">
             No projects found matching your search and filters.
           </div>
@@ -175,22 +151,23 @@ export default function Page() {
                       <Badge
                         variant={
                           project.status === 'Completed' ? 'default' :
-                            project.status === 'Planning' ? 'secondary' :
-                              project.status === 'On Hold' ? 'destructive' : 'outline'
+                            project.status === 'active' ? 'secondary' : 'outline'
                         }
                       >
                         {project.status}
                       </Badge>
                     </div>
-                    <Progress value={project.progress} className="w-full" />
                     <div className="flex justify-between items-center text-xs text-muted-foreground">
                       <div className="flex items-center">
                         <Users className="h-3 w-3 mr-1" />
-                        {project.team}
+                        {project.teams.length > 0 
+                          ? project.teams.map(team => team.name).join(', ')
+                          : 'No teams'
+                        }
                       </div>
                       <div className="flex items-center">
                         <Calendar className="h-3 w-3 mr-1" />
-                        {project.startDate}
+                        {project.start_date ? formatDate(project.start_date) : 'No date'}
                       </div>
                     </div>
                   </CardContent>

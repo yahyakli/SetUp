@@ -38,6 +38,15 @@ import { Team, User } from '@/types'
 import UserAvatar from '@/components/UserAvatar'
 import DeleteTeamModal from '@/components/DeleteTeamModal'
 import InviteMembersModal from '@/components/InviteMembersModal'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from '@/components/ui/dialog'
+import { deleteTeamInState } from '@/lib/features/TeamsSlice'
 
 export default function Page() {
   const { id } = useParams()
@@ -51,6 +60,7 @@ export default function Page() {
   const [activeTab, setActiveTab] = useState('members')
   const [teamOwner, setTeamOwner] = useState<string | undefined>('');
   const [showInviteModal, setShowInviteModal] = useState<boolean>(false);
+  const [showLeaveConfirmation, setShowLeaveConfirmation] = useState(false);
 
   const isTeamMember = team?.members.some(member => member.user_id === user?.id);
 
@@ -178,6 +188,35 @@ export default function Page() {
     </div>
   );
 
+  const handleLeaveTeam = async () => {
+    if (!team || !user) return;
+
+    const teamMember = team.members.find(member => member.user_id === user.id);
+    if (!teamMember) return;
+
+    try {
+      const res = await axios.delete(PROJECT_SERVICE_URL + `/api/team-members/${teamMember.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if(res.status === 200){
+        dispatch(deleteTeamInState(team.id));
+        toast.success('Successfully left the team');
+        router.push('/teams');
+      }
+
+    } catch (err) {
+      console.error(err);
+      if (err instanceof AxiosError) {
+        toast.error(err.response?.data.message || 'Failed to leave team');
+      } else {
+        toast.error('Failed to leave team');
+      }
+    }
+  };
+
   return (
     <AppLayout>
       <div className="p-6 space-y-6 dark:bg-gray-900 bg-gray-50 min-h-screen">
@@ -273,12 +312,10 @@ export default function Page() {
                     <ClipboardList className="h-4 w-4 mr-2" />
                     Projects
                   </TabsTrigger>
-                  {teamOwner === user?.id && (
-                    <TabsTrigger value="settings">
-                      <Settings className="h-4 w-4 mr-2" />
-                      Settings
-                    </TabsTrigger>
-                  )}
+                  <TabsTrigger value="settings">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Settings
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="members" className="space-y-4">
@@ -401,23 +438,41 @@ export default function Page() {
                 </TabsContent>
 
 
-                {teamOwner === user?.id && (
-                  <TabsContent value="settings">
-                    <Card className="dark:bg-gray-800 dark:border-gray-700">
-                      <CardHeader>
-                        <CardTitle>Team Settings</CardTitle>
+                <TabsContent value="settings">
+                  <Card className="dark:bg-gray-800 dark:border-gray-700">
+                    <CardHeader>
+                      <CardTitle>Team Settings</CardTitle>
+                      {user?.id === teamOwner && (
                         <CardDescription>
                           Manage your team settings and permissions
                         </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="dark:text-gray-300 mb-4">
-                          Team settings can only be managed by team administrators.
-                        </p>
+                      )}
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-6">
+                        {/* Leave Team Section for non-owners */}
+                        {isTeamMember && user?.id !== teamOwner && (
+                          <div>
+                            <h3 className="text-lg font-medium mb-2">Leave Team</h3>
+                            <p className="text-muted-foreground mb-4">
+                              You will lose access to all team resources and projects.
+                            </p>
+                            <Button
+                              variant="destructive"
+                              onClick={() => setShowLeaveConfirmation(true)}
+                            >
+                              Leave Team
+                            </Button>
+                          </div>
+                        )}
 
-                        <div className="space-y-6">
+                        {/* Delete Team Section - only visible to owner */}
+                        {user?.id === teamOwner && (
                           <div>
                             <h3 className="text-lg font-medium mb-2">Danger Zone</h3>
+                            <p className="text-muted-foreground mb-4">
+                              Once you delete a team, there is no going back.
+                            </p>
                             <Button
                               onClick={() => setShowDeleteModal(true)}
                               variant="destructive"
@@ -425,22 +480,50 @@ export default function Page() {
                               Delete Team
                             </Button>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
 
-                    {/* Delete Team Modal */}
-                    {team && (
-                      <DeleteTeamModal
-                        teamId={id as string}
-                        teamName={team.name}
-                        isOpen={showDeleteModal}
-                        onClose={() => setShowDeleteModal(false)}
-                        token={token}
-                      />
-                    )}
-                  </TabsContent>
-                )}
+                  {/* Leave Team Confirmation Dialog */}
+                  {showLeaveConfirmation && (
+                    <Dialog open={showLeaveConfirmation} onOpenChange={setShowLeaveConfirmation}>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Leave Team</DialogTitle>
+                          <DialogDescription>
+                            Are you sure you want to leave {team?.name}? This action cannot be undone.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                          <Button
+                            variant="outline"
+                            onClick={() => setShowLeaveConfirmation(false)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            onClick={handleLeaveTeam}
+                          >
+                            Leave Team
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  )}
+
+                  {/* Existing Delete Team Modal */}
+                  {team && (
+                    <DeleteTeamModal
+                      teamId={id as string}
+                      teamName={team.name}
+                      isOpen={showDeleteModal}
+                      onClose={() => setShowDeleteModal(false)}
+                      token={token}
+                    />
+                  )}
+                </TabsContent>
               </Tabs>
             </>
           ) : (
