@@ -1,0 +1,12 @@
+import dotenv from 'dotenv';
+import mongoose from 'mongoose';
+
+dotenv.config();
+
+export const DBConnection = async () =>{
+  mongoose.connect(process.env.MONGODB_URL + "/taskservicedb").then(() => {
+    console.log('Connected to MongoDB');
+  }).catch((error) => {
+    console.error('Error connecting to MongoDB:', error);
+  });
+} 
