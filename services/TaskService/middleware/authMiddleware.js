@@ -1,4 +1,3 @@
-
 import jwt from 'jsonwebtoken';
 import { ResponseHandler } from '../utils/responseHandler.js';
 
@@ -16,14 +15,8 @@ export const authenticate = (req, res, next) => {
 
     const token = authHeader.split(' ')[1];
 
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // Attach user info to request
-    req.user = {
-      id: decoded.id,
-      role: decoded.role
-    };
+    // Verify token using HS256 and Base64-encoded secret
+    const decoded = jwt.verify(token, Buffer.from(process.env.JWT_SECRET, 'base64'));
 
     next();
   } catch (error) {
@@ -31,6 +24,6 @@ export const authenticate = (req, res, next) => {
       return ResponseHandler.error(res, 'Token expired', 401);
     }
 
-    return ResponseHandler.error(res, 'Invalid token', 401);
+    return ResponseHandler.error(res, `Invalid token: ${error.message}`, 401);
   }
 };

@@ -22,14 +22,8 @@ export class TaskController {
         return ResponseHandler.error(res, 'Validation error', 400, error.details);
       }
 
-      // Add creator ID from authenticated user
-      const taskData = {
-        ...value,
-        creator_id: req.user.id
-      };
-
       // Create task
-      const task = await Task.create(taskData);
+      const task = await Task.create(value);
 
       return ResponseHandler.success(res, 'Task created successfully', task, 201);
     } catch (error) {
@@ -45,59 +39,9 @@ export class TaskController {
    */
   static async getAllTasks(req, res) {
     try {
-      const {
-        status,
-        priority,
-        project_id,
-        assignee_id,
-        search,
-        sort_by = 'created_at',
-        sort_order = 'DESC',
-        page = 1,
-        limit = 10
-      } = req.query;
+      const tasks = await Task.find({});
 
-      // Build filter conditions
-      const filter = {};
-
-      if (status) filter.status = status;
-      if (priority) filter.priority = priority;
-      if (project_id) filter.project_id = project_id;
-      if (assignee_id) filter.assignee_id = assignee_id;
-
-      if (search) {
-        filter.$or = [
-          { title: { $regex: search, $options: 'i' } },
-          { description: { $regex: search, $options: 'i' } },
-          { label: { $regex: search, $options: 'i' } }
-        ];
-      }
-
-      // Pagination
-      const skip = (page - 1) * limit;
-
-      // Query tasks with count
-      const tasks = await Task.find(filter)
-        .sort({ [sort_by]: sort_order === 'DESC' ? -1 : 1 })
-        .skip(skip)
-        .limit(parseInt(limit))
-        .populate('Comments', 'id')
-        .populate('Attachments', 'id');
-
-      const count = await Task.countDocuments(filter);
-
-      // Calculate pagination info
-      const totalPages = Math.ceil(count / limit);
-
-      return ResponseHandler.success(res, 'Tasks retrieved successfully', {
-        tasks,
-        pagination: {
-          total: count,
-          page: parseInt(page),
-          limit: parseInt(limit),
-          totalPages
-        }
-      });
+      return ResponseHandler.success(res, 'Tasks retrieved successfully', tasks);
     } catch (error) {
       console.error('Error getting tasks:', error);
       return ResponseHandler.error(res, 'Failed to retrieve tasks', 500);

@@ -19,7 +19,10 @@ export const createTaskSchema = Joi.object({
   due_date: Joi.date().iso().allow(null),
   estimated_hours: Joi.number().integer().min(0).allow(null),
   actual_hours: Joi.number().integer().min(0).allow(null),
-  label: Joi.string().max(255).allow('', null)
+  label: Joi.string().max(255).allow('', null),
+  creator_id: Joi.string().required().messages({
+    'string.empty': 'Creator ID is required'
+  })
 });
 
 export const updateTaskSchema = Joi.object({
