@@ -7,7 +7,7 @@ export const createTaskSchema = Joi.object({
     'string.max': 'Title cannot exceed 255 characters'
   }),
   description: Joi.string().allow('', null),
-  status: Joi.string().valid('todo', 'in_proggress', 'review', 'completed').default('todo'),
+  status: Joi.string().valid('todo', 'in_progress', 'review', 'completed').default('todo'),
   priority: Joi.string().valid('low', 'medium', 'high', 'urgent').default('low'),
   project_id: Joi.number().integer().required().messages({
     'number.base': 'Project ID must be a number',
@@ -27,7 +27,7 @@ export const updateTaskSchema = Joi.object({
     'string.max': 'Title cannot exceed 255 characters'
   }),
   description: Joi.string().allow('', null),
-  status: Joi.string().valid('todo', 'in_proggress', 'review', 'completed'),
+  status: Joi.string().valid('todo', 'in_progress', 'review', 'completed'),
   priority: Joi.string().valid('low', 'medium', 'high', 'urgent'),
   project_id: Joi.number().integer().messages({
     'number.base': 'Project ID must be a number'
@@ -62,23 +62,17 @@ export const updateCommentSchema = Joi.object({
   })
 });
 
-// Attachment validation schemas
+// Attachment validation schemas - modified to handle file uploads
 export const createAttachmentSchema = Joi.object({
   task_id: Joi.number().integer().required().messages({
     'number.base': 'Task ID must be a number',
     'any.required': 'Task ID is required'
   }),
-  attachment_type: Joi.string().required().messages({
-    'string.empty': 'Attachment type is required'
-  }),
-  attachment_url: Joi.string().required().messages({
-    'string.empty': 'Attachment URL is required'
-  }),
   status: Joi.string().valid('active', 'inactive').default('active')
+  // File will be validated separately in the middleware
 });
 
 export const updateAttachmentSchema = Joi.object({
-  attachment_type: Joi.string(),
-  attachment_url: Joi.string(),
   status: Joi.string().valid('active', 'inactive')
+  // File will be validated separately in the middleware
 });

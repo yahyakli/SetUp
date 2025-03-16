@@ -3,17 +3,24 @@ import mongoose from 'mongoose';
 const attachmentSchema = new mongoose.Schema(
   {
     task_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: true,
-      ref: 'Task',
+      type: Number,
+      required: true
     },
     attachment_type: {
       type: String,
-      required: true,
+      required: true
     },
     attachment_url: {
       type: String,
-      required: true,
+      required: true
+    },
+    original_filename: {
+      type: String,
+      required: true
+    },
+    file_size: {
+      type: Number,
+      required: true
     },
     status: {
       type: String,

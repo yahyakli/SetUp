@@ -1,5 +1,8 @@
 import Attachment from '../models/attachment.js';
 import Task from '../models/task.js';
+import axios from 'axios';
+import FormData from 'form-data';
+import fs from 'fs';
 import { ResponseHandler } from '../utils/responseHandler.js';
 import { createAttachmentSchema, updateAttachmentSchema } from '../utils/validationSchemas.js';
 
@@ -26,12 +29,49 @@ export class AttachmentController {
         return ResponseHandler.error(res, 'Task not found', 404);
       }
 
-      // Create attachment
-      const attachment = await Attachment.create(value);
+      // Check if file is provided
+      if (!req.file) {
+        return ResponseHandler.error(res, 'No file uploaded', 400);
+      }
+
+      // Create FormData to send file to storage service
+      const formData = new FormData();
+      formData.append('file', fs.createReadStream(req.file.path));
+      formData.append('task_id', value.task_id.toString());
+      formData.append('entity_type', 'attachment');
+
+      // Send file to storage service
+      const storageResponse = await axios.post('http://localhost:3030/api/files', formData, {
+        headers: {
+          ...formData.getHeaders(),
+          'Authorization': req.headers.authorization // Forward the bearer token
+        }
+      });
+
+      // Create attachment with file URL
+      const attachmentData = {
+        task_id: value.task_id,
+        attachment_type: req.file.mimetype,
+        attachment_url: storageResponse.data.url,
+        status: value.status || 'active',
+        original_filename: req.file.originalname,
+        file_size: req.file.size
+      };
+
+      const attachment = await Attachment.create(attachmentData);
+
+      // Remove temp file
+      fs.unlinkSync(req.file.path);
 
       return ResponseHandler.success(res, 'Attachment created successfully', attachment, 201);
     } catch (error) {
       console.error('Error creating attachment:', error);
+
+      // Clean up temp file if it exists
+      if (req.file && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+
       return ResponseHandler.error(res, 'Failed to create attachment', 500);
     }
   }
@@ -109,6 +149,42 @@ export class AttachmentController {
         return ResponseHandler.error(res, 'Validation error', 400, error.details);
       }
 
+      // If there's a new file, upload it
+      if (req.file) {
+        // Create FormData to send file to storage service
+        const formData = new FormData();
+        formData.append('file', fs.createReadStream(req.file.path));
+        formData.append('task_id', attachment.task_id.toString());
+        formData.append('entity_type', 'attachment');
+
+        // Send file to storage service
+        const storageResponse = await axios.post('http://localhost:3030/api/files', formData, {
+          headers: {
+            ...formData.getHeaders(),
+            'Authorization': req.headers.authorization
+          }
+        });
+
+        // Delete old file
+        await axios.delete('http://localhost:3030/api/files/delete', {
+          headers: {
+            'Authorization': req.headers.authorization
+          },
+          data: {
+            url: attachment.attachment_url
+          }
+        });
+
+        // Update attachment data
+        value.attachment_url = storageResponse.data.url;
+        value.attachment_type = req.file.mimetype;
+        value.original_filename = req.file.originalname;
+        value.file_size = req.file.size;
+
+        // Remove temp file
+        fs.unlinkSync(req.file.path);
+      }
+
       // Update attachment
       Object.assign(attachment, value);
       await attachment.save();
@@ -116,6 +192,12 @@ export class AttachmentController {
       return ResponseHandler.success(res, 'Attachment updated successfully', attachment);
     } catch (error) {
       console.error('Error updating attachment:', error);
+
+      // Clean up temp file if it exists
+      if (req.file && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+
       return ResponseHandler.error(res, 'Failed to update attachment', 500);
     }
   }
@@ -135,7 +217,19 @@ export class AttachmentController {
         return ResponseHandler.error(res, 'Attachment not found', 404);
       }
 
-      // Delete attachment (or set status to inactive)
+      // Delete file from storage service
+      if (attachment.attachment_url) {
+        await axios.delete('http://localhost:3030/api/files/delete', {
+          headers: {
+            'Authorization': req.headers.authorization
+          },
+          data: {
+            url: attachment.attachment_url
+          }
+        });
+      }
+
+      // Delete attachment record
       await attachment.deleteOne();
 
       return ResponseHandler.success(res, 'Attachment deleted successfully');
