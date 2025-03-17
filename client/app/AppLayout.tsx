@@ -10,11 +10,10 @@ import { initTeams, setTeamsLoading } from "@/lib/features/TeamsSlice";
 import { fetchUser } from "@/lib/features/userSlice";
 import { AppDispatch, RootState } from "@/lib/store";
 import { Team } from "@/types";
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 import { redirect } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { toast } from "sonner";
 
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const dispatch = useDispatch<AppDispatch>();
@@ -52,9 +51,6 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
           }
         } catch (err) {
           console.log(err);
-          if (err instanceof AxiosError) {
-            toast.error(err.message);
-          }
         } finally {
           dispatch(setTeamsLoading(false));
         }
@@ -73,10 +69,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
             dispatch(initProjects(res.data.projects));
           }
         } catch (err) {
-          console.log(err)
-          if (err instanceof AxiosError) {
-            toast.error(err.message);
-          }
+          console.log(err);
         } finally {
           dispatch(setProjectLoading(false));
         }
