@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const attachmentSchema = new mongoose.Schema(
   {
     task_id: {
-      type: Number,
+      type: mongoose.Schema.Types.ObjectId,
       required: true
     },
     attachment_type: {

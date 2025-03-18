@@ -46,9 +46,8 @@ export const updateTaskSchema = Joi.object({
 
 // Comment validation schemas
 export const createCommentSchema = Joi.object({
-  task_id: Joi.number().integer().required().messages({
-    'number.base': 'Task ID must be a number',
-    'any.required': 'Task ID is required'
+  task_id: Joi.string().required().messages({
+    'string.empty': 'Task ID is required'
   }),
   comment: Joi.string().required().messages({
     'string.empty': 'Comment is required'
@@ -56,7 +55,10 @@ export const createCommentSchema = Joi.object({
   project_id: Joi.number().integer().required().messages({
     'number.base': 'Project ID must be a number',
     'any.required': 'Project ID is required'
-  })
+  }),
+  creator_id: Joi.string().required().messages({
+    'string.empty': 'Creator ID is required'
+  }),
 });
 
 export const updateCommentSchema = Joi.object({
@@ -67,9 +69,8 @@ export const updateCommentSchema = Joi.object({
 
 // Attachment validation schemas - modified to handle file uploads
 export const createAttachmentSchema = Joi.object({
-  task_id: Joi.number().integer().required().messages({
-    'number.base': 'Task ID must be a number',
-    'any.required': 'Task ID is required'
+  task_id: Joi.string().required().messages({
+    'string.empty': 'Task ID is required'
   }),
   status: Joi.string().valid('active', 'inactive').default('active')
   // File will be validated separately in the middleware

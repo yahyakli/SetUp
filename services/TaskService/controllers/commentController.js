@@ -26,14 +26,8 @@ export class CommentController {
         return ResponseHandler.error(res, 'Task not found', 404);
       }
 
-      // Add creator ID from authenticated user
-      const commentData = {
-        ...value,
-        creator_id: req.user.id
-      };
-
       // Create comment
-      const comment = await Comment.create(commentData);
+      const comment = await Comment.create(value);
 
       return ResponseHandler.success(res, 'Comment created successfully', comment, 201);
     } catch (error) {

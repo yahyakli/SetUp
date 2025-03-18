@@ -15,7 +15,6 @@ export const authenticate = (req, res, next) => {
 
     const token = authHeader.split(' ')[1];
 
-    // Verify token using HS256 and Base64-encoded secret
     const decoded = jwt.verify(token, Buffer.from(process.env.JWT_SECRET, 'base64'));
 
     next();

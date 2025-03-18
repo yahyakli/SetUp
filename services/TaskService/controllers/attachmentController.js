@@ -24,7 +24,7 @@ export class AttachmentController {
     }
 
     // Create task directory if it doesn't exist
-    const taskDir = path.join(uploadsDir, taskId.toString());
+    const taskDir = path.join(uploadsDir, taskId);
     if (!fs.existsSync(taskDir)) {
       fs.mkdirSync(taskDir, { recursive: true });
     }
@@ -33,7 +33,7 @@ export class AttachmentController {
     const fileExtension = path.extname(file.name);
     const fileName = `${uuidv4()}${fileExtension}`;
     const filePath = path.join(taskDir, fileName);
-    const relativePath = path.join('uploads', taskId.toString(), fileName);
+    const relativePath = path.join('uploads', taskId, fileName);
 
     // Save file
     await file.mv(filePath);
