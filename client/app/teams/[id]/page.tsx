@@ -25,7 +25,9 @@ import {
   Settings,
   ClipboardList,
   UserPlus,
-  Shield
+  Shield,
+  CalendarIcon,
+  ArrowUpRight
 } from 'lucide-react'
 import AppLayout from '../../AppLayout'
 import Link from 'next/link'
@@ -47,6 +49,7 @@ import {
   DialogTitle
 } from '@/components/ui/dialog'
 import { deleteTeamInState } from '@/lib/features/TeamsSlice'
+import { format } from 'date-fns'
 
 export default function Page() {
   const { id } = useParams()
@@ -63,6 +66,7 @@ export default function Page() {
   const [showLeaveConfirmation, setShowLeaveConfirmation] = useState(false);
 
   const isTeamMember = team?.members.some(member => member.user_id === user?.id);
+  console.log(team);
 
   useEffect(() => {
     if (token && user?.id && id) {
@@ -366,73 +370,63 @@ export default function Page() {
                       onClose={() => setShowInviteModal(false)}
                       token={token}
                       existingMembers={team.members.map(member => member.user_id)}
-                      onMemberAdded={() => {
-                        // Reload team data after adding members
-                        const loadTeam = async () => {
-                          try {
-                            const res = await axios.get(PROJECT_SERVICE_URL + `/api/teams/${id}`, {
-                              headers: {
-                                Authorization: `Bearer ${token}`
-                              }
-                            });
-
-                            if (res.status === 200) {
-                              const teamData: Team = res.data.team;
-                              setTeam(teamData);
-
-                              // Update user data for new members
-                              const newMemberIds = teamData.members
-                                .map(member => member.user_id)
-                                .filter(memberId => !Object.keys(usersData).includes(memberId));
-
-                              if (newMemberIds.length > 0) {
-                                const userResponses = await Promise.all(
-                                  newMemberIds.map(async (memberId) => {
-                                    try {
-                                      const userRes = await axios.get(USERS_SERVICE_URL + `/api/users/${memberId}`, {
-                                        headers: {
-                                          Authorization: `Bearer ${token}`
-                                        }
-                                      });
-                                      return userRes.data;
-                                    } catch (error) {
-                                      console.error(`Failed to fetch user ${memberId}`, error);
-                                      return null;
-                                    }
-                                  })
-                                );
-
-                                const newUserData = userResponses.filter(Boolean).reduce((acc, userData) => {
-                                  acc[userData.id] = userData;
-                                  return acc;
-                                }, {});
-
-                                setUsersData({
-                                  ...usersData,
-                                  ...newUserData
-                                });
-                              }
-                            }
-                          } catch (error) {
-                            console.error('Error reloading team:', error);
-                            toast.error('Failed to refresh team data');
-                          }
-                        };
-
-                        loadTeam();
-                      }}
                     />
                   )}
                 </TabsContent>
 
                 <TabsContent value="projects">
                   <Card className="dark:bg-gray-800 dark:border-gray-700">
-                    <CardContent className="pt-6">
-                      <div className="text-center py-8">
-                        <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                        <h3 className="text-lg font-medium mb-2">No Projects Yet</h3>
-                        <p className="text-muted-foreground mb-4">This team doesn&#39;t have any active projects.</p>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                      <div>
+                        <CardTitle>Team Projects</CardTitle>
+                        <CardDescription>Projects this team is working on</CardDescription>
                       </div>
+                    </CardHeader>
+                    <CardContent>
+                      {team.projects && team.projects.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {team.projects.map((project) => (
+                            <Card key={project.id} className="overflow-hidden dark:bg-gray-700 dark:border-gray-600 hover:shadow-md transition-shadow">
+                              <CardHeader className="p-4 pb-2">
+                                <div className="flex justify-between items-start">
+                                  <CardTitle className="text-lg">{project.name}</CardTitle>
+                                  <Badge variant={
+                                    project.status === 'completed' ? 'default' :
+                                    project.status === 'active' ? 'secondary' : 'outline'
+                                  }>
+                                    {project.status}
+                                  </Badge>
+                                </div>
+                                <CardDescription className="line-clamp-2">
+                                  {project.description || 'No description provided'}
+                                </CardDescription>
+                              </CardHeader>
+                              <CardContent className="p-4 pt-2">
+                                <div className="flex items-center text-sm text-muted-foreground mb-3">
+                                  <CalendarIcon className="h-4 w-4 mr-1" />
+                                  <span>
+                                    {project.end_date ? 
+                                      `Due ${format(new Date(project.end_date), 'MMM d, yyyy')}` : 
+                                      'No due date'}
+                                  </span>
+                                </div>
+                                <a href={`/projects/${project.id}`} target="_blank" rel="noopener noreferrer">
+                                  <Button variant="outline" className="w-full mt-2 flex items-center justify-center">
+                                    <span>View Project</span>
+                                    <ArrowUpRight className="ml-2 h-4 w-4" />
+                                  </Button>
+                                </a>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8">
+                          <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                          <h3 className="text-lg font-medium mb-2">No Projects Yet</h3>
+                          <p className="text-muted-foreground mb-4">This team doesn&#39;t have any active projects.</p>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>

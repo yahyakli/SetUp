@@ -51,6 +51,7 @@ export interface Team {
   members: TeamMember[];
   created_at: Date;
   updated_at: Date;
+  projects: Project[] | null;
 }
 
 

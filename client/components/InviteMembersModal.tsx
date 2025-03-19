@@ -31,8 +31,7 @@ interface InviteMembersModalProps {
   isOpen: boolean;
   onClose: () => void;
   token: string | null;
-  existingMembers: string[]; // Array of existing member IDs to exclude from results
-  onMemberAdded: () => void; // Callback to refresh team data after adding a member
+  existingMembers: string[];
 }
 
 interface SelectedUserWithRole extends User {
@@ -52,8 +51,7 @@ const InviteMembersModal: React.FC<InviteMembersModalProps> = ({
   isOpen,
   onClose,
   token,
-  existingMembers,
-  onMemberAdded
+  existingMembers
 }) => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [searchResults, setSearchResults] = useState<User[]>([]);
@@ -180,8 +178,7 @@ const InviteMembersModal: React.FC<InviteMembersModalProps> = ({
 
       await Promise.all(promises);
 
-      toast.success(`Successfully added ${selectedUsers.length} member${selectedUsers.length > 1 ? 's' : ''}`);
-      onMemberAdded();
+      toast.success(`Notifications have been successfully sent to ${selectedUsers.length} member${selectedUsers.length > 1 ? 's' : ''}`);
       onClose();
     } catch (error) {
       console.error('Error inviting members:', error);

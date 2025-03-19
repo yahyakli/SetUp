@@ -42,7 +42,7 @@ class TeamController extends Controller
             'user_id' => $request->user_id,
             'role' => 'owner',
         ]);
-        return response()->json($team, 201);
+        return response()->json($team->load('members'), 201);
     }
 
     /**
@@ -50,9 +50,10 @@ class TeamController extends Controller
      */
     public function show($id)
     {
-        $team = Team::findOrFail($id)->load('members');
+        $team = Team::with(['members', 'projects'])->findOrFail($id);
         return response()->json(['team' => $team], 200);
     }
+
 
     /**
      * Update the specified team in storage.
@@ -117,7 +118,7 @@ class TeamController extends Controller
         if ($existingMember) {
             return response()->json(['message' => 'User is already a member of this team'], 422);
         }
-        
+
         // Check if there's already a pending invitation
         $existingInvitation = Invitation::where('team_id', $request->team_id)
             ->where('user_id', $request->user_id)

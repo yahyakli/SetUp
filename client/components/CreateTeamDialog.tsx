@@ -63,10 +63,10 @@ const CreateTeamDialog: React.FC<CreateTeamDialogProps> = ({ open, onOpenChange 
 
       if (response.status !== 201) {
         toast.error("Failed to create team. Please try again.");
-        dispatch(addTeam(response.data));
         return;
       }
-
+      
+      dispatch(addTeam(response.data));
       toast.success(`Team "${formData.name}" has been created.`);
       onOpenChange(false);
       setFormData({ name: '', description: '', user_id: user?.id });

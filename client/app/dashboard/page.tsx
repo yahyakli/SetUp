@@ -1,7 +1,8 @@
+"use client";
+
 import React from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
 import {
   Clock,
@@ -11,16 +12,8 @@ import {
 } from 'lucide-react'
 import AppLayout from '../AppLayout'
 import Link from 'next/link'
-
-// Fake Data Interfaces
-interface Project {
-  id: string
-  name: string
-  progress: number
-  team: string
-  status: 'In Progress' | 'Completed' | 'On Hold'
-  dueDate: string
-}
+import { RootState } from '@/lib/store'
+import { useSelector } from 'react-redux'
 
 interface Task {
   id: string
@@ -30,42 +23,6 @@ interface Task {
   dueDate: string
   completed: boolean
 }
-
-// Fake Data
-const recentProjects: Project[] = [
-  {
-    id: 'proj1',
-    name: 'Customer Portal Redesign',
-    progress: 65,
-    team: 'Design Team',
-    status: 'In Progress',
-    dueDate: '2024-04-30'
-  },
-  {
-    id: 'proj2',
-    name: 'Marketing Automation',
-    progress: 45,
-    team: 'Marketing Tech',
-    status: 'In Progress',
-    dueDate: '2024-05-15'
-  },
-  {
-    id: 'proj3',
-    name: 'Internal Communication App',
-    progress: 90,
-    team: 'Engineering',
-    status: 'In Progress',
-    dueDate: '2024-03-20'
-  },
-  {
-    id: 'proj4',
-    name: 'Product Analytics Dashboard',
-    progress: 100,
-    team: 'Data Team',
-    status: 'Completed',
-    dueDate: '2024-02-28'
-  }
-]
 
 const myTasks: Task[] = [
   {
@@ -94,7 +51,18 @@ const myTasks: Task[] = [
   }
 ]
 
+
+
 export default function Page() {
+  const { projects } = useSelector((state: RootState) => state.projects);
+
+  const formatDate = (dateString: string | Date) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  }
   return (
     <AppLayout>
       <div className="p-6 space-y-8 dark:bg-gray-900 bg-gray-50">
@@ -102,7 +70,7 @@ export default function Page() {
         <section>
           <h2 className="text-2xl font-bold mb-4 dark:text-white">Your Work</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {recentProjects.map((project) => (
+            {projects.map((project) => (
               <Link key={project.id} href={`/projects/${project.id}`}>
                 <Card className="hover:shadow-lg transition-all">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -119,12 +87,11 @@ export default function Page() {
                       >
                         {project.status}
                       </Badge>
-                      <div className="text-xs text-muted-foreground">{project.team}</div>
+                      <div className="text-xs text-muted-foreground">{project.teams.map((team) => team.name).join(', ')}</div>
                     </div>
-                    <Progress value={project.progress} className="w-full" />
                     <div className="flex justify-between items-center mt-2">
                       <span className="text-xs text-muted-foreground">
-                        Due: {project.dueDate}
+                        Due: {formatDate(project.start_date)}
                       </span>
                       <Users className="h-4 w-4 text-muted-foreground" />
                     </div>
