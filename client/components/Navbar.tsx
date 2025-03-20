@@ -24,18 +24,20 @@ import UserAvatar from './UserAvatar';
 import { logout } from '@/lib/features/userSlice';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import CreateTeamDialog from './CreateTeamDialog';
-import { Project, Team } from '@/types';
+import { Project, Team, Task } from '@/types';
 
 export const Navbar = () => {
   const { teams } = useSelector((state: RootState) => state.teams);
   const { projects } = useSelector((state: RootState) => state.projects)
   const { user } = useSelector((state: RootState) => state.user);
   const { invitations } = useSelector((state: RootState) => state.Invitations);
+  const { tasks } = useSelector((state: RootState) => state.tasks);
   const dispatch = useDispatch();
   const pathname = usePathname();
   const router = useRouter();
   const [recentTeams, setRecentTeams] = useState<Team[]>([]);
   const [recentProjects, setRecentProjects] = useState<Project[]>([]);
+  const [recentTasks, setRecentTasks] = useState<Task[]>([]);
 
   const [createTeamDialogOpen, setCreateTeamDialogOpen] = useState(false);
 
@@ -50,6 +52,17 @@ export const Navbar = () => {
       setRecentProjects(projects.slice(0, 3));
     }
   }, [projects]);
+
+  useEffect(() => {
+    if (tasks.length > 0) {
+      // Sort tasks by updated_at in descending order and take the first 6
+      const sortedTasks = [...tasks].sort((a, b) => 
+        new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      ).slice(0, 6);
+      
+      setRecentTasks(sortedTasks);
+    }
+  }, [tasks]);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -145,38 +158,29 @@ export const Navbar = () => {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Chat Dropdown */}
+          {/* Tasks Dropdown - Replacing Chat */}
           <DropdownMenu>
-            <DropdownMenuTrigger className={`cursor-pointer p-1 text-sm font-medium ${isActive('/chat') ? 'text-foreground' : 'text-muted-foreground'} hover:text-foreground/80 transition-colors py-2 flex items-center`}>
-              Chat
+            <DropdownMenuTrigger className={`cursor-pointer p-1 text-sm font-medium ${isActive('/tasks') ? 'text-foreground' : 'text-muted-foreground'} hover:text-foreground/80 transition-colors py-2 flex items-center`}>
+              Tasks
               <ChevronDown className="ml-2 h-4 w-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-64">
-              <DropdownMenuLabel className='font-light text-xs dark:text-gray-300 text-gray-500'>Chat Groups</DropdownMenuLabel>
-              <DropdownMenuItem asChild>
-                <Link href="/chat/groups/team-alpha" className="cursor-pointer">
-                  Team Alpha
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/chat/groups/marketing" className="cursor-pointer">
-                  Marketing Team
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/chat/groups/engineering" className="cursor-pointer">
-                  Engineering Group
-                </Link>
-              </DropdownMenuItem>
+              <DropdownMenuLabel className='font-light text-xs dark:text-gray-300 text-gray-500'>Recent Tasks</DropdownMenuLabel>
+              {recentTasks.length > 0 ? (
+                recentTasks.map((task) => (
+                  <DropdownMenuItem key={task.id} asChild>
+                    <Link href={`/tasks/${task.id}`} className="cursor-pointer">
+                      {task.title}
+                    </Link>
+                  </DropdownMenuItem>
+                ))
+              ) : (
+                <DropdownMenuItem disabled>No recent tasks</DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/chat/groups/create" className="cursor-pointer">
-                  Create New Group
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/chat" className="font-semibold cursor-pointer">
-                  All Chats
+                <Link href="/tasks" className="font-semibold cursor-pointer">
+                  All My Tasks
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -352,41 +356,30 @@ export const Navbar = () => {
                   </AccordionContent>
                 </AccordionItem>
 
-                {/* Chat Accordion */}
-                <AccordionItem value="chat" className="border-b">
-                  <AccordionTrigger className={`px-4 ${isActive('/chat') ? 'text-foreground' : 'text-muted-foreground'}`}>
-                    Chat
+                {/* Tasks Accordion - Replacing Chat */}
+                <AccordionItem value="tasks" className="border-b">
+                  <AccordionTrigger className={`px-4 ${isActive('/tasks') ? 'text-foreground' : 'text-muted-foreground'}`}>
+                    Tasks
                   </AccordionTrigger>
                   <AccordionContent className="px-4 pb-4 space-y-2">
+                    {recentTasks.length > 0 ? (
+                      recentTasks.map((task) => (
+                        <Link
+                          key={task.id}
+                          href={`/tasks/${task.id}`}
+                          className="block text-sm text-muted-foreground hover:text-foreground"
+                        >
+                          {task.title}
+                        </Link>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No recent tasks</p>
+                    )}
                     <Link
-                      href="/chat/groups/team-alpha"
-                      className="block text-sm text-muted-foreground hover:text-foreground"
-                    >
-                      Team Alpha
-                    </Link>
-                    <Link
-                      href="/chat/groups/marketing"
-                      className="block text-sm text-muted-foreground hover:text-foreground"
-                    >
-                      Marketing Team
-                    </Link>
-                    <Link
-                      href="/chat/groups/engineering"
-                      className="block text-sm text-muted-foreground hover:text-foreground"
-                    >
-                      Engineering Group
-                    </Link>
-                    <Link
-                      href="/chat/groups/create"
-                      className="block text-sm text-muted-foreground hover:text-foreground"
-                    >
-                      Create New Group
-                    </Link>
-                    <Link
-                      href="/chat"
+                      href="/tasks"
                       className="block text-sm font-semibold text-muted-foreground hover:text-foreground"
                     >
-                      All Chats
+                      All Tasks
                     </Link>
                   </AccordionContent>
                 </AccordionItem>

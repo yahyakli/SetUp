@@ -20,7 +20,7 @@ export const removeInvitation = createAction<string>('invitations/remove');
 
 // Create slice
 const invitationSlice = createSlice({
-  name: "teams",
+  name: "invitations",
   initialState,
   reducers: {
     setInvitationLoading: (state, action: PayloadAction<boolean>) => {

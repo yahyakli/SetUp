@@ -49,6 +49,18 @@ const taskSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    Attachments: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Attachment',
+      }
+    ],
+    Comments: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Comment',
+      }
+    ],
   },
   {
     timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },

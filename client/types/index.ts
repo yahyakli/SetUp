@@ -54,6 +54,22 @@ export interface Team {
   projects: Project[] | null;
 }
 
+export interface Task {
+  id: string;
+  title: string;
+  description: string;
+  status: string;
+  priority: string;
+  project_id: number;
+  assignee_id: string;
+  creator_id: string;
+  due_date: Date | null;
+  estimated_hours: number | null;
+  actual_hours: number | null;
+  label: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
 
 export interface AuthState {
   token: string | null;

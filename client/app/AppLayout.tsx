@@ -3,9 +3,10 @@
 import { Footer } from "@/components/Footer";
 import Loader from "@/components/Loader";
 import { Navbar } from "@/components/Navbar";
-import { PROJECT_SERVICE_URL } from "@/constants/API_URLS";
+import { PROJECT_SERVICE_URL, TASK_SERVICE_URL } from "@/constants/API_URLS";
 import { initInvitations } from "@/lib/features/InvitationsSlice";
 import { initProjects, setProjectLoading } from "@/lib/features/ProjectsSlice";
+import { initTasks } from "@/lib/features/TasksSlice";
 import { initTeams, setTeamsLoading } from "@/lib/features/TeamsSlice";
 import { fetchUser } from "@/lib/features/userSlice";
 import { AppDispatch, RootState } from "@/lib/store";
@@ -35,7 +36,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   }, [dispatch, token]);
 
   useEffect(() => {
-    if (user?.id) {
+    if (user?.id && token) {
       const initTeamsFunc = async () => {
         dispatch(setTeamsLoading(true));
         try {
@@ -92,12 +93,25 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         }
       }
 
-      if (user?.id) {
-        getUserInvitations();
+      const getUserTasks = async () => {
+        try {
+          const res = await axios.get(TASK_SERVICE_URL + "/api/tasks/user/" + user.id, {
+            headers: {
+              Authorization: "Bearer " + token
+            }
+          });
+          
+          if(res.status === 200){
+            dispatch(initTasks(res.data.data));
+          }
+        }catch(err){
+          console.log(err);
+        }
       }
-
       initTeamsFunc();
       initProjectFunc();
+      getUserInvitations();
+      getUserTasks()
     }
   }, [user?.id]);
 

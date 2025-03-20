@@ -53,6 +53,8 @@ import {
 } from "@/components/ui/popover"
 import { updateProject } from '@/lib/features/ProjectsSlice'
 import RemoveTeamModal from '@/components/RemoveTeamModal'
+import Link from 'next/link'
+import ProjectTasksTab from '@/components/ProjectTasksTab'
 
 export default function ProjectPage() {
   const dispatch = useDispatch()
@@ -114,12 +116,12 @@ export default function ProjectPage() {
               The project you&#39;re looking for doesn&#39;t exist or you may not have access to it.
             </p>
             <div className="pt-4">
-              <a
+              <Link
                 href="/projects"
                 className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
               >
                 Return to Projects
-              </a>
+              </Link>
             </div>
           </div>
         </div>
@@ -268,9 +270,7 @@ export default function ProjectPage() {
                 <CardDescription>Manage project tasks and progress</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground text-center py-4">
-                  Task management coming soon...
-                </p>
+                <ProjectTasksTab projectId={project.id} />
               </CardContent>
             </Card>
           </TabsContent>
