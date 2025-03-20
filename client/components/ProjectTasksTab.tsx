@@ -8,14 +8,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Clock, CheckCircle2, Plus, ListTodo, AlertCircle, CalendarClock } from 'lucide-react';
+import { Clock, CheckCircle2, Plus, AlertCircle, CalendarClock } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-export default function ProjectTasksTab({ projectId }: { projectId: number }) {
-  const { token } = useSelector((state: RootState) => state.user);
-  const { projects } = useSelector((state: RootState) => state.projects);
+export default function ProjectTasksTab({ project }: { project: Project }) {
+  const { token, user } = useSelector((state: RootState) => state.user);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +23,7 @@ export default function ProjectTasksTab({ projectId }: { projectId: number }) {
   useEffect(() => {
     const fetchTasks = async () => {
       try {
-        const res = await axios.get(`${TASK_SERVICE_URL}/api/tasks/project/${projectId}`, {
+        const res = await axios.get(`${TASK_SERVICE_URL}/api/tasks/project/${project.id}`, {
           headers: {
             Authorization: `Bearer ${token}`
           }
@@ -40,17 +39,15 @@ export default function ProjectTasksTab({ projectId }: { projectId: number }) {
       }
     };
     
-    if (token && projectId) {
+    if (token && project.id) {
       fetchTasks();
     }
-  }, [projectId, token]);
+  }, [project.id, token]);
 
   const formatDate = (dateString: string | Date) => {
     if (!dateString) return 'No due date';
     return format(new Date(dateString), 'MMM d, yyyy');
   };
-
-  const project = projects.find(p => p.id === projectId);
   
   const completedTasks = tasks.length > 0 ? tasks.filter(task => task.status === 'completed') : [];
   const pendingTasks = tasks.length > 0 ? tasks.filter(task => task.status !== 'completed') : [];
@@ -108,40 +105,20 @@ export default function ProjectTasksTab({ projectId }: { projectId: number }) {
     );
   }
 
-  if (tasks.length === 0) {
-    return (
-      <Card className="p-6 border-dashed">
-        <div className="flex flex-col items-center justify-center text-center py-12">
-          <div className="bg-primary/10 p-4 rounded-full mb-4">
-            <ListTodo className="h-12 w-12 text-primary" />
-          </div>
-          <h3 className="text-xl font-medium mb-3">No Tasks Yet</h3>
-          <p className="text-muted-foreground mb-8 max-w-md">
-            This project doesn&#39;t have any tasks yet. Create your first task to start tracking progress.
-          </p>
-          <Link href={`/tasks/create?project=${projectId}`}>
-            <Button className="flex items-center gap-2 px-6 py-5">
-              <Plus className="h-5 w-5" />
-              Create First Task
-            </Button>
-          </Link>
-        </div>
-      </Card>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h3 className="text-lg font-medium">Tasks ({tasks.length > 0 ? tasks.length : 0})</h3>
         </div>
-        <Link href={`/tasks/create?project=${projectId}`}>
-          <Button size="sm" className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
+        {user?.id === project.owner_id && (
+          <Link href={`/tasks/create/${project.id}`}>
+            <Button size="sm" className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
             Add Task
           </Button>
         </Link>
+        )}
       </div>
 
       <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -172,10 +149,12 @@ function renderTaskList(tasks: Task[], project: Project | undefined, formatDate:
     return (
       <Card className="border-dashed bg-muted/30">
         <CardContent className="flex flex-col items-center justify-center text-center py-10">
-          <CalendarClock className="h-10 w-10 text-muted-foreground mb-3" />
+          <div className="bg-muted/50 p-3 rounded-full mb-3">
+            <CalendarClock className="h-8 w-8 text-muted-foreground" />
+          </div>
           <h4 className="text-base font-medium mb-2">No tasks in this category</h4>
-          <p className="text-sm text-muted-foreground">
-            Try switching to a different tab or create a new task.
+          <p className="text-sm text-muted-foreground max-w-md">
+            Try switching to a different tab or create a new task to see it here.
           </p>
         </CardContent>
       </Card>
@@ -221,9 +200,17 @@ function renderTaskList(tasks: Task[], project: Project | undefined, formatDate:
           </Card>
         </Link>
       )) : (
-        <div className="flex justify-center items-center h-full">
-          <p className="text-muted-foreground">No tasks found</p>
-        </div>
+        <Card className="border-dashed bg-muted/30">
+          <CardContent className="flex flex-col items-center justify-center text-center py-8">
+            <div className="bg-muted/50 p-3 rounded-full mb-3">
+              <AlertCircle className="h-7 w-7 text-amber-500" />
+            </div>
+            <h4 className="text-base font-medium mb-2">No matching tasks</h4>
+            <p className="text-sm text-muted-foreground max-w-md mb-4">
+              We couldn&#39;t find any tasks that match your current filters.
+            </p>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

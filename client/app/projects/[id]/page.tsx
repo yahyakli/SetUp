@@ -270,7 +270,7 @@ export default function ProjectPage() {
                 <CardDescription>Manage project tasks and progress</CardDescription>
               </CardHeader>
               <CardContent>
-                <ProjectTasksTab projectId={project.id} />
+                <ProjectTasksTab project={project} />
               </CardContent>
             </Card>
           </TabsContent>
