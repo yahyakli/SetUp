@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import {
   Card,
   CardContent,
@@ -54,13 +54,27 @@ import { format } from 'date-fns'
 export default function Page() {
   const { id } = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const dispatch = useDispatch()
   const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
   const { user, token } = useSelector((state: RootState) => state.user)
   const [team, setTeam] = useState<Team | null>(null)
   const [usersData, setUsersData] = useState<Record<string, User>>({})
   const [isPending, setIsPending] = useState(true)
-  const [activeTab, setActiveTab] = useState('members')
+  
+  // Get the current tab from URL or default to 'members'
+  const activeTab = searchParams.get('tab') || 'members'
+  
+  // Function to handle tab changes
+  const handleTabChange = (value: string) => {
+    // Create a new URLSearchParams object
+    const params = new URLSearchParams(searchParams.toString())
+    // Set the tab parameter
+    params.set('tab', value)
+    // Update the URL without refreshing the page
+    router.push(`/teams/${id}?${params.toString()}`, { scroll: false })
+  }
+  
   const [teamOwner, setTeamOwner] = useState<string | undefined>('');
   const [showInviteModal, setShowInviteModal] = useState<boolean>(false);
   const [showLeaveConfirmation, setShowLeaveConfirmation] = useState(false);
@@ -305,8 +319,8 @@ export default function Page() {
                 </Card>
               </div>
 
-              {/* Tabs for Team Content */}
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              {/* Tabs for Team Content - Updated to use URL state */}
+              <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
                 <TabsList className="mb-6 w-full justify-start">
                   <TabsTrigger value="members">
                     <Users className="h-4 w-4 mr-2" />

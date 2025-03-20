@@ -1,6 +1,6 @@
 "use client"
 import React, { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '@/lib/store'
 import AppLayout from '../../AppLayout'
@@ -59,6 +59,8 @@ import ProjectTasksTab from '@/components/ProjectTasksTab'
 export default function ProjectPage() {
   const dispatch = useDispatch()
   const { id } = useParams()
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const { projects, projectLoading } = useSelector((state: RootState) => state.projects);
   const { user, token } = useSelector((state: RootState) => state.user);
   const project = projects.find(p => p.id === parseInt(id as string, 10))
@@ -68,6 +70,19 @@ export default function ProjectPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [teamToRemove, setTeamToRemove] = useState<{ id: number, name: string } | null>(null)
   const [verificationCode, setVerificationCode] = useState('')
+  
+  // Get the current tab from URL or default to 'info'
+  const currentTab = searchParams.get('tab') || 'info'
+
+  // Function to handle tab changes
+  const handleTabChange = (value: string) => {
+    // Create a new URLSearchParams object
+    const params = new URLSearchParams(searchParams.toString())
+    // Set the tab parameter
+    params.set('tab', value)
+    // Update the URL without refreshing the page
+    router.push(`/projects/${id}?${params.toString()}`, { scroll: false })
+  }
 
   // Update selectedDate when project data changes
   useEffect(() => {
@@ -148,8 +163,8 @@ export default function ProjectPage() {
           </Badge>
         </div>
 
-        {/* Tabs */}
-        <Tabs defaultValue="info" className="space-y-6">
+        {/* Tabs - Updated to use currentTab from URL */}
+        <Tabs value={currentTab} className="space-y-6" onValueChange={handleTabChange}>
           <TabsList>
             <TabsTrigger value="info" className="flex items-center gap-2">
               <Info className="h-4 w-4" />

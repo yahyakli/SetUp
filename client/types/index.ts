@@ -71,6 +71,23 @@ export interface Task {
   updated_at: Date;
 }
 
+export interface Attachment {
+  // Backend attachment properties
+  id?: string;
+  task_id?: string;
+  attachment_type?: string;
+  attachment_url?: string;
+  original_filename?: string;
+  file_size?: number;
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
+  
+  // Form upload properties
+  file?: File;
+  preview?: string;
+}
+
 export interface AuthState {
   token: string | null;
   user: User | null;

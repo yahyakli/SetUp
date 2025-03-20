@@ -239,4 +239,13 @@
                     .updatedAt(user.getUpdatedAt())
                     .build();
         }
+
+        public List<UserResponse> getUsersByIds(List<String> ids) {
+            return ids.stream()
+                    .map(id -> userRepository.findById(id)
+                            .map(this::mapToUserResponse)
+                            .orElse(null))
+                    .filter(user -> user != null)
+                    .collect(Collectors.toList());
+        }
     }

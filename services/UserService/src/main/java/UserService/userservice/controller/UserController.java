@@ -36,6 +36,11 @@ public class UserController {
         return ResponseEntity.ok(userService.getUser(id));
     }
 
+    @PostMapping("/batch")
+    public ResponseEntity<List<UserResponse>> getUsersByIds(@RequestBody List<String> ids) {
+        return ResponseEntity.ok(userService.getUsersByIds(ids));
+    }
+
     @GetMapping("/search/{term}")
     public ResponseEntity<List<UserResponse>> searchUsersByTerm(@PathVariable String term) {
         return ResponseEntity.ok(userService.searchUsers(term));
