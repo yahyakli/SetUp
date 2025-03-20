@@ -39,7 +39,7 @@ class ProjectController extends Controller
         }
 
         $project = Project::create($request->all());
-        return response()->json(['project' => $project, 'message' => 'Project created successfully'], 201);
+        return response()->json(['project' => $project->load('teams'), 'message' => 'Project created successfully'], 201);
     }
 
     /**
