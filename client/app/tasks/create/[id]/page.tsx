@@ -35,18 +35,19 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import axios from 'axios'
-import { PROJECT_SERVICE_URL } from '@/constants/API_URLS'
+import { PROJECT_SERVICE_URL, USERS_SERVICE_URL } from '@/constants/API_URLS'
 import Link from 'next/link'
-import { Attachment, TeamMember } from '@/types'
+import { Attachment, TeamMember, Project, User } from '@/types'
+import { Avatar } from '@/components/ui/avatar'
+import { AvatarImage } from '@radix-ui/react-avatar'
 
 export default function CreateTaskPage() {
   const router = useRouter()
   const { id } = useParams()
-  const { projects, projectLoading } = useSelector((state: RootState) => state.projects)
   const { user, token } = useSelector((state: RootState) => state.user)
-  const project = projects.find(p => p.id === parseInt(id as string, 10))
-  console.log(project);
   
+  const [project, setProject] = useState<Project | null>(null)
+  const [loading, setLoading] = useState(true)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [status, setStatus] = useState('todo')
@@ -57,24 +58,81 @@ export default function CreateTaskPage() {
   const [selectedTeam, setSelectedTeam] = useState<number | null>(null)
   const [assigneeId, setAssigneeId] = useState<string | null>(null)
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
+  const [teamUsers, setTeamUsers] = useState<User[] | null>([])
   const [attachments, setAttachments] = useState<Attachment[]>([])
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch project data
+  useEffect(() => {
+    const fetchProject = async () => {
+      setLoading(true)
+      try {
+        const response = await axios.get(
+          `${PROJECT_SERVICE_URL}/api/projects/${id}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          }
+        )
+        if (response.status === 200) {
+          setProject(response.data)
+        }
+      } catch (error) {
+        console.error('Error fetching project:', error)
+        toast.error('Failed to load project data')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (token && id) {
+      fetchProject()
+    }
+  }, [id, token])
 
   // Update team members when selected team changes
   useEffect(() => {
-    if (selectedTeam && project) {
-      const team = project.teams.find(t => t.id === selectedTeam)
-      if (team && team.members) {
+    const fetchTeamMembers = async () => {
+      if (!selectedTeam || !project) return
+      
+      try {
+        // Find the selected team
+        const team = project.teams.find(t => t.id === selectedTeam)
+        if (!team || !team.members || team.members.length === 0) {
+          setTeamMembers([])
+          setTeamUsers([])
+          return
+        }
+        
         setTeamMembers(team.members)
-      } else {
-        setTeamMembers([])
+        
+        // Get user details for team members
+        const userIds = team.members.map(member => member.user_id)
+        
+        // Make request to user service to get user details
+        const response = await axios.post(
+          `${USERS_SERVICE_URL}/api/users/batch`,
+          userIds,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        )
+        if (response.status === 200) {
+          setTeamUsers(response.data)
+        }
+      } catch (error) {
+        console.error('Error fetching team members:', error)
+        toast.error('Failed to load team members')
       }
-      // Reset assignee when team changes
-      setAssigneeId(null)
-    } else {
-      setTeamMembers([])
     }
-  }, [selectedTeam, project])
+    
+    fetchTeamMembers()
+    // Reset assignee when team changes
+    setAssigneeId(null)
+  }, [selectedTeam, project, token])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -176,7 +234,7 @@ export default function CreateTaskPage() {
   }
 
   // Loading skeleton
-  if (projectLoading) {
+  if (loading) {
     return (
       <AppLayout>
         <div className="p-6 space-y-6 dark:bg-gray-900 bg-gray-50">
@@ -332,12 +390,23 @@ export default function CreateTaskPage() {
                 {/* Label */}
                 <div className="space-y-2">
                   <Label htmlFor="label">Label</Label>
-                  <Input
-                    id="label"
-                    value={label}
-                    onChange={(e) => setLabel(e.target.value)}
-                    placeholder="Task label (e.g., 'Bug', 'Feature', 'Documentation')"
-                  />
+                  <Select value={label} onValueChange={setLabel}>
+                    <SelectTrigger id="label">
+                      <SelectValue placeholder="Select a label" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="feature">Feature</SelectItem>
+                      <SelectItem value="bug">Bug</SelectItem>
+                      <SelectItem value="enhancement">Enhancement</SelectItem>
+                      <SelectItem value="documentation">Documentation</SelectItem>
+                      <SelectItem value="design">Design</SelectItem>
+                      <SelectItem value="testing">Testing</SelectItem>
+                      <SelectItem value="maintenance">Maintenance</SelectItem>
+                      <SelectItem value="refactor">Refactor</SelectItem>
+                      <SelectItem value="research">Research</SelectItem>
+                      <SelectItem value="infrastructure">Infrastructure</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Team and Assignee */}
@@ -377,11 +446,29 @@ export default function CreateTaskPage() {
                         } />
                       </SelectTrigger>
                       <SelectContent>
-                        {teamMembers.map((member) => (
-                          <SelectItem key={member.id} value={member.id.toString()}>
-                            {member.id}
-                          </SelectItem>
-                        ))}
+                        {teamUsers && teamMembers.map((member) => {
+                          const user = teamUsers.find(u => u.id === member.user_id);
+                          const initials = user ? 
+                            `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}` : 
+                            member.user_id.substring(0, 2);
+                          
+                          return (
+                            <SelectItem key={member.id} value={member.user_id.toString()}>
+                              <div className="flex items-center">
+                                <Avatar className="w-6 h-6 mr-2">
+                                  {user?.avatar ? (
+                                    <AvatarImage src={USERS_SERVICE_URL + user.avatar} alt={user?.firstName || 'User'} />
+                                  ) : (
+                                    <div className="flex h-full w-full items-center justify-center rounded-full bg-muted text-xs font-medium">
+                                      {initials}
+                                    </div>
+                                  )}
+                                </Avatar>
+                                {user ? (user.firstName + ' ' + user.lastName) : member.user_id}
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                   </div>

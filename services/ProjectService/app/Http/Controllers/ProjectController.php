@@ -48,7 +48,7 @@ class ProjectController extends Controller
     public function show($id)
     {
         $project = Project::with('teams.members')->findOrFail($id);
-        return response()->json(['project' => $project], 200);
+        return response()->json($project, 200);
     }
 
     /**

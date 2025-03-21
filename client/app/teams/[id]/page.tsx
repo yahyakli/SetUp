@@ -80,7 +80,6 @@ export default function Page() {
   const [showLeaveConfirmation, setShowLeaveConfirmation] = useState(false);
 
   const isTeamMember = team?.members.some(member => member.user_id === user?.id);
-  console.log(team);
 
   useEffect(() => {
     if (token && user?.id && id) {
@@ -98,34 +97,31 @@ export default function Page() {
             const teamData: Team = res.data.team;
             setTeam(teamData);
 
-
             // Collect all unique member IDs from team
             const memberIds = teamData.members.map(member => member.user_id);
 
-            // Fetch full user data for each member
-            const userResponses = await Promise.all(
-              memberIds.map(async (memberId) => {
-                try {
-                  const userRes = await axios.get(USERS_SERVICE_URL + `/api/users/${memberId}`, {
-                    headers: {
-                      Authorization: `Bearer ${token}`
-                    }
-                  });
-                  return userRes.data;
-                } catch (error) {
-                  console.error(`Failed to fetch user ${memberId}`, error);
-                  return null;
+            // Fetch user data in batch instead of individual requests
+            if (memberIds.length > 0) {
+              const userRes = await axios.post(
+                `${USERS_SERVICE_URL}/api/users/batch`,
+                memberIds,
+                {
+                  headers: {
+                    Authorization: `Bearer ${token}`
+                  }
                 }
-              })
-            );
-
-            // Create a map of userId -> fullUserData
-            const userDataMap = userResponses.filter(Boolean).reduce((acc, userData) => {
-              acc[userData.id] = userData;
-              return acc;
-            }, {});
-
-            setUsersData(userDataMap);
+              );
+              
+              if (userRes.status === 200) {
+                // Create a map of userId -> fullUserData
+                const userDataMap = userRes.data.reduce((acc: Record<string, User>, userData: User) => {
+                  acc[userData.id] = userData;
+                  return acc;
+                }, {});
+                
+                setUsersData(userDataMap);
+              }
+            }
           }
         } catch (err) {
           console.error(err);
@@ -311,7 +307,7 @@ export default function Page() {
                     <div className="flex items-center">
                       <Calendar className="h-8 w-8 text-primary mr-3" />
                       <div>
-                        <p className="text-2xl font-bold">{team.created_at ? formatDate(team.created_at).split(',')[0] : 'N/A'}</p>
+                        <p className="text-2xl font-bold">{team.created_at ? formatDate(team.created_at) : 'N/A'}</p>
                         <p className="text-muted-foreground">Created</p>
                       </div>
                     </div>

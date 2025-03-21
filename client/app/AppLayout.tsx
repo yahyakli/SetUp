@@ -85,7 +85,6 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
           });
 
           if (res.status === 200) {
-            console.log(res.data);
             dispatch(initInvitations(res.data));
           }
         } catch (err) {
