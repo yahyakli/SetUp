@@ -4,7 +4,8 @@ const attachmentSchema = new mongoose.Schema(
   {
     task_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: true
+      required: true,
+      ref: 'Tasks',
     },
     attachment_type: {
       type: String,
@@ -33,6 +34,6 @@ const attachmentSchema = new mongoose.Schema(
   }
 );
 
-const Attachment = mongoose.model('Attachment', attachmentSchema);
+const Attachment = mongoose.model('Attachments', attachmentSchema);
 
 export default Attachment;

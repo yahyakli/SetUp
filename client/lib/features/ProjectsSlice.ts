@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { Project, Team } from "@/types";
+import { Project, Task, Team } from "@/types";
 
 // Define the initial state
 interface ProjectsState {
@@ -59,6 +59,15 @@ const projectSlice = createSlice({
       state.projects = state.projects.map((project) => {
         if (project.id === projectId) {
           project.teams = project.teams.filter((team) => team.id !== teamId);
+        }
+        return project;
+      });
+    },
+    addTaskToProject: (state, action: PayloadAction<{ projectId: number; task: Task }>) => {
+      const { projectId, task } = action.payload;
+      state.projects = state.projects.map((project) => {
+        if (project.id === projectId) {
+          project.tasks.push(task);
         }
         return project;
       });

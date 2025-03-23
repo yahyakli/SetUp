@@ -33,6 +33,7 @@ export interface Project {
   status: string;
   owner_id: string;
   teams: Team[];
+  tasks: Task[];
   created_at: Date;
   updated_at: Date;
 }
@@ -55,7 +56,7 @@ export interface Team {
 }
 
 export interface Task {
-  id: string;
+  _id: string;
   title: string;
   description: string;
   status: string;
@@ -67,13 +68,15 @@ export interface Task {
   estimated_hours: number | null;
   actual_hours: number | null;
   label: string | null;
+  attachments: Attachment[];
+  comments: Comment[];
   created_at: Date;
   updated_at: Date;
 }
 
 export interface Attachment {
   // Backend attachment properties
-  id?: string;
+  _id?: string;
   task_id?: string;
   attachment_type?: string;
   attachment_url?: string;
@@ -86,6 +89,15 @@ export interface Attachment {
   // Form upload properties
   file?: File;
   preview?: string;
+}
+
+export interface Comment {
+  _id: string;
+  task_id: string;
+  user_id: string;
+  content: string;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export interface AuthState {

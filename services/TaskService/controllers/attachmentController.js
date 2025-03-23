@@ -23,17 +23,11 @@ export class AttachmentController {
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
 
-    // Create task directory if it doesn't exist
-    const taskDir = path.join(uploadsDir, taskId);
-    if (!fs.existsSync(taskDir)) {
-      fs.mkdirSync(taskDir, { recursive: true });
-    }
-
-    // Generate unique filename
+    // Generate unique filename with taskId prefix to avoid collisions
     const fileExtension = path.extname(file.name);
-    const fileName = `${uuidv4()}${fileExtension}`;
-    const filePath = path.join(taskDir, fileName);
-    const relativePath = path.join('uploads', taskId, fileName);
+    const fileName = `${taskId}-${uuidv4()}${fileExtension}`;
+    const filePath = path.join(uploadsDir, fileName);
+    const relativePath = path.join('uploads', fileName);
 
     // Save file
     await file.mv(filePath);
@@ -41,7 +35,7 @@ export class AttachmentController {
     return {
       filePath,
       relativePath: relativePath.replace(/\\/g, '/'), // Ensure forward slashes for URLs
-      fileName
+      fileName,
     };
   }
 
@@ -90,10 +84,14 @@ export class AttachmentController {
         attachment_url: fileInfo.relativePath,
         status: value.status || 'active',
         original_filename: req.files.file.name,
-        file_size: req.files.file.size
+        file_size: req.files.file.size,
       };
 
       const attachment = await Attachment.create(attachmentData);
+
+      // Add the attachment ID to the task's attachments array
+      task.attachments.push(attachment._id);
+      await task.save();
 
       return ResponseHandler.success(res, 'Attachment created successfully', attachment, 201);
     } catch (error) {
@@ -123,8 +121,7 @@ export class AttachmentController {
         filter.status = status;
       }
 
-      const attachments = await Attachment.find(filter)
-        .sort({ created_at: -1 });
+      const attachments = await Attachment.find(filter).sort({ created_at: -1 });
 
       return ResponseHandler.success(res, 'Attachments retrieved successfully', attachments);
     } catch (error) {
@@ -216,10 +213,22 @@ export class AttachmentController {
         return ResponseHandler.error(res, 'Attachment not found', 404);
       }
 
+      // Find the associated task
+      const task = await Task.findById(attachment.task_id);
+      if (!task) {
+        return ResponseHandler.error(res, 'Task not found', 404);
+      }
+
       // Delete file from local storage
       if (attachment.attachment_url) {
         await AttachmentController.deleteFileLocally(attachment.attachment_url);
       }
+
+      // Remove the attachment ID from the task's attachments array
+      task.attachments = task.attachments.filter(
+        (attachmentId) => attachmentId.toString() !== id
+      );
+      await task.save();
 
       // Delete attachment record
       await attachment.deleteOne();
@@ -251,7 +260,11 @@ export class AttachmentController {
       attachment.status = newStatus;
       await attachment.save();
 
-      return ResponseHandler.success(res, `Attachment ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`, attachment);
+      return ResponseHandler.success(
+        res,
+        `Attachment ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`,
+        attachment
+      );
     } catch (error) {
       console.error('Error toggling attachment status:', error);
       return ResponseHandler.error(res, 'Failed to toggle attachment status', 500);

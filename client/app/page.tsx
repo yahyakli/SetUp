@@ -50,7 +50,7 @@ const Page: React.FC = () => {
     const growingValues = [1520, 1270, 1460, 1530, 1800, 1900];
     for (let i = 5; i >= 0; i--) {
       const date = new Date(today);
-      date.setMonth(today.getMonth() - i);
+      date.setMonth(today.getMonth() - i -1);
       const monthName = months[date.getMonth()];
       const value = growingValues[5 - i];
       chartData.push({ name: monthName, value });

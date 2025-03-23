@@ -49,16 +49,16 @@ const taskSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-    Attachments: [
+    attachments: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Attachment',
+        ref: 'Attachments',
       }
     ],
-    Comments: [
+    comments: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Comment',
+        ref: 'Comments',
       }
     ],
   },
@@ -67,6 +67,6 @@ const taskSchema = new mongoose.Schema(
   }
 );
 
-const Task = mongoose.model('Task', taskSchema);
+const Task = mongoose.model('Tasks', taskSchema);
 
 export default Task;

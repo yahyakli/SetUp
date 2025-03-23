@@ -216,8 +216,8 @@ export class TaskController {
       if (priority) filter.priority = priority;
 
       const tasks = await Task.find(filter)
-        .populate('Comments', 'id')
-        .populate('Attachments', 'id');
+        .populate('attachments', 'task_id')
+        .populate('comments', 'task_id');
 
       return ResponseHandler.success(res, 'Project tasks retrieved successfully', tasks);
     } catch (error) {

@@ -73,7 +73,6 @@ export const createAttachmentSchema = Joi.object({
     'string.empty': 'Task ID is required'
   }),
   status: Joi.string().valid('active', 'inactive').default('active')
-  // File will be validated separately in the middleware
 });
 
 export const updateAttachmentSchema = Joi.object({

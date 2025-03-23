@@ -51,11 +51,15 @@ import axios from 'axios';
 import { USERS_SERVICE_URL } from '@/constants/API_URLS';
 import { toast } from 'sonner';
 import { logout, updateUser } from '@/lib/features/userSlice';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 const Page = () => {
   const { user, token } = useSelector((state: RootState) => state.user);
   const dispatch = useDispatch();
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  
+  // Add state to track if profile form has changes
+  const [profileHasChanges, setProfileHasChanges] = useState<boolean>(false);
 
   // Initialize useForm
   const methods = useForm();
@@ -90,6 +94,23 @@ const Page = () => {
   // Ref for file input
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Add router and searchParams for URL handling
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Get active tab from URL or default to "general"
+  const activeTab = searchParams.get('tab') || 'general';
+  
+  // Function to update URL when tab changes
+  const handleTabChange = (value: string) => {
+    // Only update if the tab is actually changing
+    if (value !== activeTab) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('tab', value);
+      router.push(`/profile?${params.toString()}`, { scroll: false });
+    }
+  };
+
   // Use useEffect to initialize profileForm when user data is available
   useEffect(() => {
     if (user) {
@@ -98,6 +119,8 @@ const Page = () => {
         lastName: user.lastName || '',
         email: user.email || '',
       });
+      // Reset changes flag when user data is loaded
+      setProfileHasChanges(false);
     }
   }, [user]);
 
@@ -116,6 +139,23 @@ const Page = () => {
   const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setProfileForm(prev => ({ ...prev, [name]: value }));
+    
+    // Check if the new value is different from the original user data
+    if (name === 'firstName' && value !== user?.firstName) {
+      setProfileHasChanges(true);
+    } else if (name === 'lastName' && value !== user?.lastName) {
+      setProfileHasChanges(true);
+    } else if (name === 'email' && value !== user?.email) {
+      setProfileHasChanges(true);
+    } else {
+      // Check if any field is different from original
+      const hasChanges = 
+        (name === 'firstName' ? value : profileForm.firstName) !== user?.firstName ||
+        (name === 'lastName' ? value : profileForm.lastName) !== user?.lastName ||
+        (name === 'email' ? value : profileForm.email) !== user?.email;
+      
+      setProfileHasChanges(hasChanges);
+    }
   };
 
   // Handler for password form changes
@@ -164,6 +204,7 @@ const Page = () => {
       if (res.status === 200) {
         toast.success('Profile updated successfully');
         dispatch(updateUser(res.data));
+        setProfileHasChanges(false); // Reset changes flag after successful update
       }
     } catch (error) {
       console.error('Profile update error:', error);
@@ -198,6 +239,7 @@ const Page = () => {
         toast.success('Avatar updated successfully');
         dispatch(updateUser(res.data));
         setAvatarPreview(null);
+        setAvatarFile(null); // Reset avatar file after successful update
         if (fileInputRef.current) {
           fileInputRef.current.value = ''; // Reset the input value
         }
@@ -308,7 +350,11 @@ const Page = () => {
           <div className="container mx-auto px-4 py-10 max-w-4xl">
             <h1 className="text-3xl font-bold mb-6">Profile Settings</h1>
 
-            <Tabs defaultValue="general" className="w-full">
+            <Tabs 
+              value={activeTab} 
+              className="w-full"
+              onValueChange={handleTabChange}
+            >
               <TabsList className="mb-8">
                 <TabsTrigger value="general">General</TabsTrigger>
                 <TabsTrigger value="security">Security</TabsTrigger>
@@ -417,20 +463,26 @@ const Page = () => {
                   </CardContent>
 
                   <CardFooter className="flex justify-end gap-2">
-                    <Button
-                      type="submit"
-                      onClick={handleProfileUpdate}
-                      disabled={isLoading}
-                    >
-                      {isLoading ? 'Saving...' : 'Save Profile Changes'}
-                    </Button>
-                    <Button
-                      type="submit"
-                      onClick={handleAvatarUpdate}
-                      disabled={isLoading || !avatarFile}
-                    >
-                      {isLoading ? 'Saving...' : 'Save Avatar Changes'}
-                    </Button>
+                    {/* Only show profile save button when changes are detected */}
+                    {profileHasChanges && (
+                      <Button
+                        type="submit"
+                        onClick={handleProfileUpdate}
+                        disabled={isLoading}
+                      >
+                        {isLoading ? 'Saving...' : 'Save Profile Changes'}
+                      </Button>
+                    )}
+                    {/* Only show avatar save button when an avatar file is selected */}
+                    {avatarFile && (
+                      <Button
+                        type="submit"
+                        onClick={handleAvatarUpdate}
+                        disabled={isLoading}
+                      >
+                        {isLoading ? 'Saving...' : 'Save Avatar Changes'}
+                      </Button>
+                    )}
                   </CardFooter>
                 </Card>
               </TabsContent>

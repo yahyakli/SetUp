@@ -163,7 +163,7 @@ export default function Page() {
           ) : (
             <div className="space-y-3">
               {tasks.map((task) => (
-                <Card key={task.id} className="hover:bg-secondary/20 transition-all">
+                <Card key={task._id} className="hover:bg-secondary/20 transition-all">
                   <CardContent className="flex items-center justify-between p-4">
                     <div className="flex items-center space-x-4">
                       {task.status === 'completed' ? (

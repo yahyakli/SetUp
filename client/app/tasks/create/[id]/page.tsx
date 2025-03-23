@@ -1,5 +1,5 @@
 "use client"
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/lib/store'
@@ -35,7 +35,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import axios from 'axios'
-import { PROJECT_SERVICE_URL, USERS_SERVICE_URL } from '@/constants/API_URLS'
+import { PROJECT_SERVICE_URL, USERS_SERVICE_URL, TASK_SERVICE_URL } from '@/constants/API_URLS'
 import Link from 'next/link'
 import { Attachment, TeamMember, Project, User } from '@/types'
 import { Avatar } from '@/components/ui/avatar'
@@ -48,8 +48,10 @@ export default function CreateTaskPage() {
   
   const [project, setProject] = useState<Project | null>(null)
   const [loading, setLoading] = useState(true)
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
+  
+  const titleRef = useRef('')
+  const descriptionRef = useRef('')
+  
   const [status, setStatus] = useState('todo')
   const [priority, setPriority] = useState('low')
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined)
@@ -134,6 +136,17 @@ export default function CreateTaskPage() {
     setAssigneeId(null)
   }, [selectedTeam, project, token])
 
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    titleRef.current = e.target.value;
+    if (!titleRef.current.trim() && e.target.required) {
+      setStatus(status);
+    }
+  }
+
+  const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    descriptionRef.current = e.target.value;
+  }
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const newFiles = Array.from(e.target.files).map(file => ({
@@ -156,7 +169,7 @@ export default function CreateTaskPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!title.trim()) {
+    if (!titleRef.current.trim()) {
       toast.error('Task title is required')
       return
     }
@@ -166,13 +179,28 @@ export default function CreateTaskPage() {
       return
     }
 
+    if (!status) {
+      toast.error('Status is required')
+      return
+    }
+
+    if (!priority) {
+      toast.error('Priority is required')
+      return
+    }
+
+    if (!assigneeId) {
+      toast.error('Assignee is required')
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
       // Create task data
       const taskData = {
-        title,
-        description: description || null,
+        title: titleRef.current,
+        description: descriptionRef.current || null,
         status,
         priority,
         project_id: project.id,
@@ -183,9 +211,9 @@ export default function CreateTaskPage() {
         label: label || null,
       }
 
-      // Create task
-      const response = await axios.post(
-        `${PROJECT_SERVICE_URL}/api/tasks`,
+      // Create task using the task service endpoint
+      const taskResponse = await axios.post(
+        `${TASK_SERVICE_URL}/api/tasks/`,
         taskData,
         {
           headers: {
@@ -194,22 +222,20 @@ export default function CreateTaskPage() {
         }
       )
 
-      if (response.status === 201 && attachments.length > 0) {
-        const taskId = response.data.id
+      if (taskResponse.status === 201 && attachments.length > 0) {
+        const taskId = taskResponse.data.data._id
 
-        // Upload attachments if any
+        // Upload each attachment separately
         const uploadPromises = attachments.map(async (attachment) => {
           if (!attachment.file) return null;
           
           const formData = new FormData()
           formData.append('file', attachment.file)
           formData.append('task_id', taskId)
-          formData.append('attachment_type', attachment.file.type)
-          formData.append('original_filename', attachment.file.name)
-          formData.append('file_size', attachment.file.size.toString())
+          formData.append('status', 'active')
 
           return axios.post(
-            `${PROJECT_SERVICE_URL}/api/tasks/${taskId}/attachments`,
+            `${TASK_SERVICE_URL}/api/attachments/`,
             formData,
             {
               headers: {
@@ -220,6 +246,7 @@ export default function CreateTaskPage() {
           )
         })
 
+        // Wait for all attachment uploads to complete
         await Promise.all(uploadPromises.filter(Boolean))
       }
 
@@ -246,7 +273,7 @@ export default function CreateTaskPage() {
   }
 
   // Project not found
-  if (!project) {
+  if (!project || user?.id != project.owner_id) {
     return (
       <AppLayout>
         <div className="p-6 flex flex-col items-center justify-center min-h-[50vh] dark:bg-gray-900 bg-gray-50">
@@ -284,7 +311,9 @@ export default function CreateTaskPage() {
         <Card>
           <CardHeader>
             <CardTitle>Task Details</CardTitle>
-            <CardDescription>Enter the details for the new task</CardDescription>
+            <CardDescription>
+              Enter the details for the new task. Fields marked with <span className="text-destructive">*</span> are required.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <form id="create-task-form" onSubmit={handleSubmit} className="space-y-6">
@@ -294,8 +323,8 @@ export default function CreateTaskPage() {
                   <Label htmlFor="title">Title <span className="text-destructive">*</span></Label>
                   <Input
                     id="title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
+                    defaultValue={titleRef.current}
+                    onChange={handleTitleChange}
                     placeholder="Task title"
                     required
                   />
@@ -306,8 +335,8 @@ export default function CreateTaskPage() {
                   <Label htmlFor="description">Description</Label>
                   <Textarea
                     id="description"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
+                    defaultValue={descriptionRef.current}
+                    onChange={handleDescriptionChange}
                     placeholder="Task description"
                     rows={4}
                   />
@@ -316,8 +345,8 @@ export default function CreateTaskPage() {
                 {/* Status and Priority */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="status">Status</Label>
-                    <Select value={status} onValueChange={setStatus}>
+                    <Label htmlFor="status">Status <span className="text-destructive">*</span></Label>
+                    <Select value={status} onValueChange={setStatus} required>
                       <SelectTrigger id="status">
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
@@ -330,8 +359,8 @@ export default function CreateTaskPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="priority">Priority</Label>
-                    <Select value={priority} onValueChange={setPriority}>
+                    <Label htmlFor="priority">Priority <span className="text-destructive">*</span></Label>
+                    <Select value={priority} onValueChange={setPriority} required>
                       <SelectTrigger id="priority">
                         <SelectValue placeholder="Select priority" />
                       </SelectTrigger>
@@ -430,8 +459,9 @@ export default function CreateTaskPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="assignee">Assignee</Label>
-                    <Select 
+                    <Label htmlFor="assignee">Assignee <span className="text-destructive">*</span></Label>
+                    <Select
+                      required
                       value={assigneeId || ''} 
                       onValueChange={setAssigneeId}
                       disabled={!selectedTeam || teamMembers.length === 0}

@@ -5,7 +5,7 @@ const commentSchema = new mongoose.Schema(
     task_id: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      ref: 'Task',
+      ref: 'Tasks',
     },
     project_id: {
       type: Number,
@@ -25,6 +25,6 @@ const commentSchema = new mongoose.Schema(
   }
 );
 
-const Comment = mongoose.model('Comment', commentSchema);
+const Comment = mongoose.model('Comments', commentSchema);
 
 export default Comment;
