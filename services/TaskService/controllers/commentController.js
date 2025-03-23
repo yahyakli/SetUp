@@ -29,6 +29,10 @@ export class CommentController {
       // Create comment
       const comment = await Comment.create(value);
 
+      // Add the comment ID to the task's comments array
+      task.comments.push(comment._id);
+      await task.save();
+
       return ResponseHandler.success(res, 'Comment created successfully', comment, 201);
     } catch (error) {
       console.error('Error creating comment:', error);
@@ -139,6 +143,18 @@ export class CommentController {
         return ResponseHandler.error(res, 'Not authorized to delete this comment', 403);
       }
 
+      // Find the associated task
+      const task = await Task.findById(comment.task_id);
+      if (!task) {
+        return ResponseHandler.error(res, 'Task not found', 404);
+      }
+
+      // Remove the comment ID from the task's comments array
+      task.comments = task.comments.filter(
+        (commentId) => commentId.toString() !== id
+      );
+      await task.save();
+
       // Delete comment
       await comment.deleteOne();
 
@@ -162,7 +178,7 @@ export class CommentController {
         .sort({ created_at: -1 })
         .populate({
           path: 'task_id',
-          select: 'id title'
+          select: 'id title',
         });
 
       return ResponseHandler.success(res, 'Project comments retrieved successfully', comments);
