@@ -168,8 +168,8 @@ export const Navbar = () => {
               <DropdownMenuLabel className='font-light text-xs dark:text-gray-300 text-gray-500'>Recent Tasks</DropdownMenuLabel>
               {recentTasks.length > 0 ? (
                 recentTasks.map((task) => (
-                  <DropdownMenuItem key={task.id} asChild>
-                    <Link href={`/tasks/${task.id}`} className="cursor-pointer">
+                  <DropdownMenuItem key={task._id} asChild>
+                    <Link href={`/tasks/${task._id}`} className="cursor-pointer">
                       {task.title}
                     </Link>
                   </DropdownMenuItem>
@@ -365,8 +365,8 @@ export const Navbar = () => {
                     {recentTasks.length > 0 ? (
                       recentTasks.map((task) => (
                         <Link
-                          key={task.id}
-                          href={`/tasks/${task.id}`}
+                          key={task._id}
+                          href={`/tasks/${task._id}`}
                           className="block text-sm text-muted-foreground hover:text-foreground"
                         >
                           {task.title}

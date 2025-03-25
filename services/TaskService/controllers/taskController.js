@@ -58,11 +58,8 @@ export class TaskController {
       const { id } = req.params;
 
       const task = await Task.findById(id)
-        .populate('Comments')
-        .populate({
-          path: 'Attachments',
-          match: { status: 'active' }
-        });
+        .populate('attachments')
+        .populate('comments');
 
       if (!task) {
         return ResponseHandler.error(res, 'Task not found', 404);

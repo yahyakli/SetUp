@@ -38,14 +38,14 @@ export default function Page() {
   const sortedProjects = [...projects].sort((a, b) => {
     return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
   });
-  
+
   return (
     <AppLayout>
       <div className="p-6 space-y-8 dark:bg-gray-900 bg-gray-50">
         {/* Recent Projects Section */}
         <section>
           <h2 className="text-2xl font-bold mb-4 dark:text-white">Your Work</h2>
-          
+
           {projectLoading ? (
             // Skeleton loader for projects
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -125,7 +125,7 @@ export default function Page() {
         {/* My Tasks Section */}
         <section>
           <h2 className="text-2xl font-bold mb-4 dark:text-white">My Tasks</h2>
-          
+
           {taskLoading ? (
             // Skeleton loader for tasks
             <div className="space-y-3">
@@ -163,38 +163,40 @@ export default function Page() {
           ) : (
             <div className="space-y-3">
               {tasks.map((task) => (
-                <Card key={task._id} className="hover:bg-secondary/20 transition-all">
-                  <CardContent className="flex items-center justify-between p-4">
-                    <div className="flex items-center space-x-4">
-                      {task.status === 'completed' ? (
-                        <CheckCircle2 className="text-green-500 h-5 w-5" />
-                      ) : (
-                        <Clock className="text-yellow-500 h-5 w-5" />
-                      )}
-                      <div>
-                        <div className={`font-medium ${task.status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>
-                          {task.title}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {getProjectById(task.project_id)?.name}
+                <Link key={task._id} href={`/tasks/${task._id}`}>
+                  <Card className="hover:bg-secondary/20 transition-all">
+                    <CardContent className="flex items-center justify-between p-4">
+                      <div className="flex items-center space-x-4">
+                        {task.status === 'completed' ? (
+                          <CheckCircle2 className="text-green-500 h-5 w-5" />
+                        ) : (
+                          <Clock className="text-yellow-500 h-5 w-5" />
+                        )}
+                        <div>
+                          <div className={`font-medium ${task.status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>
+                            {task.title}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {getProjectById(task.project_id)?.name}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge
-                        variant={
-                          task.priority === 'High' ? 'destructive' :
-                            task.priority === 'Medium' ? 'secondary' : 'outline'
-                        }
-                      >
-                        {task.priority}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {task.due_date ? formatDate(task.due_date) : 'No due date'}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
+                      <div className="flex items-center space-x-2">
+                        <Badge
+                          variant={
+                            task.priority === 'High' ? 'destructive' :
+                              task.priority === 'Medium' ? 'secondary' : 'outline'
+                          }
+                        >
+                          {task.priority}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {task.due_date ? formatDate(task.due_date) : 'No due date'}
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
               ))}
             </div>
           )}
