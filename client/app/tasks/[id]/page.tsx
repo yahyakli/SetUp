@@ -28,7 +28,6 @@ import {
   AlertCircle,
   Calendar,
   Clock,
-  Download,
   FileText,
   Loader2,
   MessageSquare,
@@ -38,6 +37,7 @@ import {
   UserCircle
 } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
+import AttachmentPreviewModal from '@/components/TaskAttachmentPreviewModal'
 
 export default function TaskDetailPage() {
   const { id } = useParams()
@@ -56,6 +56,8 @@ export default function TaskDetailPage() {
   const [newComment, setNewComment] = useState('')
   const [submittingComment, setSubmittingComment] = useState(false)
   const [activeTab, setActiveTab] = useState('details')
+  const [previewAttachment, setPreviewAttachment] = useState<Attachment | null>(null)
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false)
 
   // Fetch task data
   useEffect(() => {
@@ -250,16 +252,6 @@ export default function TaskDetailPage() {
     }
   }
 
-  const handleDownloadAttachment = (attachment: Attachment) => {
-    if (!attachment.attachment_url && typeof attachment.attachment_url !== 'string') {
-      toast.error('File URL not available')
-      return
-    }
-
-    const fileUrl = `${TASK_SERVICE_URL}${attachment.attachment_url}`
-    window.open(fileUrl, '_blank')
-  }
-
   const formatDate = (dateString: string | Date | undefined) => {
     if (!dateString) return 'Not set'
     return format(new Date(dateString), 'MMM d, yyyy')
@@ -297,6 +289,11 @@ export default function TaskDetailPage() {
       default:
         return 'outline'
     }
+  }
+
+  const handlePreviewAttachment = (attachment: Attachment) => {
+    setPreviewAttachment(attachment)
+    setIsPreviewOpen(true)
   }
 
   // Loading skeleton
@@ -587,7 +584,8 @@ export default function TaskDetailPage() {
                         {attachments.map((attachment) => (
                           <div
                             key={attachment._id}
-                            className="flex items-center justify-between p-3 border rounded-md"
+                            className="flex items-center justify-between p-3 border rounded-md hover:bg-accent/50 cursor-pointer"
+                            onClick={() => handlePreviewAttachment(attachment)}
                           >
                             <div className="flex items-center gap-3">
                               <div className="bg-primary/10 p-2 rounded-full">
@@ -604,13 +602,6 @@ export default function TaskDetailPage() {
                                 </p>
                               </div>
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDownloadAttachment(attachment)}
-                            >
-                              <Download className="h-4 w-4" />
-                            </Button>
                           </div>
                         ))}
                       </div>
@@ -757,6 +748,11 @@ export default function TaskDetailPage() {
           </div>
         </div>
       </div>
+      <AttachmentPreviewModal
+        attachment={previewAttachment}
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+      />
     </AppLayout>
   )
 }
