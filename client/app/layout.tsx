@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "sonner";
 import ReduxProvider from "@/lib/ReduxProvider.client";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
+import { AppContextProvider } from "@/context/AppContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,8 +23,10 @@ export default function RootLayout({
       <body className={inter.className}>
         <NextThemesProvider attribute="class" defaultTheme="system" enableSystem>
           <ReduxProvider>
-            {children}
-            <Toaster />
+            <AppContextProvider>
+              {children}
+              <Toaster />
+            </AppContextProvider>
           </ReduxProvider>
         </NextThemesProvider>
       </body>

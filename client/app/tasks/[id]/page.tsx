@@ -58,12 +58,18 @@ export default function TaskDetailPage() {
   const [previewAttachment, setPreviewAttachment] = useState<Attachment | null>(null)
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null)
+  const [dataReady, setDataReady] = useState(false)
 
   // Fetch task data
   useEffect(() => {
+    let isMounted = true;
+    
     const fetchTaskData = async () => {
+      if (!isMounted) return;
+      
       setLoading(true)
-      setError(null) // Reset error state on new fetch attempt
+      setError(null)
+      setDataReady(false) // Reset data ready state
       
       try {
         // Fetch task details
@@ -76,48 +82,179 @@ export default function TaskDetailPage() {
           }
         )
 
+        if (!isMounted) return;
+
         if (taskResponse.status === 200) {
           const taskData = taskResponse.data.data
           
           // Check if task data is empty or null
           if (!taskData) {
             setError('Task not found. The task may have been deleted or does not exist.')
+            setLoading(false)
             return
           }
           
-          setTask(taskData)
+          // Store task data but don't set it to state yet
+          const fetchedTask = taskData
 
-          // Use comments and attachments from task data
+          // Prepare data objects to set all at once
+          let commentsData = [];
+          let attachmentsData = [];
+          let projectData = null;
+          let isUserAuthorized = false;
+          let commentUsersData = {};
+          let assigneeData = null;
+          let creatorData = null;
+
+          // Process comments
           if (taskData.comments) {
-            setComments(taskData.comments)
+            commentsData = taskData.comments;
 
             // Extract unique user IDs from comments
             const commentUserIds = [...new Set(taskData.comments.map((comment: Comment) => comment.user_id))]
 
             if (commentUserIds.length > 0) {
-              fetchCommentUsers(commentUserIds as string[])
+              try {
+                const userResponse = await axios.post(
+                  `${USERS_SERVICE_URL}/api/users/batch`,
+                  commentUserIds,
+                  {
+                    headers: {
+                      'Authorization': `Bearer ${token}`
+                    }
+                  }
+                )
+                
+                if (!isMounted) return;
+
+                if (userResponse.status === 200) {
+                  const users = userResponse.data
+                  const usersMap: Record<string, User> = {}
+
+                  users.forEach((user: User) => {
+                    usersMap[user.id] = user
+                  })
+
+                  commentUsersData = usersMap;
+                }
+              } catch (error) {
+                console.error('Error fetching comment users:', error)
+              }
             }
           }
 
+          // Process attachments
           if (taskData.attachments) {
-            setAttachments(taskData.attachments)
+            attachmentsData = taskData.attachments;
           }
 
           // Fetch project details
           if (taskData.project_id) {
-            fetchProjectData(taskData.project_id)
+            try {
+              const projectResponse = await axios.get(
+                `${PROJECT_SERVICE_URL}/api/projects/${taskData.project_id}`,
+                {
+                  headers: {
+                    'Authorization': `Bearer ${token}`
+                  }
+                }
+              )
+              
+              if (!isMounted) return;
+              
+              if (projectResponse.status === 200) {
+                projectData = projectResponse.data;
+                
+                // Check authorization
+                // User is authorized if they are the project owner
+                if (user?.id === projectData.owner_id) {
+                  isUserAuthorized = true;
+                }
+                
+                // User is authorized if they are the task creator or assignee
+                else if (user?.id === fetchedTask.creator_id || user?.id === fetchedTask.assignee_id) {
+                  isUserAuthorized = true;
+                }
+                
+                // Check if user is a member of any project teams
+                else if (projectData.teams && projectData.teams.length > 0) {
+                  for (const team of projectData.teams) {
+                    // Check if the current user is a member of this team
+                    if (team.members && team.members.some((member: TeamMember) => member.user_id === user?.id)) {
+                      isUserAuthorized = true;
+                      break;
+                    }
+                  }
+                }
+                
+                if (!isUserAuthorized) {
+                  setIsAuthorized(false);
+                  setError('You do not have permission to view this task.');
+                  setLoading(false);
+                  return;
+                }
+              }
+            } catch (error) {
+              console.error('Error fetching project:', error)
+              setError('Failed to load project data. Please try again later.')
+              setLoading(false);
+              return;
+            }
           }
 
           // Fetch user details (assignee and creator)
           const userIds = []
-          if (taskData.assignee_id) userIds.push(taskData.assignee_id)
-          if (taskData.creator_id) userIds.push(taskData.creator_id)
+          if (fetchedTask.assignee_id) userIds.push(fetchedTask.assignee_id)
+          if (fetchedTask.creator_id) userIds.push(fetchedTask.creator_id)
 
           if (userIds.length > 0) {
-            fetchUserData(userIds)
+            try {
+              const userResponse = await axios.post(
+                `${USERS_SERVICE_URL}/api/users/batch`,
+                userIds,
+                {
+                  headers: {
+                    'Authorization': `Bearer ${token}`
+                  }
+                }
+              )
+
+              if (!isMounted) return;
+
+              if (userResponse.status === 200) {
+                const users = userResponse.data
+
+                if (fetchedTask.assignee_id) {
+                  const foundAssignee = users.find((u: User) => u.id === fetchedTask.assignee_id)
+                  if (foundAssignee) assigneeData = foundAssignee;
+                }
+
+                if (fetchedTask.creator_id) {
+                  const foundCreator = users.find((u: User) => u.id === fetchedTask.creator_id)
+                  if (foundCreator) creatorData = foundCreator;
+                }
+              }
+            } catch (error) {
+              console.error('Error fetching users:', error)
+            }
+          }
+
+          // Set all state at once to avoid flickering
+          if (isMounted) {
+            setTask(fetchedTask);
+            setComments(commentsData);
+            setAttachments(attachmentsData);
+            if (projectData) setProject(projectData);
+            setCommentUsers(commentUsersData);
+            if (assigneeData) setAssignee(assigneeData);
+            if (creatorData) setCreator(creatorData);
+            setIsAuthorized(true);
+            setDataReady(true);
           }
         }
       } catch (error) {
+        if (!isMounted) return;
+        
         console.error('Error fetching task:', error)
         if (error instanceof AxiosError && error.response && error.response.status === 404) {
           setError('Task not found. The task may have been deleted or does not exist.')
@@ -125,123 +262,9 @@ export default function TaskDetailPage() {
           setError('Failed to load task data. Please try again later.')
         }
       } finally {
-        // Always set loading to false when the task fetch is complete, regardless of success or error
-        setLoading(false)
-      }
-    }
-
-    const fetchProjectData = async (projectId: string) => {
-      try {
-        const projectResponse = await axios.get(
-          `${PROJECT_SERVICE_URL}/api/projects/${projectId}`,
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          }
-        )
-        if (projectResponse.status === 200) {
-          setProject(projectResponse.data)
-          
-          // Check if user is authorized to view this task
-          checkUserAuthorization(projectResponse.data)
+        if (isMounted) {
+          setLoading(false)
         }
-      } catch (error) {
-        console.error('Error fetching project:', error)
-        setLoading(false)
-      }
-    }
-    
-    // New function to check if user is authorized to view this task
-    const checkUserAuthorization = async (projectData: Project) => {
-      // User is authorized if they are the project owner
-      if (user?.id === projectData.owner_id) {
-        setIsAuthorized(true)
-        return
-      }
-      
-      // User is authorized if they are the task creator or assignee
-      if (task && (user?.id === task.creator_id || user?.id === task.assignee_id)) {
-        setIsAuthorized(true)
-        return
-      }
-      
-      // Check if user is a member of any project teams
-      let isMember = false
-      
-      // Check if user is a member of any team
-      if (projectData.teams && projectData.teams.length > 0) {
-        for (const team of projectData.teams) {
-          // Check if the current user is a member of this team
-          if (team.members && team.members.some((member: TeamMember) => member.user_id === user?.id)) {
-            isMember = true
-            break
-          }
-        }
-      }
-      
-      if (isMember) {
-        setIsAuthorized(true)
-      } else {
-        setIsAuthorized(false)
-        setError('You do not have permission to view this task.')
-      }
-    }
-
-    const fetchUserData = async (userIds: string[]) => {
-      try {
-        const userResponse = await axios.post(
-          `${USERS_SERVICE_URL}/api/users/batch`,
-          userIds,
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          }
-        )
-
-        if (userResponse.status === 200) {
-          const users = userResponse.data
-
-          if (task?.assignee_id) {
-            const foundAssignee = users.find((u: User) => u.id === task.assignee_id)
-            if (foundAssignee) setAssignee(foundAssignee)
-          }
-
-          if (task?.creator_id) {
-            const foundCreator = users.find((u: User) => u.id === task.creator_id)
-            if (foundCreator) setCreator(foundCreator)
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching users:', error)
-      }
-    }
-
-    const fetchCommentUsers = async (userIds: string[]) => {
-      try {
-        const userResponse = await axios.post(
-          `${USERS_SERVICE_URL}/api/users/batch`,
-          userIds,
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          }
-        )
-
-        if (userResponse.status === 200) {
-          const users = userResponse.data
-          const usersMap: Record<string, User> = {}
-
-          users.forEach((user: User) => {
-            usersMap[user.id] = user
-          })
-
-          setCommentUsers(usersMap)
-        }
-      } catch (error) {
-        console.error('Error fetching comment users:', error)
       }
     }
 
@@ -250,7 +273,12 @@ export default function TaskDetailPage() {
     } else {
       setLoading(false)
     }
-  }, [id, token, task?.assignee_id, task?.creator_id, user?.id])
+    
+    // Cleanup function to prevent state updates after unmount
+    return () => {
+      isMounted = false;
+    };
+  }, [id, token, user?.id])
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -317,7 +345,8 @@ export default function TaskDetailPage() {
     return format(new Date(dateString), 'MMM d, yyyy h:mm a')
   }
 
-  const getStatusBadgeVariant = (status: string): "outline" | "secondary" | "default" | "destructive" | null | undefined => {
+  const getStatusBadgeVariant = (status: string | undefined): "outline" | "secondary" | "default" | "destructive" | null | undefined => {
+    if (!status) return null;
     switch (status.toLowerCase()) {
       case 'todo':
         return 'outline'
@@ -373,7 +402,7 @@ export default function TaskDetailPage() {
   }
 
   // Task not found or error state - show this after loading is completed
-  if (error || !task || isAuthorized === false) {
+  if (error || !dataReady || isAuthorized === false) {
     return (
       <AppLayout>
         <div className="p-6 flex flex-col items-center justify-center min-h-[50vh] dark:bg-gray-900 bg-gray-50">
@@ -417,19 +446,19 @@ export default function TaskDetailPage() {
               <span>Task</span>
             </div>
           )}
-          <h1 className="text-3xl font-bold dark:text-white">{task.title}</h1>
+          <h1 className="text-3xl font-bold dark:text-white">{task?.title}</h1>
           <div className="flex flex-wrap items-center gap-2 mt-2">
-            <Badge variant={getStatusBadgeVariant(task.status)}>
-              {task.status === 'todo' ? 'To Do' :
-                task.status === 'in_progress' ? 'In Progress' :
-                  task.status.charAt(0).toUpperCase() + task.status.slice(1)}
+            <Badge variant={getStatusBadgeVariant(task?.status)}>
+              {task?.status === 'todo' ? 'To Do' :
+                task?.status === 'in_progress' ? 'In Progress' :
+                  task?.status ? task?.status?.charAt(0).toUpperCase() + task?.status?.slice(1) : null}
             </Badge>
-            <Badge variant={getPriorityBadgeVariant(task.priority)}>
-              {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)} Priority
+            <Badge variant={getPriorityBadgeVariant(task?.priority || '')}>
+              {task?.priority ? task?.priority?.charAt(0).toUpperCase() + task?.priority?.slice(1) : null} Priority
             </Badge>
-            {task.label && (
+            {task?.label && (
               <Badge variant="secondary">
-                {task.label.charAt(0).toUpperCase() + task.label.slice(1)}
+                {task?.label?.charAt(0).toUpperCase() + task?.label?.slice(1)}
               </Badge>
             )}
           </div>
@@ -457,9 +486,9 @@ export default function TaskDetailPage() {
                     <CardTitle>Task Description</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {task.description ? (
+                    {task?.description ? (
                       <div className="prose dark:prose-invert max-w-none">
-                        <p>{task.description}</p>
+                        <p>{task?.description}</p>
                       </div>
                     ) : (
                       <p className="text-muted-foreground">No description provided.</p>
@@ -480,13 +509,13 @@ export default function TaskDetailPage() {
                       <div>
                         <h4 className="text-sm font-medium">Created</h4>
                         <p className="text-sm text-muted-foreground">
-                          {task.created_at ? formatDateTime(task.created_at) : 'Unknown'}
+                          {task?.created_at ? formatDateTime(task?.created_at) : 'Unknown'}
                           {creator && ` by ${creator.firstName} ${creator.lastName}`}
                         </p>
                       </div>
                     </div>
 
-                    {task.updated_at && task.updated_at !== task.created_at && (
+                    {task?.updated_at && task?.updated_at !== task?.created_at && (
                       <div className="flex items-start gap-4">
                         <div className="bg-primary/10 p-2 rounded-full">
                           <Clock className="h-5 w-5 text-primary" />
@@ -500,7 +529,7 @@ export default function TaskDetailPage() {
                       </div>
                     )}
 
-                    {task.due_date && (
+                    {task?.due_date && (
                       <div className="flex items-start gap-4">
                         <div className="bg-primary/10 p-2 rounded-full">
                           <Calendar className="h-5 w-5 text-primary" />
@@ -717,18 +746,18 @@ export default function TaskDetailPage() {
                 {/* Status */}
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium">Status</h4>
-                  <Badge variant={getStatusBadgeVariant(task.status)} className="text-xs">
-                    {task.status === 'todo' ? 'To Do' :
-                      task.status === 'in_progress' ? 'In Progress' :
-                        task.status.charAt(0).toUpperCase() + task.status.slice(1)}
+                  <Badge variant={getStatusBadgeVariant(task?.status)} className="text-xs">
+                    {task?.status === 'todo' ? 'To Do' :
+                      task?.status === 'in_progress' ? 'In Progress' :
+                        task?.status ? task?.status?.charAt(0).toUpperCase() + task?.status?.slice(1) : null}
                   </Badge>
                 </div>
 
                 {/* Priority */}
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium">Priority</h4>
-                  <Badge variant={getPriorityBadgeVariant(task.priority)} className="text-xs">
-                    {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+                  <Badge variant={getPriorityBadgeVariant(task?.priority || '')} className="text-xs">
+                    {task?.priority ? task?.priority?.charAt(0).toUpperCase() + task?.priority?.slice(1) : null}
                   </Badge>
                 </div>
 
@@ -737,12 +766,12 @@ export default function TaskDetailPage() {
                   <h4 className="text-sm font-medium">Due Date</h4>
                   <div className="flex items-center gap-2 text-sm">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span>{task.due_date ? formatDate(task.due_date) : 'Not set'}</span>
+                    <span>{task?.due_date ? formatDate(task?.due_date) : 'Not set'}</span>
                   </div>
                 </div>
 
                 {/* Estimated Hours */}
-                {task.estimated_hours && (
+                {task?.estimated_hours && (
                   <div className="space-y-2">
                     <h4 className="text-sm font-medium">Estimated Hours</h4>
                     <div className="flex items-center gap-2 text-sm">
@@ -753,7 +782,7 @@ export default function TaskDetailPage() {
                 )}
 
                 {/* Label */}
-                {task.label && (
+                {task?.label && (
                   <div className="space-y-2">
                     <h4 className="text-sm font-medium">Label</h4>
                     <div className="flex items-center gap-2 text-sm">
@@ -772,9 +801,9 @@ export default function TaskDetailPage() {
                   </Button>
                 )}
                 {/* Only show edit button if user is project owner or task creator */}
-                {(user?.id === project?.owner_id || user?.id === task.creator_id) && (
+                {(user?.id === project?.owner_id || user?.id === task?.creator_id) && (
                   <Button asChild>
-                    <Link href={`/tasks/edit/${task._id}`}>
+                    <Link href={`/tasks/edit/${task?._id}`}>
                       Edit Task
                     </Link>
                   </Button>
