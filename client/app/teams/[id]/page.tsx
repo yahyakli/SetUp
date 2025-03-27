@@ -36,7 +36,7 @@ import { RootState } from '@/lib/store'
 import axios, { AxiosError } from 'axios'
 import { toast } from 'sonner'
 import { PROJECT_SERVICE_URL, USERS_SERVICE_URL } from '@/constants/API_URLS'
-import { Team, User } from '@/types'
+import { Team, TeamMember, User } from '@/types'
 import UserAvatar from '@/components/UserAvatar'
 import DeleteTeamModal from '@/components/DeleteTeamModal'
 import InviteMembersModal from '@/components/InviteMembersModal'
@@ -50,6 +50,16 @@ import {
 } from '@/components/ui/dialog'
 import { deleteTeamInState } from '@/lib/features/TeamsSlice'
 import { format } from 'date-fns'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 export default function Page() {
   const { id } = useParams()
@@ -78,6 +88,7 @@ export default function Page() {
   const [teamOwner, setTeamOwner] = useState<string | undefined>('');
   const [showInviteModal, setShowInviteModal] = useState<boolean>(false);
   const [showLeaveConfirmation, setShowLeaveConfirmation] = useState(false);
+  const [memberToRemove, setMemberToRemove] = useState<{ id: number, user_id: string, name: string } | null>(null);
 
   const isTeamMember = team?.members.some(member => member.user_id === user?.id);
 
@@ -231,6 +242,50 @@ export default function Page() {
     }
   };
 
+  const handleRemoveMember = (member: TeamMember) => {
+    const memberName = usersData[member.user_id]?.firstName && usersData[member.user_id]?.lastName
+      ? `${usersData[member.user_id].firstName} ${usersData[member.user_id].lastName}`
+      : 'this member';
+    
+    setMemberToRemove({
+      id: member.id,
+      user_id: member.user_id,
+      name: memberName
+    });
+  };
+
+  const confirmRemoveMember = async () => {
+    if (!memberToRemove || !token) return;
+
+    try {
+      const res = await axios.delete(PROJECT_SERVICE_URL + `/api/team-members/${memberToRemove.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (res.status === 200) {
+        // Update local state to reflect the change
+        if (team) {
+          setTeam({
+            ...team,
+            members: team.members.filter(member => member.id !== memberToRemove.id)
+          });
+        }
+        toast.success(`${memberToRemove.name} has been removed from the team`);
+      }
+    } catch (err) {
+      console.error(err);
+      if (err instanceof AxiosError) {
+        toast.error(err.response?.data.message || 'Failed to remove team member');
+      } else {
+        toast.error('Failed to remove team member');
+      }
+    } finally {
+      setMemberToRemove(null);
+    }
+  };
+
   return (
     <AppLayout>
       <div className="p-6 space-y-6 dark:bg-gray-900 bg-gray-50 min-h-screen">
@@ -346,6 +401,7 @@ export default function Page() {
                     {team.members.map((member) => {
                       const memberData = usersData[member.user_id] || {};
                       const isCurrentUser = member.user_id === user?.id;
+                      const isOwner = member.role === 'owner';
 
                       return (
                         <Card key={member.user_id} className="dark:bg-gray-800 dark:border-gray-700">
@@ -366,6 +422,17 @@ export default function Page() {
                                 </div>
                               </div>
                             </div>
+                            {/* Add remove button for team owner */}
+                            {user?.id === teamOwner && !isOwner && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => handleRemoveMember(member)}
+                              >
+                                Remove
+                              </Button>
+                            )}
                           </CardContent>
                         </Card>
                       );
@@ -547,6 +614,28 @@ export default function Page() {
             </Link>
           </div>
         )}
+
+        {/* Add the AlertDialog for member removal confirmation */}
+        <AlertDialog open={!!memberToRemove} onOpenChange={(open) => !open && setMemberToRemove(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove Team Member</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to remove {memberToRemove?.name} from this team? 
+                They will lose access to all team projects and resources.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={confirmRemoveMember}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Remove
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AppLayout>
   )

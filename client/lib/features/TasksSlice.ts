@@ -30,13 +30,13 @@ const taskSlice = createSlice({
       state.tasks.push(action.payload);
     },
     updateTask: (state, action: PayloadAction<Task>) => {
-      const index = state.tasks.findIndex((task) => task.id === action.payload.id);
+      const index = state.tasks.findIndex((task) => task._id === action.payload._id);
       if (index !== -1) {
         state.tasks[index] = action.payload;
       }
     },
     deleteTask: (state, action: PayloadAction<string>) => {
-      state.tasks = state.tasks.filter((task) => task.id !== action.payload);
+      state.tasks = state.tasks.filter((task) => task._id !== action.payload);
     }
   },
 });

@@ -135,7 +135,7 @@ const Page: React.FC = () => {
               <ThemeToggle />
             </div>
             <Button className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white hidden md:inline-block" onClick={() => router.push("/dashboard")}>
-              get started
+              Get Started
             </Button>
           </div>
 

@@ -48,7 +48,6 @@ export default function TaskDetailPage() {
   const [assignee, setAssignee] = useState<User | null>(null)
   const [creator, setCreator] = useState<User | null>(null)
   const [attachments, setAttachments] = useState<Attachment[]>([])
-  console.log(attachments);
   const [comments, setComments] = useState<Comment[]>([])
   const [commentUsers, setCommentUsers] = useState<Record<string, User>>({})
   const [loading, setLoading] = useState(true)
