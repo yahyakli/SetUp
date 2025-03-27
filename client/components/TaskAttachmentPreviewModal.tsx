@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,20 @@ import { ExternalLink, FileText, Image as ImageIcon, Film, FileCode, File } from
 import { Attachment } from '@/types';
 import { TASK_SERVICE_URL } from '@/constants/API_URLS';
 import Image from 'next/image';
+import Editor from 'react-simple-code-editor';
+import { highlight, languages } from 'prismjs';
+import 'prismjs/components/prism-javascript';
+import 'prismjs/components/prism-typescript';
+import 'prismjs/components/prism-jsx';
+import 'prismjs/components/prism-tsx';
+import 'prismjs/components/prism-css';
+import 'prismjs/components/prism-python';
+import 'prismjs/components/prism-java';
+import 'prismjs/components/prism-c';
+import 'prismjs/components/prism-cpp';
+import 'prismjs/components/prism-json';
+import 'prismjs/components/prism-markup'; // HTML
+import 'prismjs/themes/prism.css'; // Choose a theme that fits your design
 
 interface AttachmentPreviewModalProps {
   attachment: Attachment | null;
@@ -24,6 +38,16 @@ export default function AttachmentPreviewModal({
   isOpen,
   onClose,
 }: AttachmentPreviewModalProps) {
+  const [fileContent, setFileContent] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen && attachment?.attachment_url && isViewableAsText()) {
+      fetchFileContent();
+    }
+  }, [isOpen, attachment]);
+
   if (!attachment) return null;
 
   const fileUrl = attachment.attachment_url 
@@ -38,13 +62,60 @@ export default function AttachmentPreviewModal({
   const isPdf = fileExtension === 'pdf';
   const isVideo = ['mp4', 'webm', 'ogg', 'mov'].includes(fileExtension || '');
   const isCode = ['js', 'jsx', 'ts', 'tsx', 'html', 'css', 'json', 'py', 'java', 'c', 'cpp'].includes(fileExtension || '');
+  const isText = ['txt', 'md', 'csv', 'log'].includes(fileExtension || '');
   const isAudio = ['mp3', 'wav', 'ogg'].includes(fileExtension || '');
+  const isViewableAsText = () => {
+    const ext = attachment?.original_filename
+      ?.split('.')
+      .pop()
+      ?.toLowerCase() || '';
+    const isCode = ['js', 'jsx', 'ts', 'tsx', 'html', 'css', 'json', 'py', 'java', 'c', 'cpp'].includes(ext);
+    const isText = ['txt', 'md', 'csv', 'log'].includes(ext);
+    return isCode || isText;
+  };
+
+  const fetchFileContent = async () => {
+    if (!fileUrl) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch(fileUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`);
+      }
+      const text = await response.text();
+      setFileContent(text);
+    } catch (err) {
+      console.error('Error fetching file content:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load file content');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getLanguageForPrism = () => {
+    switch (fileExtension) {
+      case 'js': return languages.javascript;
+      case 'jsx': return languages.jsx;
+      case 'ts': return languages.typescript;
+      case 'tsx': return languages.tsx;
+      case 'css': return languages.css;
+      case 'html': return languages.html;
+      case 'json': return languages.json;
+      case 'py': return languages.python;
+      case 'java': return languages.java;
+      case 'c': case 'cpp': return languages.cpp;
+      default: return languages.plain;
+    }
+  };
 
   const getFileIcon = () => {
     if (isImage) return <ImageIcon className="h-12 w-12 text-primary" />;
     if (isPdf) return <FileText className="h-12 w-12 text-primary" />;
     if (isVideo) return <Film className="h-12 w-12 text-primary" />;
-    if (isCode) return <FileCode className="h-12 w-12 text-primary" />;
+    if (isCode || isText) return <FileCode className="h-12 w-12 text-primary" />;
     return <File className="h-12 w-12 text-primary" />;
   };
 
@@ -101,6 +172,53 @@ export default function AttachmentPreviewModal({
             <source src={fileUrl} type={`audio/${fileExtension}`} />
             Your browser does not support the audio element.
           </audio>
+        </div>
+      );
+    }
+
+    if (isViewableAsText()) {
+      if (isLoading) {
+        return (
+          <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-lg">
+            <p className="text-muted-foreground">Loading file content...</p>
+          </div>
+        );
+      }
+
+      if (error) {
+        return (
+          <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-lg">
+            <p className="text-red-500">Error: {error}</p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="mt-4" 
+              onClick={fetchFileContent}
+            >
+              Retry
+            </Button>
+          </div>
+        );
+      }
+
+      return (
+        <div className="border rounded-md overflow-hidden">
+          <Editor
+            value={fileContent}
+            onValueChange={() => {}} // Read-only, so no change handler needed
+            highlight={code => highlight(code, getLanguageForPrism(), '')}
+            padding={16}
+            readOnly={true}
+            style={{
+              fontFamily: '"Fira code", "Fira Mono", monospace',
+              fontSize: 14,
+              minHeight: '60vh',
+              maxHeight: '60vh',
+              overflow: 'auto',
+              backgroundColor: '#f5f5f5',
+            }}
+            className="code-editor"
+          />
         </div>
       );
     }
