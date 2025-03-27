@@ -1,6 +1,6 @@
 "use client"
 import React, { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/lib/store'
 import AppLayout from '../../AppLayout'
@@ -41,6 +41,8 @@ import AttachmentPreviewModal from '@/components/TaskAttachmentPreviewModal'
 
 export default function TaskDetailPage() {
   const { id } = useParams()
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const { user, token } = useSelector((state: RootState) => state.user)
 
   const [task, setTask] = useState<Task | null>(null)
@@ -54,11 +56,23 @@ export default function TaskDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [newComment, setNewComment] = useState('')
   const [submittingComment, setSubmittingComment] = useState(false)
-  const [activeTab, setActiveTab] = useState('details')
   const [previewAttachment, setPreviewAttachment] = useState<Attachment | null>(null)
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null)
   const [dataReady, setDataReady] = useState(false)
+
+  // Get the current tab from URL or default to 'details'
+  const currentTab = searchParams.get('tab') || 'details'
+
+  // Function to handle tab changes
+  const handleTabChange = (value: string) => {
+    // Create a new URLSearchParams object
+    const params = new URLSearchParams(searchParams.toString())
+    // Set the tab parameter
+    params.set('tab', value)
+    // Update the URL without refreshing the page
+    router.push(`/tasks/${id}?${params.toString()}`, { scroll: false })
+  }
 
   // Fetch task data
   useEffect(() => {
@@ -468,7 +482,7 @@ export default function TaskDetailPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Left column - Task details and tabs */}
           <div className="md:col-span-2 space-y-6">
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <Tabs value={currentTab} onValueChange={handleTabChange}>
               <TabsList>
                 <TabsTrigger value="details">Details</TabsTrigger>
                 <TabsTrigger value="comments">

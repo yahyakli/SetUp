@@ -26,6 +26,7 @@ import 'prismjs/components/prism-cpp';
 import 'prismjs/components/prism-json';
 import 'prismjs/components/prism-markup'; // HTML
 import 'prismjs/themes/prism.css'; // Choose a theme that fits your design
+import { useTheme } from 'next-themes';
 
 interface AttachmentPreviewModalProps {
   attachment: Attachment | null;
@@ -41,6 +42,8 @@ export default function AttachmentPreviewModal({
   const [fileContent, setFileContent] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const { resolvedTheme } = useTheme();
+  const isDarkMode = resolvedTheme === 'dark';
 
   useEffect(() => {
     if (isOpen && attachment?.attachment_url && isViewableAsText()) {
@@ -215,7 +218,8 @@ export default function AttachmentPreviewModal({
               minHeight: '60vh',
               maxHeight: '60vh',
               overflow: 'auto',
-              backgroundColor: '#f5f5f5',
+              backgroundColor: isDarkMode ? '#1e1e2e' : '#f5f5f5',
+              color: isDarkMode ? '#f8f8f2' : 'inherit',
             }}
             className="code-editor"
           />
