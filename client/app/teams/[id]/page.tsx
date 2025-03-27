@@ -35,7 +35,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '@/lib/store'
 import axios, { AxiosError } from 'axios'
 import { toast } from 'sonner'
-import { PROJECT_SERVICE_URL, USERS_SERVICE_URL } from '@/constants/API_URLS'
+import { PROJECT_SERVICE_URL, USERS_SERVICE_URL, TASK_SERVICE_URL } from '@/constants/API_URLS'
 import { Team, TeamMember, User } from '@/types'
 import UserAvatar from '@/components/UserAvatar'
 import DeleteTeamModal from '@/components/DeleteTeamModal'
@@ -220,11 +220,23 @@ export default function Page() {
     if (!teamMember) return;
 
     try {
-      const res = await axios.delete(PROJECT_SERVICE_URL + `/api/team-members/${teamMember.id}`, {
+      // First, remove the user's tasks
+      const tasksRes = await axios.delete(TASK_SERVICE_URL + `/api/tasks/user/${user.id}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
+      
+      // Check if tasks were successfully deleted
+      if (tasksRes.status !== 200) {
+        toast.error('Failed to remove your tasks');
+        return;
+      }
+      
+      // Then remove the member from the team
+      const res = await axios.delete(PROJECT_SERVICE_URL + `/api/team-members/${teamMember.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
 
       if(res.status === 200){
         dispatch(deleteTeamInState(team.id));
@@ -258,6 +270,14 @@ export default function Page() {
     if (!memberToRemove || !token) return;
 
     try {
+      // First, remove the user's tasks
+      await axios.delete(TASK_SERVICE_URL + `/api/tasks/user/${memberToRemove.user_id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      // Then remove the member from the team
       const res = await axios.delete(PROJECT_SERVICE_URL + `/api/team-members/${memberToRemove.id}`, {
         headers: {
           Authorization: `Bearer ${token}`
@@ -272,7 +292,7 @@ export default function Page() {
             members: team.members.filter(member => member.id !== memberToRemove.id)
           });
         }
-        toast.success(`${memberToRemove.name} has been removed from the team`);
+        toast.success(`${memberToRemove.name} has been removed from the team and their tasks have been deleted`);
       }
     } catch (err) {
       console.error(err);
@@ -427,7 +447,7 @@ export default function Page() {
                               <Button 
                                 variant="ghost" 
                                 size="sm" 
-                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                className="text-red-500 hover:text-destructive hover:bg-destructive/40 duration-200"
                                 onClick={() => handleRemoveMember(member)}
                               >
                                 Remove
@@ -617,19 +637,21 @@ export default function Page() {
 
         {/* Add the AlertDialog for member removal confirmation */}
         <AlertDialog open={!!memberToRemove} onOpenChange={(open) => !open && setMemberToRemove(null)}>
-          <AlertDialogContent>
+          <AlertDialogContent className="dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100">
             <AlertDialogHeader>
-              <AlertDialogTitle>Remove Team Member</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to remove {memberToRemove?.name} from this team? 
+              <AlertDialogTitle className="dark:text-gray-100 text-xl">Remove Team Member</AlertDialogTitle>
+              <AlertDialogDescription className="dark:text-gray-300 text-gray-600">
+                Are you sure you want to remove <span className="font-medium dark:text-gray-100 text-gray-900">{memberToRemove?.name}</span> from this team? 
                 They will lose access to all team projects and resources.
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogFooter className="gap-2">
+              <AlertDialogCancel className="dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600 dark:border-gray-600">
+                Cancel
+              </AlertDialogCancel>
               <AlertDialogAction 
                 onClick={confirmRemoveMember}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                className="bg-destructive text-white hover:bg-destructive/90 dark:bg-red-600 dark:hover:bg-red-700 dark:text-white"
               >
                 Remove
               </AlertDialogAction>

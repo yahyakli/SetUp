@@ -22,7 +22,7 @@ import { toast } from 'sonner'
 import axios from 'axios'
 import { PROJECT_SERVICE_URL, USERS_SERVICE_URL, TASK_SERVICE_URL } from '@/constants/API_URLS'
 import Link from 'next/link'
-import { Attachment, Comment, Task, User, Project } from '@/types'
+import { Attachment, Comment, Task, User, Project, TeamMember } from '@/types'
 import { format, formatDistanceToNow } from 'date-fns'
 import {
   AlertCircle,
@@ -57,6 +57,7 @@ export default function TaskDetailPage() {
   const [activeTab, setActiveTab] = useState('details')
   const [previewAttachment, setPreviewAttachment] = useState<Attachment | null>(null)
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null)
 
   // Fetch task data
   useEffect(() => {
@@ -127,9 +128,48 @@ export default function TaskDetailPage() {
         )
         if (projectResponse.status === 200) {
           setProject(projectResponse.data)
+          
+          // Check if user is authorized to view this task
+          checkUserAuthorization(projectResponse.data)
         }
       } catch (error) {
         console.error('Error fetching project:', error)
+      }
+    }
+    
+    // New function to check if user is authorized to view this task
+    const checkUserAuthorization = async (projectData: Project) => {
+      // User is authorized if they are the project owner
+      if (user?.id === projectData.owner_id) {
+        setIsAuthorized(true)
+        return
+      }
+      
+      // User is authorized if they are the task creator or assignee
+      if (task && (user?.id === task.creator_id || user?.id === task.assignee_id)) {
+        setIsAuthorized(true)
+        return
+      }
+      
+      // Check if user is a member of any project teams
+      let isMember = false
+      
+      // Check if user is a member of any team
+      if (projectData.teams && projectData.teams.length > 0) {
+        for (const team of projectData.teams) {
+          // Check if the current user is a member of this team
+          if (team.members && team.members.some((member: TeamMember) => member.user_id === user?.id)) {
+            isMember = true
+            break
+          }
+        }
+      }
+      
+      if (isMember) {
+        setIsAuthorized(true)
+      } else {
+        setIsAuthorized(false)
+        setError('You do not have permission to view this task.')
       }
     }
 
@@ -193,7 +233,7 @@ export default function TaskDetailPage() {
     if (token && id) {
       fetchTaskData()
     }
-  }, [id, token, task?.assignee_id, task?.creator_id])
+  }, [id, token, task?.assignee_id, task?.creator_id, user?.id])
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -296,7 +336,7 @@ export default function TaskDetailPage() {
   }
 
   // Loading skeleton
-  if (loading) {
+  if (loading || isAuthorized === null) {
     return (
       <AppLayout>
         <div className="p-6 space-y-6 dark:bg-gray-900 bg-gray-50">
@@ -315,14 +355,16 @@ export default function TaskDetailPage() {
     )
   }
 
-  // Error state
-  if (error || !task) {
+  // Error state - now includes unauthorized access
+  if (error || !task || isAuthorized === false) {
     return (
       <AppLayout>
         <div className="p-6 flex flex-col items-center justify-center min-h-[50vh] dark:bg-gray-900 bg-gray-50">
           <div className="text-center space-y-4">
             <AlertCircle className="h-12 w-12 text-destructive mx-auto" />
-            <h1 className="text-3xl font-bold text-muted-foreground">Task Not Found</h1>
+            <h1 className="text-3xl font-bold text-muted-foreground">
+              {isAuthorized === false ? "Access Denied" : "Task Not Found"}
+            </h1>
             <p className="text-muted-foreground max-w-md">
               {error || "The task you're looking for doesn't exist or you may not have access to it."}
             </p>
