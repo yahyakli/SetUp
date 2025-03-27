@@ -237,10 +237,12 @@ export default function Page() {
       const res = await axios.delete(PROJECT_SERVICE_URL + `/api/team-members/${teamMember.id}`, {
         headers: {
           Authorization: `Bearer ${token}`
+        }
+      });
 
       if(res.status === 200){
         dispatch(deleteTeamInState(team.id));
-        toast.success('Successfully left the team');
+        toast.success('Successfully left the team and removed your tasks');
         router.push('/teams');
       }
 
@@ -271,11 +273,17 @@ export default function Page() {
 
     try {
       // First, remove the user's tasks
-      await axios.delete(TASK_SERVICE_URL + `/api/tasks/user/${memberToRemove.user_id}`, {
+      const tasksRes = await axios.delete(TASK_SERVICE_URL + `/api/tasks/user/${memberToRemove.user_id}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
+      
+      // Check if tasks were successfully deleted
+      if (tasksRes.status !== 200) {
+        toast.error('Failed to remove member tasks');
+        return;
+      }
       
       // Then remove the member from the team
       const res = await axios.delete(PROJECT_SERVICE_URL + `/api/team-members/${memberToRemove.id}`, {
