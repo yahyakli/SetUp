@@ -19,7 +19,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
-import axios from 'axios'
+import axios, { AxiosError } from 'axios'
 import { PROJECT_SERVICE_URL, USERS_SERVICE_URL, TASK_SERVICE_URL } from '@/constants/API_URLS'
 import Link from 'next/link'
 import { Attachment, Comment, Task, User, Project, TeamMember } from '@/types'
@@ -63,6 +63,8 @@ export default function TaskDetailPage() {
   useEffect(() => {
     const fetchTaskData = async () => {
       setLoading(true)
+      setError(null) // Reset error state on new fetch attempt
+      
       try {
         // Fetch task details
         const taskResponse = await axios.get(
@@ -76,6 +78,13 @@ export default function TaskDetailPage() {
 
         if (taskResponse.status === 200) {
           const taskData = taskResponse.data.data
+          
+          // Check if task data is empty or null
+          if (!taskData) {
+            setError('Task not found. The task may have been deleted or does not exist.')
+            return
+          }
+          
           setTask(taskData)
 
           // Use comments and attachments from task data
@@ -110,8 +119,13 @@ export default function TaskDetailPage() {
         }
       } catch (error) {
         console.error('Error fetching task:', error)
-        setError('Failed to load task data. Please try again later.')
+        if (error instanceof AxiosError && error.response && error.response.status === 404) {
+          setError('Task not found. The task may have been deleted or does not exist.')
+        } else {
+          setError('Failed to load task data. Please try again later.')
+        }
       } finally {
+        // Always set loading to false when the task fetch is complete, regardless of success or error
         setLoading(false)
       }
     }
@@ -134,6 +148,7 @@ export default function TaskDetailPage() {
         }
       } catch (error) {
         console.error('Error fetching project:', error)
+        setLoading(false)
       }
     }
     
@@ -232,6 +247,8 @@ export default function TaskDetailPage() {
 
     if (token && id) {
       fetchTaskData()
+    } else {
+      setLoading(false)
     }
   }, [id, token, task?.assignee_id, task?.creator_id, user?.id])
 
@@ -336,7 +353,7 @@ export default function TaskDetailPage() {
   }
 
   // Loading skeleton
-  if (loading || isAuthorized === null) {
+  if (loading) {
     return (
       <AppLayout>
         <div className="p-6 space-y-6 dark:bg-gray-900 bg-gray-50">
@@ -355,7 +372,7 @@ export default function TaskDetailPage() {
     )
   }
 
-  // Error state - now includes unauthorized access
+  // Task not found or error state - show this after loading is completed
   if (error || !task || isAuthorized === false) {
     return (
       <AppLayout>
