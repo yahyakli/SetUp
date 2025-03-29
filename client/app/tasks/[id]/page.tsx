@@ -1,5 +1,5 @@
 "use client"
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/lib/store'
@@ -54,12 +54,12 @@ export default function TaskDetailPage() {
   const [commentUsers, setCommentUsers] = useState<Record<string, User>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [newComment, setNewComment] = useState('')
   const [submittingComment, setSubmittingComment] = useState(false)
   const [previewAttachment, setPreviewAttachment] = useState<Attachment | null>(null)
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null)
   const [dataReady, setDataReady] = useState(false)
+  const commentInputRef = useRef<HTMLTextAreaElement>(null)
 
   // Get the current tab from URL or default to 'details'
   const currentTab = searchParams.get('tab') || 'details'
@@ -125,7 +125,7 @@ export default function TaskDetailPage() {
             commentsData = taskData.comments;
 
             // Extract unique user IDs from comments
-            const commentUserIds = [...new Set(taskData.comments.map((comment: Comment) => comment.user_id))]
+            const commentUserIds = [...new Set(taskData.comments.map((comment: Comment) => comment.creator_id))]
 
             if (commentUserIds.length > 0) {
               try {
@@ -296,8 +296,11 @@ export default function TaskDetailPage() {
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Get comment value from ref instead of state
+    const commentText = commentInputRef.current?.value || ''
 
-    if (!newComment.trim()) {
+    if (!commentText.trim()) {
       toast.error('Comment cannot be empty')
       return
     }
@@ -314,9 +317,9 @@ export default function TaskDetailPage() {
         `${TASK_SERVICE_URL}/api/comments/`,
         {
           task_id: task._id,
-          user_id: user.id,
-          content: newComment,
-          status: 'active'
+          comment: commentText,
+          project_id: task.project_id,
+          creator_id: user.id,
         },
         {
           headers: {
@@ -338,8 +341,11 @@ export default function TaskDetailPage() {
           })
         }
 
-        // Clear the comment input
-        setNewComment('')
+        // Clear the comment input using the ref
+        if (commentInputRef.current) {
+          commentInputRef.current.value = ''
+        }
+        
         toast.success('Comment added successfully')
       }
     } catch (error) {
@@ -573,10 +579,10 @@ export default function TaskDetailPage() {
                     {comments.length > 0 ? (
                       <div className="space-y-6">
                         {comments.map((comment) => {
-                          const commentUser = commentUsers[comment.user_id]
+                          const commentUser = commentUsers[comment.creator_id]
                           const initials = commentUser ?
                             `${commentUser.firstName?.[0] || ''}${commentUser.lastName?.[0] || ''}` :
-                            comment.user_id.substring(0, 2)
+                            comment.creator_id.substring(0, 2)
 
                           return (
                             <div key={comment._id} className="flex gap-4">
@@ -605,8 +611,8 @@ export default function TaskDetailPage() {
                                       'Unknown time'}
                                   </span>
                                 </div>
-                                <div className="text-sm">
-                                  {comment.content}
+                                <div className="text-sm whitespace-pre-wrap">
+                                  {comment.comment}
                                 </div>
                               </div>
                             </div>
@@ -641,14 +647,13 @@ export default function TaskDetailPage() {
                         <div className="flex-1 space-y-2">
                           <Textarea
                             placeholder="Add a comment..."
-                            value={newComment}
-                            onChange={(e) => setNewComment(e.target.value)}
+                            ref={commentInputRef}
                             className="min-h-[100px]"
                           />
                           <div className="flex justify-end">
                             <Button
                               type="submit"
-                              disabled={submittingComment || !newComment.trim()}
+                              disabled={submittingComment}
                             >
                               {submittingComment ? (
                                 <>

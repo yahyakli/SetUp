@@ -164,15 +164,17 @@ export default function EditTaskPage() {
               }
             }
             
-            // If no team found with this assignee, select the first team
-            if (!foundTeam && projectData.teams.length > 0) {
-              setSelectedTeam(projectData.teams[0].id)
-              await fetchTeamMembers(projectData.teams[0].id, projectData)
+            // If no team found with this assignee, don't select any team by default
+            if (!foundTeam) {
+              setSelectedTeam(null)
+              setTeamMembers([])
+              setTeamUsers([])
             }
-          } else if (projectData.teams && projectData.teams.length > 0) {
-            // If no assignee, select the first team
-            setSelectedTeam(projectData.teams[0].id)
-            await fetchTeamMembers(projectData.teams[0].id, projectData)
+          } else {
+            // If no assignee, don't select any team by default
+            setSelectedTeam(null)
+            setTeamMembers([])
+            setTeamUsers([])
           }
         }
       } catch (error) {
@@ -218,13 +220,10 @@ export default function EditTaskPage() {
             
             if (memberExists) {
               setAssigneeId(currentAssigneeId)
-            } else if (team.members.length > 0) {
-              // Otherwise select the first team member
-              setAssigneeId(team.members[0].user_id)
+            } else {
+              // If the current assignee is not in this team, don't auto-select anyone
+              setAssigneeId(null)
             }
-          } else if (team.members.length > 0) {
-            // If no assignee specified, select the first team member
-            setAssigneeId(team.members[0].user_id)
           }
         }
       } catch (error) {
@@ -238,8 +237,7 @@ export default function EditTaskPage() {
     }
   }, [id, token])
 
-  // Remove the existing useEffect for team members since we're handling it in the fetchProjectData function
-  // Instead, add a new useEffect that only runs when selectedTeam changes manually (not during initial load)
+  // Update the useEffect that runs when selectedTeam changes
   useEffect(() => {
     const loadTeamMembers = async () => {
       if (!selectedTeam || !project) return
@@ -279,13 +277,10 @@ export default function EditTaskPage() {
               (member: TeamMember) => member.user_id === assigneeId
             )
             
-            if (!memberExists && team.members.length > 0) {
-              // If current assignee is not in this team, select the first member
-              setAssigneeId(team.members[0].user_id)
+            if (!memberExists) {
+              // If current assignee is not in this team, don't auto-select anyone
+              setAssigneeId(null)
             }
-          } else if (team.members.length > 0) {
-            // If no assignee selected, select the first member
-            setAssigneeId(team.members[0].user_id)
           }
         }
       } catch (error) {
@@ -374,11 +369,6 @@ export default function EditTaskPage() {
       return
     }
 
-    if (!assigneeId) {
-      toast.error('Assignee is required')
-      return
-    }
-
     setIsSubmitting(true)
 
     try {
@@ -389,6 +379,7 @@ export default function EditTaskPage() {
         status,
         priority,
         project_id: project.id,
+        team_id: selectedTeam || null,
         assignee_id: assigneeId || null,
         due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
         estimated_hours: estimatedHours ? parseFloat(estimatedHours) : null,
@@ -672,9 +663,8 @@ export default function EditTaskPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="assignee">Assignee <span className="text-destructive">*</span></Label>
+                    <Label htmlFor="assignee">Assignee</Label>
                     <Select
-                      required
                       value={assigneeId || ''} 
                       onValueChange={setAssigneeId}
                       disabled={!selectedTeam || teamMembers.length === 0}

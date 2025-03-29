@@ -13,9 +13,8 @@ export const createTaskSchema = Joi.object({
     'number.base': 'Project ID must be a number',
     'any.required': 'Project ID is required'
   }),
-  assignee_id: Joi.string().required().messages({
-    'string.empty': 'Assignee ID is required'
-  }),
+  team_id: Joi.number().integer().allow(null),
+  assignee_id: Joi.string().allow(null),
   due_date: Joi.date().iso().allow(null),
   estimated_hours: Joi.number().integer().min(0).allow(null),
   actual_hours: Joi.number().integer().min(0).allow(null),
@@ -35,9 +34,8 @@ export const updateTaskSchema = Joi.object({
   project_id: Joi.number().integer().messages({
     'number.base': 'Project ID must be a number'
   }),
-  assignee_id: Joi.string().required().messages({
-    'string.empty': 'Assignee ID is required'
-  }),
+  team_id: Joi.number().integer().allow(null),
+  assignee_id: Joi.string().allow(null),
   due_date: Joi.date().iso().allow(null),
   estimated_hours: Joi.number().integer().min(0).allow(null),
   actual_hours: Joi.number().integer().min(0).allow(null),

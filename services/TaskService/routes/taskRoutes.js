@@ -18,6 +18,6 @@ router.put('/:id', TaskController.updateTask);
 router.delete('/:id', TaskController.deleteTask);
 router.patch('/:id/status', TaskController.updateTaskStatus);
 router.patch('/:id/assign', TaskController.assignTask);
-router.delete('/user/:userId', TaskController.deleteUserTasks);
+router.delete('/user/:userId/team/:teamId', TaskController.removeUserTaskAssignments);
 
 export default router;

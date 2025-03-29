@@ -303,49 +303,46 @@ export class TaskController {
   }
 
   /**
-   * Delete all tasks for a specific user
-   * @param {Object} req - Express request object
-   * @param {Object} res - Express response object
-   */
-  static async deleteUserTasks(req, res) {
+ * Remove assignee from all tasks for a specific user in a project
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+  static async removeUserTaskAssignments(req, res) {
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
-      const { userId } = req.params;
+      const { userId, teamId } = req.params;
 
-      // Find all tasks for the user
-      const tasks = await Task.find({ assignee_id: userId }).session(session);
+      // Find all tasks for the user in the specified project
+      const tasks = await Task.find({
+        assignee_id: userId,
+        team_id: teamId
+      }).session(session);
 
       if (tasks.length === 0) {
         await session.abortTransaction();
         session.endSession();
-        return ResponseHandler.error(res, 'No tasks found for this user', 404);
+        return ResponseHandler.error(res, 'No tasks found for this user in the specified project', 404);
       }
 
-      // Get task IDs to use for deleting comments and attachments
-      const taskIds = tasks.map(task => task._id);
-
-      // Delete all comments associated with user's tasks
-      await Comment.deleteMany({ task_id: { $in: taskIds } }).session(session);
-
-      // Delete all attachments associated with user's tasks
-      await Attachment.deleteMany({ task_id: { $in: taskIds } }).session(session);
-
-      // Delete all tasks for the user
-      await Task.deleteMany({ assignee_id: userId }).session(session);
+      // Update all tasks to remove the assignee_id
+      const updateResult = await Task.updateMany(
+        { assignee_id: userId, team_id: teamId },
+        { $unset: { assignee_id: "", team_id: "" } }
+      ).session(session);
 
       await session.commitTransaction();
       session.endSession();
 
-      return ResponseHandler.success(res, `Deleted ${tasks.length} tasks for user`, {
-        tasksDeleted: tasks.length
+      return ResponseHandler.success(res, `Removed assignee from ${tasks.length} tasks for user in project`, {
+        tasksUpdated: tasks.length
       });
     } catch (error) {
       await session.abortTransaction();
       session.endSession();
-      console.error('Error deleting user tasks:', error);
-      return ResponseHandler.error(res, 'Failed to delete user tasks', 500);
+      console.error('Error removing task assignments:', error);
+      return ResponseHandler.error(res, 'Failed to remove task assignments', 500);
     }
   }
 }

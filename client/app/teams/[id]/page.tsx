@@ -221,7 +221,7 @@ export default function Page() {
 
     try {
       // First, remove the user's tasks
-      const tasksRes = await axios.delete(TASK_SERVICE_URL + `/api/tasks/user/${user.id}`, {
+      const tasksRes = await axios.delete(TASK_SERVICE_URL + `/api/tasks/user/${user.id}/team/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -273,7 +273,7 @@ export default function Page() {
 
     try {
       // First, remove the user's tasks
-      const tasksRes = await axios.delete(TASK_SERVICE_URL + `/api/tasks/user/${memberToRemove.user_id}`, {
+      const tasksRes = await axios.delete(TASK_SERVICE_URL + `/api/tasks/user/${memberToRemove.user_id}/team/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }

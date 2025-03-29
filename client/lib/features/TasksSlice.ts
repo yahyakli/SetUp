@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { Task } from "@/types";
+import { Comment, Task } from "@/types";
 
 // Define the initial state
 interface TasksState {
@@ -37,6 +37,12 @@ const taskSlice = createSlice({
     },
     deleteTask: (state, action: PayloadAction<string>) => {
       state.tasks = state.tasks.filter((task) => task._id !== action.payload);
+    },
+    addCommentToTask: (state, action: PayloadAction<{ taskId: string; comment: Comment }>) => {
+      const index = state.tasks.findIndex((task) => task._id === action.payload.taskId);
+      if (index !== -1) {
+        state.tasks[index].comments.push(action.payload.comment);
+      }
     }
   },
 });

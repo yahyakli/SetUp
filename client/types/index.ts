@@ -62,7 +62,8 @@ export interface Task {
   status: string;
   priority: string;
   project_id: number;
-  assignee_id: string;
+  team_id: number | null;
+  assignee_id: string | null;
   creator_id: string;
   due_date: Date | null;
   estimated_hours: number | null;
@@ -94,8 +95,9 @@ export interface Attachment {
 export interface Comment {
   _id: string;
   task_id: string;
-  user_id: string;
-  content: string;
+  project_id: number;
+  creator_id: string;
+  comment: string;
   created_at: Date;
   updated_at: Date;
 }

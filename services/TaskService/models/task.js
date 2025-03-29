@@ -25,6 +25,10 @@ const taskSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    team_id: {
+      type: Number,
+      default: null,
+    },
     assignee_id: {
       type: String,
       default: null,

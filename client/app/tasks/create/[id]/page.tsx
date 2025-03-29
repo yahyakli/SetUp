@@ -189,11 +189,6 @@ export default function CreateTaskPage() {
       return
     }
 
-    if (!assigneeId) {
-      toast.error('Assignee is required')
-      return
-    }
-
     setIsSubmitting(true)
 
     try {
@@ -204,6 +199,7 @@ export default function CreateTaskPage() {
         status,
         priority,
         project_id: project.id,
+        team_id: selectedTeam || null,
         assignee_id: assigneeId || null,
         creator_id: user?.id,
         due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
@@ -459,9 +455,8 @@ export default function CreateTaskPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="assignee">Assignee <span className="text-destructive">*</span></Label>
+                    <Label htmlFor="assignee">Assignee</Label>
                     <Select
-                      required
                       value={assigneeId || ''} 
                       onValueChange={setAssigneeId}
                       disabled={!selectedTeam || teamMembers.length === 0}
