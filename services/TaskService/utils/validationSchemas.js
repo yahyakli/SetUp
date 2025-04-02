@@ -73,7 +73,10 @@ export const createAttachmentSchema = Joi.object({
   task_id: Joi.string().required().messages({
     'string.empty': 'Task ID is required'
   }),
-  status: Joi.string().valid('active', 'inactive').default('active')
+  uploaded_by: Joi.string().required().messages({
+    'string.empty': 'uploaded by id is required'
+  }),
+  status: Joi.string().valid('active', 'inactive').default('active'),
 });
 
 export const updateAttachmentSchema = Joi.object({

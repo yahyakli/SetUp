@@ -1,7 +1,7 @@
 "use client"
 import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { useSelector } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '@/lib/store'
 import AppLayout from '../../../AppLayout'
 import {
@@ -40,21 +40,26 @@ import Link from 'next/link'
 import { Attachment, TeamMember, Project, User, Task } from '@/types'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { AvatarImage } from '@radix-ui/react-avatar'
+import { updateTask } from '@/lib/features/TasksSlice'
 
 export default function EditTaskPage() {
   const router = useRouter()
+  const dispatch = useDispatch();
   const { id } = useParams()
   const { user, token } = useSelector((state: RootState) => state.user)
-  
+
   const [task, setTask] = useState<Task | null>(null)
   const [project, setProject] = useState<Project | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  
+
   // Replace state with refs for form inputs to prevent lag
   const titleRef = useRef('')
   const descriptionRef = useRef('')
-  
+
+  const isProjectOwner = project?.owner_id === user?.id;
+  const isTaskAssignee = task?.assignee_id === user?.id;
+
   const [status, setStatus] = useState('todo')
   const [priority, setPriority] = useState('low')
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined)
@@ -75,7 +80,7 @@ export default function EditTaskPage() {
       try {
         // Ensure id is a string
         const taskId = Array.isArray(id) ? id[0] : id
-        
+
         // Fetch task details
         const taskResponse = await axios.get(
           `${TASK_SERVICE_URL}/api/tasks/${taskId}`,
@@ -89,34 +94,34 @@ export default function EditTaskPage() {
         if (taskResponse.status === 200) {
           const taskData = taskResponse.data.data
           setTask(taskData)
-          
+
           // Set form values from task data using refs instead of state
           titleRef.current = taskData.title || ''
           descriptionRef.current = taskData.description || ''
-          
+
           // These still use state since they're used for UI components
           setStatus(taskData.status || 'todo')
           setPriority(taskData.priority || 'low')
           setLabel(taskData.label || '')
-          
+
           if (taskData.due_date) {
             setDueDate(new Date(taskData.due_date))
           }
-          
+
           if (taskData.estimated_hours) {
             setEstimatedHours(taskData.estimated_hours.toString())
           }
-          
+
           // Store the assignee ID
           if (taskData.assignee_id) {
             setAssigneeId(taskData.assignee_id)
           }
-          
+
           // Set existing attachments
           if (taskData.attachments) {
             setExistingAttachments(taskData.attachments)
           }
-          
+
           // Fetch project details
           if (taskData.project_id) {
             await fetchProjectData(taskData.project_id, taskData.assignee_id)
@@ -140,30 +145,30 @@ export default function EditTaskPage() {
             }
           }
         )
-        
+
         if (projectResponse.status === 200) {
           const projectData = projectResponse.data
           setProject(projectData)
-          
+
           // Find the team that contains the assignee
           if (currentAssigneeId && projectData.teams) {
             let foundTeam = false
-            
+
             for (const team of projectData.teams) {
               const memberExists = team.members.some(
                 (member: TeamMember) => member.user_id === currentAssigneeId
               )
-              
+
               if (memberExists) {
                 setSelectedTeam(team.id)
                 foundTeam = true
-                
+
                 // Fetch team members for this team
                 await fetchTeamMembers(team.id, projectData, currentAssigneeId)
                 break
               }
             }
-            
+
             // If no team found with this assignee, don't select any team by default
             if (!foundTeam) {
               setSelectedTeam(null)
@@ -182,7 +187,7 @@ export default function EditTaskPage() {
         setError('Failed to load project data.')
       }
     }
-    
+
     const fetchTeamMembers = async (teamId: number, projectData: Project, currentAssigneeId?: string) => {
       try {
         // Find the selected team
@@ -192,12 +197,12 @@ export default function EditTaskPage() {
           setTeamUsers([])
           return
         }
-        
+
         setTeamMembers(team.members)
-        
+
         // Get user details for team members
         const userIds = team.members.map(member => member.user_id)
-        
+
         // Make request to user service to get user details
         const response = await axios.post(
           `${USERS_SERVICE_URL}/api/users/batch`,
@@ -208,16 +213,16 @@ export default function EditTaskPage() {
             }
           }
         )
-        
+
         if (response.status === 200) {
           setTeamUsers(response.data)
-          
+
           // If we have a current assignee and they're in this team, select them
           if (currentAssigneeId) {
             const memberExists = team.members.some(
               (member: TeamMember) => member.user_id === currentAssigneeId
             )
-            
+
             if (memberExists) {
               setAssigneeId(currentAssigneeId)
             } else {
@@ -241,7 +246,7 @@ export default function EditTaskPage() {
   useEffect(() => {
     const loadTeamMembers = async () => {
       if (!selectedTeam || !project) return
-      
+
       try {
         // Find the selected team
         const team = project.teams.find(t => t.id === selectedTeam)
@@ -251,12 +256,12 @@ export default function EditTaskPage() {
           setAssigneeId(null)
           return
         }
-        
+
         setTeamMembers(team.members)
-        
+
         // Get user details for team members
         const userIds = team.members.map(member => member.user_id)
-        
+
         // Make request to user service to get user details
         const response = await axios.post(
           `${USERS_SERVICE_URL}/api/users/batch`,
@@ -267,16 +272,16 @@ export default function EditTaskPage() {
             }
           }
         )
-        
+
         if (response.status === 200) {
           setTeamUsers(response.data)
-          
+
           // If current assignee is in this team, keep them selected
           if (assigneeId) {
             const memberExists = team.members.some(
               (member: TeamMember) => member.user_id === assigneeId
             )
-            
+
             if (!memberExists) {
               // If current assignee is not in this team, don't auto-select anyone
               setAssigneeId(null)
@@ -288,7 +293,7 @@ export default function EditTaskPage() {
         toast.error('Failed to load team members')
       }
     }
-    
+
     loadTeamMembers()
   }, [selectedTeam, project, token])
 
@@ -316,7 +321,7 @@ export default function EditTaskPage() {
       toast.error('Cannot remove attachment: missing ID')
       return
     }
-    
+
     try {
       await axios.delete(
         `${TASK_SERVICE_URL}/api/attachments/${attachment._id}`,
@@ -326,7 +331,7 @@ export default function EditTaskPage() {
           }
         }
       )
-      
+
       // Remove from state
       setExistingAttachments(existingAttachments.filter(a => a._id !== attachment._id))
       toast.success('Attachment removed')
@@ -348,7 +353,7 @@ export default function EditTaskPage() {
   // Update the handleSubmit function to use refs
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!titleRef.current.trim()) {
       toast.error('Task title is required')
       return
@@ -398,16 +403,23 @@ export default function EditTaskPage() {
         }
       )
 
+      if (taskResponse.status === 200) {
+        if (taskData.assignee_id === user?.id) {
+          dispatch(updateTask(taskResponse.data.data))
+        }
+      }
+
       if (taskResponse.status === 200 && newAttachments.length > 0) {
         const taskId = task._id
 
         // Upload each new attachment separately
         const uploadPromises = newAttachments.map(async (attachment) => {
           if (!attachment.file) return null;
-          
+
           const formData = new FormData()
           formData.append('file', attachment.file)
           formData.append('task_id', taskId)
+          formData.append('uploaded_by', user ? user.id : '')
           formData.append('status', 'active')
 
           return axios.post(
@@ -474,8 +486,8 @@ export default function EditTaskPage() {
   }
 
   // Check if user has permission to edit this task
-  const hasEditPermission = user?.id === project?.owner_id || user?.id === task?.creator_id
-  
+  const hasEditPermission = isProjectOwner || isTaskAssignee
+
   if (!hasEditPermission) {
     return (
       <AppLayout>
@@ -530,6 +542,7 @@ export default function EditTaskPage() {
                     defaultValue={titleRef.current}
                     onChange={handleTitleChange}
                     placeholder="Task title"
+                    disabled={!isProjectOwner}
                     required
                   />
                 </div>
@@ -543,6 +556,7 @@ export default function EditTaskPage() {
                     onChange={handleDescriptionChange}
                     placeholder="Task description"
                     rows={4}
+                    disabled={!isProjectOwner}
                   />
                 </div>
 
@@ -550,7 +564,7 @@ export default function EditTaskPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="status">Status <span className="text-destructive">*</span></Label>
-                    <Select value={status} onValueChange={setStatus} required>
+                    <Select value={status} onValueChange={setStatus} disabled={!isProjectOwner} required>
                       <SelectTrigger id="status">
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
@@ -564,7 +578,7 @@ export default function EditTaskPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="priority">Priority <span className="text-destructive">*</span></Label>
-                    <Select value={priority} onValueChange={setPriority} required>
+                    <Select value={priority} onValueChange={setPriority} disabled={!isProjectOwner} required>
                       <SelectTrigger id="priority">
                         <SelectValue placeholder="Select priority" />
                       </SelectTrigger>
@@ -583,7 +597,7 @@ export default function EditTaskPage() {
                   <div className="space-y-2">
                     <Label htmlFor="due-date">Due Date</Label>
                     <Popover>
-                      <PopoverTrigger asChild>
+                      <PopoverTrigger asChild disabled={!isProjectOwner}>
                         <Button
                           id="due-date"
                           variant={"outline"}
@@ -616,6 +630,7 @@ export default function EditTaskPage() {
                       value={estimatedHours}
                       onChange={(e) => setEstimatedHours(e.target.value)}
                       placeholder="Estimated hours to complete"
+                      disabled={!isProjectOwner}
                     />
                   </div>
                 </div>
@@ -623,7 +638,7 @@ export default function EditTaskPage() {
                 {/* Label */}
                 <div className="space-y-2">
                   <Label htmlFor="label">Label</Label>
-                  <Select value={label} onValueChange={setLabel}>
+                  <Select value={label} onValueChange={setLabel} disabled={!isProjectOwner}>
                     <SelectTrigger id="label">
                       <SelectValue placeholder="Select a label" />
                     </SelectTrigger>
@@ -646,8 +661,9 @@ export default function EditTaskPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="team">Team</Label>
-                    <Select 
-                      value={selectedTeam?.toString() || ''} 
+                    <Select
+                      disabled={!isProjectOwner}
+                      value={selectedTeam?.toString() || ''}
                       onValueChange={(value) => setSelectedTeam(parseInt(value, 10))}
                     >
                       <SelectTrigger id="team">
@@ -665,26 +681,26 @@ export default function EditTaskPage() {
                   <div className="space-y-2">
                     <Label htmlFor="assignee">Assignee</Label>
                     <Select
-                      value={assigneeId || ''} 
+                      value={assigneeId || ''}
                       onValueChange={setAssigneeId}
-                      disabled={!selectedTeam || teamMembers.length === 0}
+                      disabled={!selectedTeam || teamMembers.length === 0 || !isProjectOwner}
                     >
                       <SelectTrigger id="assignee">
                         <SelectValue placeholder={
-                          !selectedTeam 
-                            ? "Select a team first" 
-                            : teamMembers.length === 0 
-                              ? "No members in this team" 
+                          !selectedTeam
+                            ? "Select a team first"
+                            : teamMembers.length === 0
+                              ? "No members in this team"
                               : "Select team member"
                         } />
                       </SelectTrigger>
                       <SelectContent>
                         {teamUsers && teamMembers.map((member) => {
                           const user = teamUsers.find(u => u.id === member.user_id);
-                          const initials = user ? 
-                            `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}` : 
+                          const initials = user ?
+                            `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}` :
                             member.user_id.substring(0, 2);
-                          
+
                           return (
                             <SelectItem key={member.id} value={member.user_id.toString()}>
                               <div className="flex items-center">
@@ -718,8 +734,8 @@ export default function EditTaskPage() {
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                       {existingAttachments.map((attachment) => (
-                        <div 
-                          key={attachment._id} 
+                        <div
+                          key={attachment._id}
                           className="relative border rounded-md p-2 flex items-center gap-2"
                         >
                           <div className="flex-1 truncate">
@@ -727,21 +743,23 @@ export default function EditTaskPage() {
                               {attachment.original_filename || 'File'}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {attachment.file_size 
-                                ? `${(attachment.file_size / 1024).toFixed(2)} KB` 
+                              {attachment.file_size
+                                ? `${(attachment.file_size / 1024).toFixed(2)} KB`
                                 : 'Unknown size'
                               }
                             </p>
                           </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => removeExistingAttachment(attachment)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
+                          {(isProjectOwner || attachment.uploaded_by === user?.id) && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => removeExistingAttachment(attachment)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -758,8 +776,8 @@ export default function EditTaskPage() {
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Label 
-                        htmlFor="file-upload" 
+                      <Label
+                        htmlFor="file-upload"
                         className="cursor-pointer flex items-center gap-2 px-4 py-2 border border-input rounded-md hover:bg-accent"
                       >
                         <Upload className="h-4 w-4" />
@@ -771,10 +789,14 @@ export default function EditTaskPage() {
                         multiple
                         onChange={handleFileChange}
                         className="hidden"
+                        accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip,.rar,.ppt,.pptx,.svg,.bmp,.tiff,.rtf,.xml,.json,.html,.css,.js,.md,.psd,.ai,.eps,.indd,.sketch"
                       />
+                      <p className="text-xs text-muted-foreground">
+                        Supported formats: Images, documents, spreadsheets, presentations, code files, design files (no video or audio)
+                      </p>
                     </div>
                   </div>
-                  
+
                   {/* New Attachment Previews */}
                   {newAttachments.length > 0 && (
                     <>
@@ -786,8 +808,8 @@ export default function EditTaskPage() {
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         {newAttachments.map((attachment, index) => (
-                          <div 
-                            key={index} 
+                          <div
+                            key={index}
                             className="relative border rounded-md p-2 flex items-center gap-2"
                           >
                             <div className="flex-1 truncate">
@@ -795,7 +817,7 @@ export default function EditTaskPage() {
                                 {attachment.file?.name || 'File'}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                {attachment.file 
+                                {attachment.file
                                   ? `${(attachment.file.size / 1024).toFixed(2)} KB`
                                   : 'Unknown size'
                                 }
@@ -820,15 +842,15 @@ export default function EditTaskPage() {
             </form>
           </CardContent>
           <CardFooter className="flex justify-between">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => router.push(`/tasks/${task?._id}`)}
               disabled={isSubmitting}
             >
               Cancel
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               form="edit-task-form"
               disabled={isSubmitting}
             >

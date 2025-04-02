@@ -161,7 +161,7 @@ export default function Page() {
               </div>
             </Card>
           ) : (
-            <div className="space-y-3">
+            <div className="flex flex-col gap-5">
               {tasks.map((task) => (
                 <Link key={task._id} href={`/tasks/${task._id}`}>
                   <Card className="hover:bg-secondary/20 transition-all">
@@ -187,9 +187,13 @@ export default function Page() {
                             task.priority === 'High' ? 'destructive' :
                               task.priority === 'Medium' ? 'secondary' : 'outline'
                           }
+                          className="whitespace-nowrap text-xs dark:border-slate-700"
                         >
                           {task.priority}
                         </Badge>
+                        {task.label && (
+                          <Badge variant="secondary" className="whitespace-nowrap text-xs dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">{task.label}</Badge>
+                        )}
                         <span className="text-xs text-muted-foreground">
                           {task.due_date ? formatDate(task.due_date) : 'No due date'}
                         </span>

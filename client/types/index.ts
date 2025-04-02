@@ -83,6 +83,7 @@ export interface Attachment {
   attachment_url?: string;
   original_filename?: string;
   file_size?: number;
+  uploaded_by: string;
   status?: string;
   created_at?: string;
   updated_at?: string;

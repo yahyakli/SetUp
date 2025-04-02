@@ -23,6 +23,10 @@ const attachmentSchema = new mongoose.Schema(
       type: Number,
       required: true
     },
+    uploaded_by: {
+      type: String,
+      required: true
+    },
     status: {
       type: String,
       enum: ['active', 'inactive'],

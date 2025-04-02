@@ -61,6 +61,8 @@ export default function TaskDetailPage() {
   const [dataReady, setDataReady] = useState(false)
   const commentInputRef = useRef<HTMLTextAreaElement>(null)
 
+  const isTaskAssignee = task?.assignee_id === user?.id;
+
   // Get the current tab from URL or default to 'details'
   const currentTab = searchParams.get('tab') || 'details'
 
@@ -820,7 +822,7 @@ export default function TaskDetailPage() {
                   </Button>
                 )}
                 {/* Only show edit button if user is project owner or task creator */}
-                {(user?.id === project?.owner_id || user?.id === task?.creator_id) && (
+                {(user?.id === project?.owner_id || isTaskAssignee) && (
                   <Button asChild>
                     <Link href={`/tasks/edit/${task?._id}`}>
                       Edit Task

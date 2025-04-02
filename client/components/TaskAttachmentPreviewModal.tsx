@@ -8,7 +8,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, FileText, Image as ImageIcon, Film, FileCode, File } from 'lucide-react';
+import { ExternalLink, FileText, Image as ImageIcon, FileCode, File } from 'lucide-react';
 import { Attachment } from '@/types';
 import { TASK_SERVICE_URL } from '@/constants/API_URLS';
 import Image from 'next/image';
@@ -63,10 +63,8 @@ export default function AttachmentPreviewModal({
 
   const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(fileExtension || '');
   const isPdf = fileExtension === 'pdf';
-  const isVideo = ['mp4', 'webm', 'ogg', 'mov'].includes(fileExtension || '');
   const isCode = ['js', 'jsx', 'ts', 'tsx', 'html', 'css', 'json', 'py', 'java', 'c', 'cpp'].includes(fileExtension || '');
   const isText = ['txt', 'md', 'csv', 'log'].includes(fileExtension || '');
-  const isAudio = ['mp3', 'wav', 'ogg'].includes(fileExtension || '');
   const isViewableAsText = () => {
     const ext = attachment?.original_filename
       ?.split('.')
@@ -117,7 +115,6 @@ export default function AttachmentPreviewModal({
   const getFileIcon = () => {
     if (isImage) return <ImageIcon className="h-12 w-12 text-primary" />;
     if (isPdf) return <FileText className="h-12 w-12 text-primary" />;
-    if (isVideo) return <Film className="h-12 w-12 text-primary" />;
     if (isCode || isText) return <FileCode className="h-12 w-12 text-primary" />;
     return <File className="h-12 w-12 text-primary" />;
   };
@@ -156,29 +153,6 @@ export default function AttachmentPreviewModal({
       );
     }
 
-    if (isVideo) {
-      return (
-        <video 
-          controls 
-          className="max-h-[60vh] max-w-full rounded-md"
-        >
-          <source src={fileUrl} type={`video/${fileExtension}`} />
-          Your browser does not support the video tag.
-        </video>
-      );
-    }
-
-    if (isAudio) {
-      return (
-        <div className="flex flex-col items-center justify-center p-8">
-          <audio controls className="w-full">
-            <source src={fileUrl} type={`audio/${fileExtension}`} />
-            Your browser does not support the audio element.
-          </audio>
-        </div>
-      );
-    }
-
     if (isViewableAsText()) {
       if (isLoading) {
         return (
@@ -208,7 +182,7 @@ export default function AttachmentPreviewModal({
         <div className="border rounded-md overflow-hidden">
           <Editor
             value={fileContent}
-            onValueChange={() => {}} // Read-only, so no change handler needed
+            onValueChange={() => {}}
             highlight={code => highlight(code, getLanguageForPrism(), '')}
             padding={16}
             readOnly={true}

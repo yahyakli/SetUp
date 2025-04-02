@@ -85,6 +85,7 @@ export class AttachmentController {
         status: value.status || 'active',
         original_filename: req.files.file.name,
         file_size: req.files.file.size,
+        uploaded_by: value.uploaded_by,
       };
 
       const attachment = await Attachment.create(attachmentData);

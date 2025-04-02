@@ -1,7 +1,7 @@
 "use client"
 import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { useSelector } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '@/lib/store'
 import AppLayout from '../../../AppLayout'
 import {
@@ -40,9 +40,11 @@ import Link from 'next/link'
 import { Attachment, TeamMember, Project, User } from '@/types'
 import { Avatar } from '@/components/ui/avatar'
 import { AvatarImage } from '@radix-ui/react-avatar'
+import { addTask } from '@/lib/features/TasksSlice'
 
 export default function CreateTaskPage() {
   const router = useRouter()
+  const dispatch = useDispatch()
   const { id } = useParams()
   const { user, token } = useSelector((state: RootState) => state.user)
   
@@ -217,8 +219,15 @@ export default function CreateTaskPage() {
           }
         }
       )
+      if (taskResponse.status === 201) {
+        if (taskData.assignee_id === user?.id){
+          dispatch(addTask(taskResponse.data.data));
+        }
+      }
 
       if (taskResponse.status === 201 && attachments.length > 0) {
+
+
         const taskId = taskResponse.data.data._id
 
         // Upload each attachment separately
@@ -517,7 +526,11 @@ export default function CreateTaskPage() {
                         multiple
                         onChange={handleFileChange}
                         className="hidden"
+                        accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip,.rar,.ppt,.pptx,.svg,.bmp,.tiff,.rtf,.xml,.json,.html,.css,.js,.md,.psd,.ai,.eps,.indd,.sketch"
                       />
+                      <p className="text-xs text-muted-foreground">
+                        Supported formats: Images, documents, spreadsheets, presentations, code files, design files (no video or audio)
+                      </p>
                     </div>
                   </div>
                   

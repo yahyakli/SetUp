@@ -5,6 +5,7 @@ import { Toaster } from "sonner";
 import ReduxProvider from "@/lib/ReduxProvider.client";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { AppContextProvider } from "@/context/AppContext";
+import NavigationProgress from "../components/NavigationProgress";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -24,6 +25,7 @@ export default function RootLayout({
         <NextThemesProvider attribute="class" defaultTheme="system" enableSystem>
           <ReduxProvider>
             <AppContextProvider>
+              <NavigationProgress />
               {children}
               <Toaster />
             </AppContextProvider>

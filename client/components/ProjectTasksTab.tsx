@@ -21,7 +21,6 @@ export default function ProjectTasksTab({ project }: { project: Project }) {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("all");
   const [usersData, setUsersData] = useState<Record<string, User>>({});
-  console.log(tasks)
 
   useEffect(() => {
     const fetchTasks = async () => {
