@@ -12,6 +12,7 @@ import messageRoutes from './routes/messageRoutes.js';
 
 // Import middleware
 import { errorHandler, notFound } from './middleware/errorMiddleware.js';
+import { corsConfig } from './config/index.js';
 
 // Load environment variables
 dotenv.config();
@@ -31,7 +32,7 @@ mongoose.connect(process.env.MONGO_URI)
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors());
+app.use(cors(corsConfig));
 
 // Log requests in development mode
 if (process.env.NODE_ENV === 'development') {
@@ -50,7 +51,7 @@ app.use(notFound);
 app.use(errorHandler);
 
 // Start server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
 });
