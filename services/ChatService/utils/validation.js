@@ -10,7 +10,8 @@ export const validateChatRoom = (data) => {
       then: Joi.number().required(),
       otherwise: Joi.optional()
     }),
-    participants: Joi.array().items(Joi.string()).min(1).required()
+    participants: Joi.array().items(Joi.string()).min(1).required(),
+    user_id: Joi.string().required()
   });
   
   return schema.validate(data);
@@ -25,7 +26,8 @@ export const validateMessage = (data) => {
       then: Joi.string().required().min(1),
       otherwise: Joi.optional()
     }),
-    contentType: Joi.string().valid('text', 'file').required()
+    contentType: Joi.string().valid('text', 'file').required(),
+    user_id: Joi.string().required()
   });
   
   return schema.validate(data);

@@ -26,7 +26,7 @@ const createMessage = asyncHandler(async (req, res) => {
   // Check if chat room exists and user is participant
   const chatRoom = await ChatRoom.findOne({
     _id: req.body.chatRoomId,
-    participants: req.user.id
+    participants: req.user_id
   });
 
   if (!chatRoom) {
@@ -37,10 +37,10 @@ const createMessage = asyncHandler(async (req, res) => {
   // Create message
   const message = await Message.create({
     chatRoomId: req.body.chatRoomId,
-    senderId: req.user.id,
+    senderId: req.user_id,
     content: req.body.content,
     contentType: req.body.contentType,
-    readBy: [{ userId: req.user.id, readAt: new Date() }]
+    readBy: [{ userId: req.user_id, readAt: new Date() }]
   });
 
   // Update chat room's updatedAt
@@ -60,7 +60,7 @@ const getMessagesByChatRoom = asyncHandler(async (req, res) => {
   // Check if chat room exists and user is participant
   const chatRoom = await ChatRoom.findOne({
     _id: req.params.chatRoomId,
-    participants: req.user.id
+    participants: req.user_id
   });
 
   if (!chatRoom) {
@@ -103,10 +103,10 @@ const getMessagesByChatRoom = asyncHandler(async (req, res) => {
     await Message.updateMany(
       {
         _id: { $in: messageIds },
-        'readBy.userId': { $ne: req.user.id }
+        'readBy.userId': { $ne: req.user_id }
       },
       {
-        $push: { readBy: { userId: req.user.id, readAt: new Date() } }
+        $push: { readBy: { userId: req.user_id, readAt: new Date() } }
       }
     );
   }
@@ -144,7 +144,7 @@ const uploadAttachment = asyncHandler(async (req, res) => {
   }
 
   // Check if user is the sender of the message
-  if (message.senderId !== req.user.id) {
+  if (message.senderId !== req.user_id) {
     // Delete uploaded file if user is not sender
     fs.unlinkSync(req.file.path);
     res.status(403);
@@ -165,7 +165,7 @@ const uploadAttachment = asyncHandler(async (req, res) => {
     mimeType: req.file.mimetype,
     size: req.file.size,
     messageId: message._id,
-    uploadedBy: req.user.id
+    uploadedBy: req.user_id
   });
 
   res.status(201).json(attachment);
@@ -185,7 +185,7 @@ const getAttachments = asyncHandler(async (req, res) => {
   // Check if chat room exists and user is participant
   const chatRoom = await ChatRoom.findOne({
     _id: message.chatRoomId,
-    participants: req.user.id
+    participants: req.user_id
   });
 
   if (!chatRoom) {
@@ -218,7 +218,7 @@ const deleteAttachment = asyncHandler(async (req, res) => {
   }
 
   // Check if user is the sender of the message
-  if (message.senderId !== req.user.id) {
+  if (message.senderId !== req.user_id) {
     res.status(403);
     throw new Error('Not authorized, only message sender can delete attachments');
   }
@@ -271,10 +271,10 @@ const markMessagesAsRead = asyncHandler(async (req, res) => {
   await Message.updateMany(
     {
       _id: { $in: messageIds },
-      'readBy.userId': { $ne: req.user.id }
+      'readBy.userId': { $ne: req.user_id }
     },
     {
-      $push: { readBy: { userId: req.user.id, readAt: new Date() } }
+      $push: { readBy: { userId: req.user_id, readAt: new Date() } }
     }
   );
 
@@ -282,7 +282,7 @@ const markMessagesAsRead = asyncHandler(async (req, res) => {
   if (chatRoomId) {
     req.io.to(`room:${chatRoomId}`).emit('messages_read', {
       messageIds,
-      userId: req.user.id,
+      userId: req.user_id,
       readAt: new Date()
     });
   }
