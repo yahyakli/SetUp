@@ -18,14 +18,17 @@ import {
   Search,
   Filter,
   CheckCircle2,
-  Clock
+  Clock,
+  LayoutGrid,
+  List as ListIcon
 } from 'lucide-react'
 import AppLayout from '../AppLayout'
 import Link from 'next/link'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/lib/store'
 import { Skeleton } from '@/components/ui/skeleton'
-
+import { Button } from '@/components/ui/button'
+import { useViewMode } from '@/hooks/useViewMode'
 
 export default function Page() {
 
@@ -34,13 +37,13 @@ export default function Page() {
   const { projects } = useSelector((state: RootState) => state.projects);
   const [statusFilter, setStatusFilter] = useState<string>('All')
   const [priorityFilter, setPriorityFilter] = useState<string>('All')
-
+  const [viewMode, setViewMode] = useViewMode('tasks', 'list')
 
   // Filtered and Searched Projects
   const filteredTasks = useMemo(() => {
     return tasks.filter(task => {
       const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        task.description.toLowerCase().includes(searchTerm.toLowerCase())
+        task.description?.toLowerCase().includes(searchTerm.toLowerCase())
 
       const matchesStatus = statusFilter === 'All' || task.status === statusFilter
       const matchesPriority = priorityFilter === 'All' || task.priority === priorityFilter
@@ -63,25 +66,43 @@ export default function Page() {
   }
 
   // Add ProjectSkeleton component
-  const ProjectSkeleton = () => (
-    <Card className="dark:bg-gray-800 dark:border-gray-700">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <div className="flex-grow pr-4 space-y-2">
-          <Skeleton className="h-6 w-3/4" />
-          <Skeleton className="h-4 w-full" />
-        </div>
-        <Skeleton className="h-5 w-5 rounded" />
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="flex justify-between items-center">
-          <Skeleton className="h-5 w-20" />
-        </div>
-        <div className="flex justify-between items-center">
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-4 w-24" />
-        </div>
-      </CardContent>
-    </Card>
+  const ProjectSkeleton = ({ viewMode }: { viewMode: 'grid' | 'list' }) => (
+    viewMode === 'list' ? (
+      <Card className="dark:bg-gray-800 dark:border-gray-700">
+        <CardContent className="flex items-center justify-between p-4">
+          <div className="flex items-center space-x-4">
+            <Skeleton className="h-5 w-5 rounded-full" />
+            <div>
+              <Skeleton className="h-5 w-32 mb-1" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Skeleton className="h-5 w-16" />
+            <Skeleton className="h-4 w-24" />
+          </div>
+        </CardContent>
+      </Card>
+    ) : (
+      <Card className="dark:bg-gray-800 dark:border-gray-700">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <div className="flex-grow pr-4 space-y-2">
+            <Skeleton className="h-6 w-3/4" />
+            <Skeleton className="h-4 w-full" />
+          </div>
+          <Skeleton className="h-5 w-5 rounded" />
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex justify-between items-center">
+            <Skeleton className="h-5 w-20" />
+          </div>
+          <div className="flex justify-between items-center">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-24" />
+          </div>
+        </CardContent>
+      </Card>
+    )
   )
 
   return (
@@ -89,6 +110,24 @@ export default function Page() {
       <div className="p-6 space-y-6 dark:bg-gray-900 bg-gray-50">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold dark:text-white">Tasks</h1>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('grid')}
+              aria-label="Grid view"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+              aria-label="List view"
+            >
+              <ListIcon className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         {/* Filters and Search */}
@@ -140,19 +179,27 @@ export default function Page() {
           </div>
         </div>
 
-        {/* Projects Grid with Loading State */}
+        {/* Tasks with Loading State */}
         {taskLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {[...Array(8)].map((_, index) => (
-              <ProjectSkeleton key={index} />
-            ))}
-          </div>
+          viewMode === 'list' ? (
+            <div className="flex flex-col gap-4">
+              {[...Array(8)].map((_, index) => (
+                <ProjectSkeleton key={index} viewMode={viewMode} />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {[...Array(8)].map((_, index) => (
+                <ProjectSkeleton key={index} viewMode={viewMode} />
+              ))}
+            </div>
+          )
         ) : filteredTasks.length === 0 ? (
           <div className="text-center text-muted-foreground py-10">
             No tasks found matching your search and filters.
           </div>
-        ) : (
-          <div className="flex flex-col gap-5">
+        ) : viewMode === 'list' ? (
+          <div className="flex flex-col gap-4">
             {filteredTasks.map((task) => (
               <Link key={task._id} href={`/tasks/${task._id}`}>
                 <Card className="hover:bg-secondary/20 transition-all">
@@ -188,6 +235,49 @@ export default function Page() {
                       <span className="text-xs text-muted-foreground">
                         {task.due_date ? formatDate(task.due_date) : 'No due date'}
                       </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredTasks.map((task) => (
+              <Link key={task._id} href={`/tasks/${task._id}`}>
+                <Card className="hover:shadow-lg transition-all dark:bg-gray-800 dark:border-gray-700 h-full">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <h3 className={`font-medium ${task.status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>
+                        {task.title}
+                      </h3>
+                      {task.status === 'completed' ? (
+                        <CheckCircle2 className="text-green-500 h-5 w-5" />
+                      ) : (
+                        <Clock className="text-yellow-500 h-5 w-5" />
+                      )}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {getProjectById(task.project_id)?.name}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex flex-wrap gap-2">
+                      <Badge
+                        variant={
+                          task.priority === 'High' ? 'destructive' :
+                            task.priority === 'Medium' ? 'secondary' : 'outline'
+                        }
+                        className="whitespace-nowrap text-xs dark:border-slate-700"
+                      >
+                        {task.priority}
+                      </Badge>
+                      {task.label && (
+                        <Badge variant="secondary" className="whitespace-nowrap text-xs dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">{task.label}</Badge>
+                      )}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Due: {task.due_date ? formatDate(task.due_date) : 'No due date'}
                     </div>
                   </CardContent>
                 </Card>

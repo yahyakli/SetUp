@@ -21,19 +21,23 @@ import { Skeleton } from '@/components/ui/skeleton'
 import {
   Users,
   Search,
-  Filter
+  Filter,
+  LayoutGrid,
+  List
 } from 'lucide-react'
 import AppLayout from '../AppLayout'
 import Link from 'next/link'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/lib/store'
+import { Button } from '@/components/ui/button'
+import { useViewMode } from '@/hooks/useViewMode'
 
 
 export default function Page() {
   const { teams, teamLoading } = useSelector((state: RootState) => state.teams);
   const [searchTerm, setSearchTerm] = useState('')
   const [memberCountFilter, setMemberCountFilter] = useState('All')
-
+  const [viewMode, setViewMode] = useViewMode('teams', 'grid')
 
   // Filtered and Searched Teams
   const filteredTeams = useMemo(() => {
@@ -58,16 +62,38 @@ export default function Page() {
   }, [searchTerm, memberCountFilter, teams]);
 
   // Skeleton loader component for team cards
-  const TeamCardSkeleton = () => (
-    <Card className="dark:bg-gray-800 dark:border-gray-700 h-full">
-      <CardHeader className="pb-2">
-        <Skeleton className="h-6 w-3/4 mb-2" />
-        <Skeleton className="h-4 w-full" />
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <Skeleton className="h-5 w-1/4" />
-        <Skeleton className="h-3 w-1/2" />
-      </CardContent>
+  const TeamCardSkeleton = ({ viewMode }: { viewMode: 'grid' | 'list' }) => (
+    <Card className={`dark:bg-gray-800 dark:border-gray-700 ${viewMode === 'list' ? "flex flex-row items-stretch" : "h-full"}`}>
+      {viewMode === 'list' ? (
+        <>
+          <div className="flex items-center pl-5">
+            <Skeleton className="h-9 w-9 rounded-full" />
+          </div>
+          <div className="flex-grow p-4 flex flex-col sm:flex-row sm:items-center">
+            <div className="sm:flex-grow pr-4 mb-2 sm:mb-0">
+              <Skeleton className="h-6 w-3/4 mb-2" />
+              <Skeleton className="h-4 w-full" />
+            </div>
+            <div className="flex flex-wrap gap-3 items-center">
+              <Skeleton className="h-5 w-28" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <CardHeader className="pb-2">
+            <Skeleton className="h-6 w-3/4 mb-2" />
+            <Skeleton className="h-4 w-full" />
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex justify-between items-center">
+              <Skeleton className="h-5 w-1/4" />
+            </div>
+            <Skeleton className="h-3 w-1/2" />
+          </CardContent>
+        </>
+      )}
     </Card>
   );
 
@@ -76,6 +102,24 @@ export default function Page() {
       <div className="p-6 space-y-6 dark:bg-gray-900 bg-gray-50 min-h-screen">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold dark:text-white">Teams</h1>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('grid')}
+              aria-label="Grid view"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+              aria-label="List view"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         {/* Filters and Search */}
@@ -111,9 +155,12 @@ export default function Page() {
 
         {/* Skeleton Loader or Teams Grid */}
         {teamLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className={viewMode === 'grid'
+            ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            : "flex flex-col gap-4"
+          }>
             {Array(6).fill(0).map((_, index) => (
-              <TeamCardSkeleton key={index} />
+              <TeamCardSkeleton key={index} viewMode={viewMode} />
             ))}
           </div>
         ) : !teams || teams.length === 0 ? (
@@ -125,33 +172,63 @@ export default function Page() {
             No teams found matching your search and filters.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className={viewMode === 'grid'
+            ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            : "flex flex-col gap-4"
+          }>
             {filteredTeams.map((team) => (
-              <Link key={team.id} href={`/teams/${team.id}`}>
+              <Link key={team.id} href={`/teams/${team.id}`} className={viewMode === 'list' ? "block w-full" : ""}>
                 <Card
-                  className="hover:shadow-lg transition-all dark:bg-gray-800 dark:border-gray-700 h-full"
+                  className={`hover:shadow-lg transition-all dark:bg-gray-800 dark:border-gray-700 ${viewMode === 'list' ? "flex flex-row items-stretch" : "h-full"
+                    }`}
                 >
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <div className="flex-grow pr-4">
-                      <CardTitle className="text-lg font-bold truncate">
-                        {team.name}
-                      </CardTitle>
-                      <CardDescription className="text-sm line-clamp-2">
-                        {team.description}
-                      </CardDescription>
-                    </div>
-                    <Users className="h-5 w-5 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <Badge variant="default">
-                        {team.members.length} {team.members.length === 1 ? 'Member' : 'Members'}
-                      </Badge>
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-2">
-                      Last updated: {new Date().toLocaleDateString()}
-                    </div>
-                  </CardContent>
+                  {viewMode === 'list' ? (
+                    <>
+                      <div className="flex items-center pl-5">
+                        <Users className="h-9 w-9 text-primary/70" />
+                      </div>
+                      <div className="flex-grow p-4 flex flex-col sm:flex-row sm:items-center">
+                        <div className="sm:flex-grow pr-4 mb-2 sm:mb-0">
+                          <CardTitle className="text-lg font-bold">{team.name}</CardTitle>
+                          <CardDescription className="text-sm line-clamp-1">
+                            {team.description}
+                          </CardDescription>
+                        </div>
+                        <div className="flex flex-wrap gap-3 items-center justify-start sm:justify-end">
+                          <Badge variant="default">
+                            {team.members.length} {team.members.length === 1 ? 'Member' : 'Members'}
+                          </Badge>
+                          <div className="text-xs text-muted-foreground">
+                            Last updated: {new Date().toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <div className="flex-grow pr-4">
+                          <CardTitle className="text-lg font-bold truncate">
+                            {team.name}
+                          </CardTitle>
+                          <CardDescription className="text-sm line-clamp-2">
+                            {team.description}
+                          </CardDescription>
+                        </div>
+                        <Users className="h-5 w-5 text-muted-foreground" />
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="flex items-center">
+                          <Badge variant="default">
+                            {team.members.length} {team.members.length === 1 ? 'Member' : 'Members'}
+                          </Badge>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Last updated: {new Date().toLocaleDateString()}
+                        </div>
+                      </CardContent>
+                    </>
+                  )}
                 </Card>
               </Link>
             ))}
