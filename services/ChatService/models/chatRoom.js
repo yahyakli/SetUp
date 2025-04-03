@@ -17,10 +17,10 @@ const chatRoomSchema = new mongoose.Schema({
       return this.type === 'project';
     }
   },
-  participants: [{
-    type: String, // User IDs from the auth service
+  participants: {
+    type: [String],
     required: true
-  }],
+  },
   createdAt: {
     type: Date,
     default: Date.now

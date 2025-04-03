@@ -14,8 +14,8 @@ const createChatRoom = asyncHandler(async (req, res) => {
   }
 
   // Ensure the creator is included in participants
-  if (!req.body.participants.includes(req.user_id)) {
-    req.body.participants.push(req.user_id);
+  if (!req.body.participants.includes(req.body.user_id)) {
+    req.body.participants.push(req.body.user_id);
   }
 
   // Create chat room
@@ -29,7 +29,7 @@ const createChatRoom = asyncHandler(async (req, res) => {
 // @access  Private
 const getChatRooms = asyncHandler(async (req, res) => {
   const chatRooms = await ChatRoom.find({
-    participants: req.user_id
+    participants: req.body.user_id
   }).sort({ updatedAt: -1 });
 
   res.json(chatRooms);
@@ -41,7 +41,7 @@ const getChatRooms = asyncHandler(async (req, res) => {
 const getChatRoomById = asyncHandler(async (req, res) => {
   const chatRoom = await ChatRoom.findOne({
     _id: req.params.id,
-    participants: req.user_id
+    participants: req.body.user_id
   });
 
   if (!chatRoom) {
@@ -71,8 +71,8 @@ const updateChatRoom = asyncHandler(async (req, res) => {
   }
 
   // Ensure the current user remains a participant
-  if (!req.body.participants.includes(req.user_id)) {
-    req.body.participants.push(req.user_id);
+  if (!req.body.participants.includes(req.body.user_id)) {
+    req.body.participants.push(req.body.user_id);
   }
 
   // Update chat room

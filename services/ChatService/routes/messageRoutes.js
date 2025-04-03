@@ -5,7 +5,9 @@ import {
   uploadAttachment,
   getAttachments,
   deleteAttachment,
-  markMessagesAsRead
+  markMessagesAsRead,
+  getPaginatedMessages,
+  getMoreMessages
 } from '../controllers/messageController.js';
 import { protect } from '../middleware/authMiddleware.js';
 import upload from '../middleware/uploadMiddleware.js';
@@ -17,6 +19,12 @@ router.post('/', protect, createMessage);
 
 // Get messages by chat room
 router.get('/chat-room/:chatRoomId', protect, getMessagesByChatRoom);
+
+// Get paginated messages
+router.get('/paginated/:chatRoomId', protect, getPaginatedMessages);
+
+// Get more messages based on last message ID
+router.get('/more/:chatRoomId/:lastMessageId', protect, getMoreMessages);
 
 // Mark messages as read
 router.put('/read', protect, markMessagesAsRead);
