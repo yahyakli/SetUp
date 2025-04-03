@@ -47,6 +47,9 @@ const createMessage = asyncHandler(async (req, res) => {
   chatRoom.updatedAt = new Date();
   await chatRoom.save();
 
+  // Emit socket event for new message
+  req.io.to(`room:${req.body.chatRoomId}`).emit('new_message', message);
+
   res.status(201).json(message);
 });
 
@@ -251,7 +254,7 @@ const deleteAttachment = asyncHandler(async (req, res) => {
 // @route   PUT /api/messages/read
 // @access  Private
 const markMessagesAsRead = asyncHandler(async (req, res) => {
-  const { messageIds } = req.body;
+  const { messageIds, chatRoomId } = req.body;
 
   if (!messageIds || !Array.isArray(messageIds) || messageIds.length === 0) {
     res.status(400);
@@ -274,6 +277,15 @@ const markMessagesAsRead = asyncHandler(async (req, res) => {
       $push: { readBy: { userId: req.user.id, readAt: new Date() } }
     }
   );
+
+  // Emit socket event for messages read
+  if (chatRoomId) {
+    req.io.to(`room:${chatRoomId}`).emit('messages_read', {
+      messageIds,
+      userId: req.user.id,
+      readAt: new Date()
+    });
+  }
 
   res.json({ message: 'Messages marked as read' });
 });
