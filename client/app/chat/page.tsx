@@ -15,7 +15,14 @@ export default function ChatPage() {
   const { user } = useSelector((state: RootState) => state.user);
   const [selectedRoom, setSelectedRoom] = useState<ChatRoom | null>(null);
   const [showChatList, setShowChatList] = useState(true);
-  const [sidebarWidth, setSidebarWidth] = useState(320);
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    // Initialize from localStorage if available, otherwise use default width
+    if (typeof window !== 'undefined') {
+      const savedWidth = localStorage.getItem('chatSidebarWidth');
+      return savedWidth ? parseInt(savedWidth, 10) : 320;
+    }
+    return 320;
+  });
   const [isMobile, setIsMobile] = useState(false);
 
   // Check if we're on mobile
@@ -63,6 +70,8 @@ export default function ChatPage() {
   // Handle sidebar resize
   const handleSidebarResize = (width: number) => {
     setSidebarWidth(width);
+    // Save to localStorage
+    localStorage.setItem('chatSidebarWidth', width.toString());
   };
 
   return (

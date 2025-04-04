@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { ChatRoom, User } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -31,7 +31,16 @@ export default function ChatRoomsList({
 }: ChatRoomsListProps) {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [chatFilter, setChatFilter] = React.useState<'all' | 'direct' | 'project'>('all');
-  const [width, setWidth] = useState(320); // Default width
+  
+  // Initialize width from props or localStorage
+  const [width, setWidth] = useState(() => {
+    if (typeof window !== 'undefined' && !isMobile) {
+      const savedWidth = localStorage.getItem('chatSidebarWidth');
+      return savedWidth ? parseInt(savedWidth, 10) : 320;
+    }
+    return 320;
+  });
+  
   const minWidth = 250;
   const maxWidth = 500;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -92,6 +101,8 @@ export default function ChatRoomsList({
         if (onResize) {
           onResize(newWidth);
         }
+        // Save to localStorage directly here as well
+        localStorage.setItem('chatSidebarWidth', newWidth.toString());
       }
     };
     
@@ -208,7 +219,7 @@ export default function ChatRoomsList({
       </div>
       
       <div className="p-4 border-t dark:border-gray-800 shrink-0 bg-white dark:bg-gray-800">
-        <Button className="w-full flex items-center gap-2" variant="outline">
+        <Button className="w-full flex items-center gap-2 dark:hover:bg-gray-700" variant="outline">
           <Plus className="h-4 w-4" />
           New Conversation
         </Button>
@@ -218,7 +229,7 @@ export default function ChatRoomsList({
       {!isMobile && (
         <div 
           onMouseDown={handleMouseDown}
-          className={`absolute top-0 right-0 w-8 h-full z-10 hidden md:block ${
+          className={`absolute top-0 right-0 w-2 h-full z-10 hidden md:block ${
             isResizing ? 'cursor-col-resize' : 'cursor-default hover:cursor-col-resize'
           }`}
           style={{ transform: 'translateX(50%)' }}

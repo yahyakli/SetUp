@@ -90,7 +90,7 @@ export default function ChatMessageList({ messages, currentUserId, users }: Chat
                   key={message._id} 
                   className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div className={`flex items-end gap-2 max-w-[80%] ${
+                  <div className={`flex items-center gap-2 max-w-[80%] ${
                     !isCurrentUser && !showAvatar ? 'pl-10' : ''
                   }`}>
                     {!isCurrentUser && showAvatar ? (
