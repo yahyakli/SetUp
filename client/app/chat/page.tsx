@@ -1,62 +1,91 @@
-"use client"
-import React, { useState, useEffect } from 'react'
-import { useSelector } from 'react-redux'
-import { RootState } from '@/lib/store'
-import AppLayout from '../AppLayout'
-import ChatSidebar from '@/components/chat/ChatSidebar'
-import ChatWindow from '@/components/chat/ChatWindow'
-import { ChatRoom } from '@/types'
-import { generateFakeChatRooms } from '@/lib/fakeChatData'
+"use client";
+
+import React, { useState } from 'react';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/lib/store';
+import { ChatRoom } from '@/types';
+import ChatRoomsList from '@/components/chat/ChatRoomsList';
+import ChatHeader from '@/components/chat/ChatHeader';
+import ChatMessageList from '@/components/chat/ChatMessageList';
+import ChatInput from '@/components/chat/ChatInput';
+import EmptyState from '@/components/chat/EmptyState';
+import { mockChatRooms, mockMessages, mockUsers } from '@/components/chat/MockDataProvider';
 
 export default function ChatPage() {
-  const { user } = useSelector((state: RootState) => state.user)
-  const [chatRooms, setChatRooms] = useState<ChatRoom[]>([])
-  const [selectedChatRoom, setSelectedChatRoom] = useState<ChatRoom | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { user } = useSelector((state: RootState) => state.user);
+  const [selectedRoom, setSelectedRoom] = useState<ChatRoom | null>(null);
+  const [showChatList, setShowChatList] = useState(true);
 
-  useEffect(() => {
-    // Simulate API call to fetch chat rooms
-    const fetchChatRooms = async () => {
-      setLoading(true)
-      try {
-        // In a real app, this would be an API call
-        const fakeChatRooms = generateFakeChatRooms(user?.id || '')
-        setChatRooms(fakeChatRooms)
-        
-        // Select the first chat room by default
-        if (fakeChatRooms.length > 0 && !selectedChatRoom) {
-          setSelectedChatRoom(fakeChatRooms[0])
-        }
-      } catch (error) {
-        console.error('Error fetching chat rooms:', error)
-      } finally {
-        setLoading(false)
-      }
+  // Get messages for selected room
+  const currentMessages = selectedRoom ? mockMessages[selectedRoom._id] || [] : [];
+
+  // Handle room selection
+  const handleRoomSelect = (room: ChatRoom) => {
+    setSelectedRoom(room);
+    // On mobile, hide the chat list when a room is selected
+    if (window.innerWidth < 768) {
+      setShowChatList(false);
     }
+  };
 
-    if (user) {
-      fetchChatRooms()
-    }
-  }, [user])
+  // Handle back button on mobile
+  const handleBackToList = () => {
+    setShowChatList(true);
+    setSelectedRoom(null);
+  };
 
-  const handleSelectChatRoom = (chatRoom: ChatRoom) => {
-    setSelectedChatRoom(chatRoom)
-  }
+  // Handle sending a new message
+  const handleSendMessage = (message: string) => {
+    if (!selectedRoom) return;
+    
+    // In a real app, you would send this to your API
+    console.log('Sending message:', message, 'to room:', selectedRoom._id);
+  };
 
   return (
-    <AppLayout>
-      <div className="flex h-[calc(100vh-64px)] overflow-hidden">
-        <ChatSidebar 
-          chatRooms={chatRooms}
-          selectedChatRoom={selectedChatRoom}
-          onSelectChatRoom={handleSelectChatRoom}
-          loading={loading}
-        />
-        <ChatWindow 
-          chatRoom={selectedChatRoom}
-          currentUser={user}
+    <div className="h-[calc(100vh-64px)] flex flex-col md:flex-row">
+      {/* Chat Rooms List - Hidden on mobile when a chat is selected */}
+      <div 
+        className={`${
+          showChatList ? 'flex' : 'hidden'
+        } md:flex flex-col w-full md:w-80 lg:w-96`}
+      >
+        <ChatRoomsList 
+          chatRooms={mockChatRooms}
+          selectedRoom={selectedRoom}
+          onRoomSelect={handleRoomSelect}
+          currentUserId={user?.id}
+          users={mockUsers}
         />
       </div>
-    </AppLayout>
-  )
+      
+      {/* Chat Messages - Hidden on mobile when no chat is selected */}
+      <div 
+        className={`${
+          !showChatList ? 'flex' : 'hidden'
+        } md:flex flex-col flex-1 h-full`}
+      >
+        {selectedRoom ? (
+          <>
+            <ChatHeader 
+              room={selectedRoom}
+              onBackClick={handleBackToList}
+              currentUserId={user?.id}
+              users={mockUsers}
+            />
+            
+            <ChatMessageList 
+              messages={currentMessages}
+              currentUserId={user?.id}
+              users={mockUsers}
+            />
+            
+            <ChatInput onSendMessage={handleSendMessage} />
+          </>
+        ) : (
+          <EmptyState />
+        )}
+      </div>
+    </div>
+  );
 } 
