@@ -115,3 +115,43 @@ export interface AuthContextType {
   logout: () => void;
   updateUser: (user: User) => void;
 }
+
+export interface ReadBy {
+  userId: string;
+  readAt: Date;
+}
+
+export interface Message {
+  _id: string;
+  chatRoomId: string;
+  senderId: string;
+  content: string;
+  contentType: 'text' | 'file';
+  readBy: ReadBy[];
+  attachments?: MessageAttachment[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ChatRoom {
+  _id: string;
+  name: string;
+  type: 'project' | 'direct';
+  projectId?: number;
+  participants: string[];
+  createdAt: Date;
+  updatedAt: Date;
+  lastMessage?: Message;
+}
+
+export interface MessageAttachment {
+  _id: string;
+  originalName: string;
+  fileName: string;
+  path: string;
+  mimeType: string;
+  size: number;
+  messageId: string;
+  uploadedBy: string;
+  createdAt: Date;
+}

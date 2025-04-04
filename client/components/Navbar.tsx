@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, LogOut, UserCircle, ChevronDown, Bell } from 'lucide-react';
+import { Menu, LogOut, UserCircle, ChevronDown, Bell, CreditCard, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -40,6 +40,7 @@ export const Navbar = () => {
   const [recentTasks, setRecentTasks] = useState<Task[]>([]);
 
   const [createTeamDialogOpen, setCreateTeamDialogOpen] = useState(false);
+  const [subscriptionExpanded, setSubscriptionExpanded] = useState(false);
 
   useEffect(() => {
     if (teams.length > 0) {
@@ -158,7 +159,7 @@ export const Navbar = () => {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Tasks Dropdown - Replacing Chat */}
+          {/* Tasks Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger className={`cursor-pointer p-1 text-sm font-medium ${isActive('/tasks') ? 'text-foreground' : 'text-muted-foreground'} hover:text-foreground/80 transition-colors py-2 flex items-center`}>
               Tasks
@@ -186,32 +187,10 @@ export const Navbar = () => {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Plans Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger className={`cursor-pointer p-1 text-sm font-medium ${isActive('/plans') ? 'text-foreground' : 'text-muted-foreground'} hover:text-foreground/80 transition-colors py-2 flex items-center`}>
-              Plans
-              <ChevronDown className="ml-2 h-4 w-4" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-64">
-              <DropdownMenuLabel className='font-light text-xs dark:text-gray-300 text-gray-500'>Subscription Options</DropdownMenuLabel>
-              <DropdownMenuItem asChild>
-                <Link href="/plans" className="cursor-pointer">
-                  Current Plan
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/plans/upgrade" className="cursor-pointer">
-                  Upgrade Plan
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/plans/billing" className="cursor-pointer">
-                  Billing History
-                </Link>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Chat Link - Replacing Plans Dropdown */}
+          <Link href="/chat" className={`cursor-pointer p-1 text-sm font-medium ${isActive('/chat') ? 'text-foreground' : 'text-muted-foreground'} hover:text-foreground/80 transition-colors py-2 flex items-center`}>
+            Chat
+          </Link>
         </nav>
 
         {/* Desktop Right Actions */}
@@ -268,6 +247,45 @@ export const Navbar = () => {
                   )}
                 </Link>
               </DropdownMenuItem>
+
+              {/* Collapsible Subscription Menu */}
+              <DropdownMenuItem 
+                onClick={(e) => {
+                  e.preventDefault();
+                  setSubscriptionExpanded(!subscriptionExpanded);
+                }}
+                className="cursor-pointer"
+              >
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center">
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    <span>Subscription</span>
+                  </div>
+                  <ChevronRight className={`h-4 w-4 transition-transform ${subscriptionExpanded ? 'rotate-90' : ''}`} />
+                </div>
+              </DropdownMenuItem>
+              
+              {subscriptionExpanded && (
+                <>
+                  <DropdownMenuItem asChild className="pl-8">
+                    <Link href="/plans" className="flex cursor-pointer items-center">
+                      <span>Current Plan</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="pl-8">
+                    <Link href="/plans/upgrade" className="flex cursor-pointer items-center">
+                      <span>Upgrade Plan</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="pl-8">
+                    <Link href="/plans/billing" className="flex cursor-pointer items-center">
+                      <span>Billing History</span>
+                    </Link>
+                  </DropdownMenuItem>
+                </>
+              )}
+              
+              <DropdownMenuSeparator />
 
               <DropdownMenuItem onClick={handleLogout} className="focus:text-destructive duration-300">
                 <LogOut className="mr-2 h-4 w-4" />
@@ -356,7 +374,7 @@ export const Navbar = () => {
                   </AccordionContent>
                 </AccordionItem>
 
-                {/* Tasks Accordion - Replacing Chat */}
+                {/* Tasks Accordion */}
                 <AccordionItem value="tasks" className="border-b">
                   <AccordionTrigger className={`px-4 ${isActive('/tasks') ? 'text-foreground' : 'text-muted-foreground'}`}>
                     Tasks
@@ -384,31 +402,11 @@ export const Navbar = () => {
                   </AccordionContent>
                 </AccordionItem>
 
-                {/* Plans Accordion */}
-                <AccordionItem value="plans" className="border-b">
-                  <AccordionTrigger className={`px-4 ${isActive('/plans') ? 'text-foreground' : 'text-muted-foreground'}`}>
-                    Plans
-                  </AccordionTrigger>
-                  <AccordionContent className="px-4 pb-4 space-y-2">
-                    <Link
-                      href="/plans"
-                      className="block text-sm text-muted-foreground hover:text-foreground"
-                    >
-                      Current Plan
-                    </Link>
-                    <Link
-                      href="/plans/upgrade"
-                      className="block text-sm text-muted-foreground hover:text-foreground"
-                    >
-                      Upgrade Plan
-                    </Link>
-                    <Link
-                      href="/plans/billing"
-                      className="block text-sm text-muted-foreground hover:text-foreground"
-                    >
-                      Billing History
-                    </Link>
-                  </AccordionContent>
+                {/* Chat Link - Replacing Plans Accordion */}
+                <AccordionItem value="chat" className="border-b">
+                  <Link href="/chat" className={`flex items-center justify-between px-4 py-4 ${isActive('/chat') ? 'text-foreground' : 'text-muted-foreground'}`}>
+                    Chat
+                  </Link>
                 </AccordionItem>
 
                 {/* User Section */}
@@ -448,11 +446,48 @@ export const Navbar = () => {
                       <UserCircle className="mr-2 h-4 w-4" />
                       Profile
                     </Link>
+                    
+                    {/* Collapsible Plans options in mobile menu */}
+                    <div className="pt-2 mt-2 border-t">
+                      <button 
+                        onClick={() => setSubscriptionExpanded(!subscriptionExpanded)}
+                        className="flex items-center justify-between w-full text-sm text-muted-foreground hover:text-foreground mb-2"
+                      >
+                        <div className="flex items-center">
+                          <CreditCard className="mr-2 h-4 w-4" />
+                          <span>Subscription</span>
+                        </div>
+                        <ChevronRight className={`h-4 w-4 transition-transform ${subscriptionExpanded ? 'rotate-90' : ''}`} />
+                      </button>
+                      
+                      {subscriptionExpanded && (
+                        <div className="pl-6 space-y-2 mt-2">
+                          <Link
+                            href="/plans"
+                            className="flex items-center text-sm text-muted-foreground hover:text-foreground"
+                          >
+                            Current Plan
+                          </Link>
+                          <Link
+                            href="/plans/upgrade"
+                            className="flex items-center text-sm text-muted-foreground hover:text-foreground"
+                          >
+                            Upgrade Plan
+                          </Link>
+                          <Link
+                            href="/plans/billing"
+                            className="flex items-center text-sm text-muted-foreground hover:text-foreground"
+                          >
+                            Billing History
+                          </Link>
+                        </div>
+                      )}
+                    </div>
 
                     <Button
                       variant="destructive"
                       size="sm"
-                      className="w-full"
+                      className="w-full mt-2"
                       onClick={handleLogout}
                     >
                       <LogOut className="mr-2 h-4 w-4" />
