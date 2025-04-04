@@ -21,6 +21,11 @@ const createChatRoom = asyncHandler(async (req, res) => {
   // Create chat room
   const chatRoom = await ChatRoom.create(req.body);
 
+  // Emit socket event for new chat room
+  chatRoom.participants.forEach(participantId => {
+    req.io.to(`user:${participantId}`).emit('new_chat_room', chatRoom);
+  });
+
   res.status(201).json(chatRoom);
 });
 
@@ -82,6 +87,23 @@ const updateChatRoom = asyncHandler(async (req, res) => {
     { new: true }
   );
 
+  // Emit socket event for updated chat room
+  updatedChatRoom.participants.forEach(participantId => {
+    req.io.to(`user:${participantId}`).emit('update_chat_room', updatedChatRoom);
+  });
+
+  // Notify removed participants
+  const removedParticipants = chatRoom.participants.filter(
+    participant => !updatedChatRoom.participants.includes(participant)
+  );
+
+  removedParticipants.forEach(participantId => {
+    req.io.to(`user:${participantId}`).emit('removed_from_chat_room', {
+      chatRoomId: updatedChatRoom._id,
+      name: updatedChatRoom.name
+    });
+  });
+
   res.json(updatedChatRoom);
 });
 
@@ -113,6 +135,19 @@ const addParticipant = asyncHandler(async (req, res) => {
   chatRoom.participants.push(userId);
   await chatRoom.save();
 
+  // Emit socket event for the new participant
+  req.io.to(`user:${userId}`).emit('added_to_chat_room', chatRoom);
+
+  // Notify existing participants
+  chatRoom.participants.forEach(participantId => {
+    if (participantId !== userId) {
+      req.io.to(`user:${participantId}`).emit('participant_added', {
+        chatRoomId: chatRoom._id,
+        userId: userId
+      });
+    }
+  });
+
   res.json(chatRoom);
 });
 
@@ -133,12 +168,29 @@ const removeParticipant = asyncHandler(async (req, res) => {
     throw new Error('User is not a participant');
   }
 
+  // Store the user ID being removed
+  const removedUserId = req.params.userId;
+
   // Remove participant
   chatRoom.participants = chatRoom.participants.filter(
-    participant => participant !== req.params.userId
+    participant => participant !== removedUserId
   );
 
   await chatRoom.save();
+
+  // Emit socket event for the removed participant
+  req.io.to(`user:${removedUserId}`).emit('removed_from_chat_room', {
+    chatRoomId: chatRoom._id,
+    name: chatRoom.name
+  });
+
+  // Notify remaining participants
+  chatRoom.participants.forEach(participantId => {
+    req.io.to(`user:${participantId}`).emit('participant_removed', {
+      chatRoomId: chatRoom._id,
+      userId: removedUserId
+    });
+  });
 
   res.json(chatRoom);
 });
@@ -154,7 +206,18 @@ const deleteChatRoom = asyncHandler(async (req, res) => {
     throw new Error('Chat room not found');
   }
 
+  // Store participants before deletion
+  const participants = [...chatRoom.participants];
+
   await chatRoom.deleteOne();
+
+  // Emit socket event to all participants
+  participants.forEach(participantId => {
+    req.io.to(`user:${participantId}`).emit('chat_room_deleted', {
+      chatRoomId: chatRoom._id,
+      name: chatRoom.name
+    });
+  });
 
   res.json({ message: 'Chat room removed' });
 });
