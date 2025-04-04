@@ -1,13 +1,13 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ChatRoom, User } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Plus } from 'lucide-react';
+import { Search, Plus, GripVertical } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface ChatRoomsListProps {
@@ -16,6 +16,8 @@ interface ChatRoomsListProps {
   onRoomSelect: (room: ChatRoom) => void;
   currentUserId?: string;
   users: Record<string, User>;
+  onResize?: (width: number) => void;
+  isMobile?: boolean;
 }
 
 export default function ChatRoomsList({
@@ -23,10 +25,17 @@ export default function ChatRoomsList({
   selectedRoom,
   onRoomSelect,
   currentUserId,
-  users
+  users,
+  onResize,
+  isMobile = false
 }: ChatRoomsListProps) {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [chatFilter, setChatFilter] = React.useState<'all' | 'direct' | 'project'>('all');
+  const [width, setWidth] = useState(320); // Default width
+  const minWidth = 250;
+  const maxWidth = 500;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isResizing, setIsResizing] = useState(false);
 
   // Filter chat rooms based on search query and filter type
   const filteredChatRooms = chatRooms.filter(room => {
@@ -66,9 +75,43 @@ export default function ChatRoomsList({
     return user?.avatar || '';
   };
 
+  // Handle mouse down on resizer
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (isMobile) return;
+    
+    e.preventDefault();
+    setIsResizing(true);
+    
+    const startX = e.clientX;
+    const startWidth = width;
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      const newWidth = startWidth + (e.clientX - startX);
+      if (newWidth >= minWidth && newWidth <= maxWidth) {
+        setWidth(newWidth);
+        if (onResize) {
+          onResize(newWidth);
+        }
+      }
+    };
+    
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
   return (
-    <div className="flex flex-col h-full border-r dark:border-gray-800 bg-gray-50 dark:bg-gray-900 overflow-hidden">
-      <div className="p-4 border-b dark:border-gray-800 shrink-0">
+    <div 
+      ref={containerRef}
+      className="flex flex-col h-full border-r dark:border-gray-800 bg-gray-50 dark:bg-gray-900 overflow-hidden relative"
+      style={isMobile ? {} : { width: `${width}px` }}
+    >
+      <div className="p-4 border-b dark:border-gray-800 shrink-0 bg-white dark:bg-gray-800">
         <h2 className="text-xl font-bold mb-4 dark:text-white">Messages</h2>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -76,14 +119,14 @@ export default function ChatRoomsList({
             placeholder="Search conversations..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+            className="pl-10 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
           />
         </div>
         <Tabs value={chatFilter} className="mt-4" onValueChange={(value) => setChatFilter(value as 'all' | 'direct' | 'project')}>
-          <TabsList className="w-full">
-            <TabsTrigger value="all" className="flex-1">All</TabsTrigger>
-            <TabsTrigger value="direct" className="flex-1">Direct</TabsTrigger>
-            <TabsTrigger value="project" className="flex-1">Projects</TabsTrigger>
+          <TabsList className="w-full bg-gray-100 dark:bg-gray-700">
+            <TabsTrigger value="all" className="flex-1 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600">All</TabsTrigger>
+            <TabsTrigger value="direct" className="flex-1 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600">Direct</TabsTrigger>
+            <TabsTrigger value="project" className="flex-1 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600">Projects</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -103,18 +146,20 @@ export default function ChatRoomsList({
                 <div
                   key={room._id}
                   className={`p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${
-                    selectedRoom?._id === room._id ? 'bg-gray-100 dark:bg-gray-800' : ''
+                    selectedRoom?._id === room._id ? 'bg-blue-50 dark:bg-gray-700 border-l-4 border-blue-500 dark:border-blue-400' : ''
                   }`}
                   onClick={() => onRoomSelect(room)}
                 >
                   <div className="flex items-start gap-3">
                     {room.type === 'direct' ? (
-                      <Avatar>
+                      <Avatar className="h-12 w-12 border-2 border-white dark:border-gray-800 shadow-sm">
                         <AvatarImage src={getUserAvatar(room.participants.find(id => id !== currentUserId) || '')} />
-                        <AvatarFallback>{getUserInitials(room.participants.find(id => id !== currentUserId) || '')}</AvatarFallback>
+                        <AvatarFallback className="bg-gradient-to-br from-blue-400 to-blue-600 text-white">
+                          {getUserInitials(room.participants.find(id => id !== currentUserId) || '')}
+                        </AvatarFallback>
                       </Avatar>
                     ) : (
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white shadow-sm">
                         <span className="text-sm font-medium">{room.name.substring(0, 2).toUpperCase()}</span>
                       </div>
                     )}
@@ -143,15 +188,15 @@ export default function ChatRoomsList({
                           </p>
                           
                           {isUnread && (
-                            <Badge variant="default" className="ml-2 h-2 w-2 rounded-full p-0">
-                              <span className="sr-only">Unread</span>
+                            <Badge variant="default" className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center bg-blue-500">
+                              <span className="text-xs">1</span>
                             </Badge>
                           )}
                         </div>
                       )}
                       
                       {room.type === 'project' && (
-                        <Badge variant="outline" className="mt-1 text-xs">Project</Badge>
+                        <Badge variant="outline" className="mt-1 text-xs bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800">Project</Badge>
                       )}
                     </div>
                   </div>
@@ -162,12 +207,31 @@ export default function ChatRoomsList({
         )}
       </div>
       
-      <div className="p-4 border-t dark:border-gray-800 shrink-0">
+      <div className="p-4 border-t dark:border-gray-800 shrink-0 bg-white dark:bg-gray-800">
         <Button className="w-full flex items-center gap-2" variant="outline">
           <Plus className="h-4 w-4" />
           New Conversation
         </Button>
       </div>
+
+      {/* Resizer handle - only visible on desktop */}
+      {!isMobile && (
+        <div 
+          onMouseDown={handleMouseDown}
+          className={`absolute top-0 right-0 w-8 h-full z-10 hidden md:block ${
+            isResizing ? 'cursor-col-resize' : 'cursor-default hover:cursor-col-resize'
+          }`}
+          style={{ transform: 'translateX(50%)' }}
+        >
+          <div className={`absolute top-0 bottom-0 left-1/2 w-1 transform -translate-x-1/2 ${
+            isResizing ? 'bg-blue-500' : 'bg-transparent hover:bg-blue-500'
+          } transition-colors`}></div>
+          
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gray-300 dark:bg-gray-600 rounded-full p-1 shadow-md opacity-0 hover:opacity-100 transition-opacity">
+            <GripVertical className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

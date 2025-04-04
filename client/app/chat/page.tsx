@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/lib/store';
 import { ChatRoom } from '@/types';
@@ -15,6 +15,24 @@ export default function ChatPage() {
   const { user } = useSelector((state: RootState) => state.user);
   const [selectedRoom, setSelectedRoom] = useState<ChatRoom | null>(null);
   const [showChatList, setShowChatList] = useState(true);
+  const [sidebarWidth, setSidebarWidth] = useState(320);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check if we're on mobile
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    // Initial check
+    checkIfMobile();
+    
+    // Add event listener for window resize
+    window.addEventListener('resize', checkIfMobile);
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', checkIfMobile);
+  }, []);
 
   // Get messages for selected room
   const currentMessages = selectedRoom ? mockMessages[selectedRoom._id] || [] : [];
@@ -23,7 +41,7 @@ export default function ChatPage() {
   const handleRoomSelect = (room: ChatRoom) => {
     setSelectedRoom(room);
     // On mobile, hide the chat list when a room is selected
-    if (window.innerWidth < 768) {
+    if (isMobile) {
       setShowChatList(false);
     }
   };
@@ -42,13 +60,18 @@ export default function ChatPage() {
     console.log('Sending message:', message, 'to room:', selectedRoom._id);
   };
 
+  // Handle sidebar resize
+  const handleSidebarResize = (width: number) => {
+    setSidebarWidth(width);
+  };
+
   return (
     <div className="h-full flex flex-col md:flex-row">
       {/* Chat Rooms List - Hidden on mobile when a chat is selected */}
       <div 
         className={`${
           showChatList ? 'flex' : 'hidden'
-        } md:flex flex-col w-full md:w-80 lg:w-96 h-full`}
+        } md:flex flex-col h-full ${isMobile ? 'w-full' : ''}`}
       >
         <ChatRoomsList 
           chatRooms={mockChatRooms}
@@ -56,6 +79,8 @@ export default function ChatPage() {
           onRoomSelect={handleRoomSelect}
           currentUserId={user?.id}
           users={mockUsers}
+          onResize={handleSidebarResize}
+          isMobile={isMobile}
         />
       </div>
       
@@ -64,6 +89,7 @@ export default function ChatPage() {
         className={`${
           !showChatList ? 'flex' : 'hidden'
         } md:flex flex-col flex-1 h-full`}
+        style={isMobile ? {} : { width: `calc(100% - ${sidebarWidth}px)` }}
       >
         {selectedRoom ? (
           <>
