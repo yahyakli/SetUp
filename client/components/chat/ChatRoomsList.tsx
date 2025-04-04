@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -68,8 +67,8 @@ export default function ChatRoomsList({
   };
 
   return (
-    <div className="flex flex-col w-full h-full border-r dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
-      <div className="p-4 border-b dark:border-gray-800">
+    <div className="flex flex-col h-full border-r dark:border-gray-800 bg-gray-50 dark:bg-gray-900 overflow-hidden">
+      <div className="p-4 border-b dark:border-gray-800 shrink-0">
         <h2 className="text-xl font-bold mb-4 dark:text-white">Messages</h2>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -89,7 +88,7 @@ export default function ChatRoomsList({
         </Tabs>
       </div>
       
-      <ScrollArea className="flex-1">
+      <div className="flex-1 overflow-y-auto">
         {filteredChatRooms.length === 0 ? (
           <div className="p-4 text-center text-gray-500 dark:text-gray-400">
             No conversations found
@@ -161,9 +160,9 @@ export default function ChatRoomsList({
             })}
           </div>
         )}
-      </ScrollArea>
+      </div>
       
-      <div className="p-4 border-t dark:border-gray-800">
+      <div className="p-4 border-t dark:border-gray-800 shrink-0">
         <Button className="w-full flex items-center gap-2" variant="outline">
           <Plus className="h-4 w-4" />
           New Conversation

@@ -2,7 +2,6 @@
 
 import React, { useRef, useEffect } from 'react';
 import { Message, User } from '@/types';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
 
@@ -14,11 +13,15 @@ interface ChatMessageListProps {
 
 export default function ChatMessageList({ messages, currentUserId, users }: ChatMessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Scroll to bottom of messages when messages change
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (messagesEndRef.current && scrollContainerRef.current) {
+      // Use scrollIntoView with a slight delay to ensure proper rendering
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
+      }, 100);
     }
   }, [messages]);
 
@@ -46,8 +49,8 @@ export default function ChatMessageList({ messages, currentUserId, users }: Chat
   };
 
   return (
-    <ScrollArea className="flex-1 p-4">
-      <div className="space-y-4">
+    <div className="h-full overflow-y-auto" ref={scrollContainerRef}>
+      <div className="p-4 space-y-4">
         {messages.map((message) => {
           const isCurrentUser = message.senderId === currentUserId;
           
@@ -89,6 +92,6 @@ export default function ChatMessageList({ messages, currentUserId, users }: Chat
         })}
         <div ref={messagesEndRef} />
       </div>
-    </ScrollArea>
+    </div>
   );
 } 

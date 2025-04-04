@@ -43,12 +43,12 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="h-[calc(100vh-64px)] flex flex-col md:flex-row">
+    <div className="h-full flex flex-col md:flex-row">
       {/* Chat Rooms List - Hidden on mobile when a chat is selected */}
       <div 
         className={`${
           showChatList ? 'flex' : 'hidden'
-        } md:flex flex-col w-full md:w-80 lg:w-96`}
+        } md:flex flex-col w-full md:w-80 lg:w-96 h-full`}
       >
         <ChatRoomsList 
           chatRooms={mockChatRooms}
@@ -74,11 +74,13 @@ export default function ChatPage() {
               users={mockUsers}
             />
             
-            <ChatMessageList 
-              messages={currentMessages}
-              currentUserId={user?.id}
-              users={mockUsers}
-            />
+            <div className="flex-1 overflow-hidden">
+              <ChatMessageList 
+                messages={currentMessages}
+                currentUserId={user?.id}
+                users={mockUsers}
+              />
+            </div>
             
             <ChatInput onSendMessage={handleSendMessage} />
           </>

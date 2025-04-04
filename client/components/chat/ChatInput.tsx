@@ -19,7 +19,7 @@ export default function ChatInput({ onSendMessage }: ChatInputProps) {
   };
 
   return (
-    <div className="p-4 border-t dark:border-gray-800">
+    <div className="p-4 border-t dark:border-gray-800 shrink-0">
       <div className="flex items-center gap-2">
         <Button variant="outline" size="icon">
           <Paperclip className="h-4 w-4" />

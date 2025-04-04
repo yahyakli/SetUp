@@ -33,7 +33,7 @@ export default function ChatHeader({ room, onBackClick, currentUserId, users }: 
   };
 
   return (
-    <div className="p-4 border-b dark:border-gray-800 flex items-center gap-3">
+    <div className="p-4 border-b dark:border-gray-800 flex items-center gap-3 shrink-0">
       <Button 
         variant="ghost" 
         size="icon" 
