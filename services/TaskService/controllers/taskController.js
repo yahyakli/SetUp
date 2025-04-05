@@ -323,7 +323,7 @@ export class TaskController {
       if (tasks.length === 0) {
         await session.abortTransaction();
         session.endSession();
-        return ResponseHandler.error(res, 'No tasks found for this user in the specified project', 404);
+        return ResponseHandler.error(res, 'No tasks found for this user in the specified project', 200);
       }
 
       // Update all tasks to remove the assignee_id

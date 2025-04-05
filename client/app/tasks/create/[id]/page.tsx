@@ -237,6 +237,7 @@ export default function CreateTaskPage() {
           const formData = new FormData()
           formData.append('file', attachment.file)
           formData.append('task_id', taskId)
+          formData.append('uploaded_by', user ? user?.id : '')
           formData.append('status', 'active')
 
           return axios.post(

@@ -188,7 +188,7 @@ export default function ChatInput({ onSendMessage }: ChatInputProps) {
         </div>
       )}
       
-      <div className="flex items-end gap-2">
+      <div className="flex items-center gap-2">
         <div className="flex gap-1">
           <Button 
             variant="ghost" 
@@ -246,12 +246,16 @@ export default function ChatInput({ onSendMessage }: ChatInputProps) {
             }}
             className="pr-10 py-3 min-h-[44px] max-h-[150px] resize-none rounded-2xl bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600 focus-visible:ring-blue-500"
             rows={1}
+            style={{
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+            }}
           />
           <Button 
             ref={emojiButtonRef}
             variant="ghost" 
             size="icon" 
-            className="absolute right-2 bottom-2 rounded-full text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+            className="absolute right-2 bottom-1 rounded-full text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
           >
             <Smile className="h-5 w-5" />
