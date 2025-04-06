@@ -1,6 +1,7 @@
 import asyncHandler from 'express-async-handler';
 import ChatRoom from '../models/chatRoom.js';
 import { validateChatRoom } from '../utils/validation.js';
+import Message from '../models/message.js';
 
 // @desc    Create a new chat room
 // @route   POST /api/chat-rooms
@@ -34,11 +35,48 @@ const createChatRoom = asyncHandler(async (req, res) => {
 // @access  Private
 const getChatRooms = asyncHandler(async (req, res) => {
   const userId = req.params.userId;
+  
+  // Get all chat rooms where the user is a participant
   const chatRooms = await ChatRoom.find({
     participants: userId
   }).sort({ updatedAt: -1 });
+  
+  // Get chat room IDs
+  const chatRoomIds = chatRooms.map(room => room._id);
+  
+  // Find the last message for each chat room in a single query
+  const lastMessages = await Message.aggregate([
+    // Match messages that belong to any of the user's chat rooms
+    { $match: { chatRoomId: { $in: chatRoomIds } } },
+    // Sort by creation date (descending)
+    { $sort: { createdAt: -1 } },
+    // Group by chat room and get the first (most recent) message
+    { $group: {
+      _id: "$chatRoomId",
+      content: { $first: "$content" },
+      createdAt: { $first: "$createdAt" },
+      readBy: { $first: "$readBy" }
+    }}
+  ]);
+  
+  // Create a map of chat room ID to last message for quick lookup
+  const lastMessageMap = {};
+  lastMessages.forEach(msg => {
+    lastMessageMap[msg._id.toString()] = {
+      content: msg.content,
+      createdAt: msg.createdAt,
+      readBy: msg.readBy
+    };
+  });
+  
+  // Add last message to each chat room
+  const chatRoomsWithLastMessage = chatRooms.map(room => {
+    const roomObj = room.toObject();
+    roomObj.lastMessage = lastMessageMap[room._id.toString()] || null;
+    return roomObj;
+  });
 
-  res.json(chatRooms);
+  res.json(chatRoomsWithLastMessage);
 });
 
 // @desc    Get chat room by ID

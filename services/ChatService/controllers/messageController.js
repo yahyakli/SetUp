@@ -341,19 +341,7 @@ const getPaginatedMessages = asyncHandler(async (req, res) => {
 
   // Mark messages as read
   const messageIds = messages.map(message => message._id);
-
-  if (messageIds.length > 0) {
-    await Message.updateMany(
-      {
-        _id: { $in: messageIds },
-        'readBy.userId': { $ne: req.params.userId }
-      },
-      {
-        $push: { readBy: { userId: req.params.userId, readAt: new Date() } }
-      }
-    );
-  }
-
+  
   // Get total count for pagination
   const total = await Message.countDocuments({ chatRoomId: req.params.chatRoomId });
 

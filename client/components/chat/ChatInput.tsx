@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Paperclip, Send, Smile, Image as ImageIcon, X } from 'lucide-react';
-import EmojiPicker from 'emoji-picker-react';
+import EmojiPicker, { Theme } from 'emoji-picker-react';
 import { useTheme } from 'next-themes';
 import { CHAT_SERVICE_URL } from '@/constants/API_URLS';
 import axios from 'axios';
@@ -12,6 +12,7 @@ import { ChatRoom } from '@/types';
 import { RootState } from '@/lib/store';
 import { useSelector } from 'react-redux';
 import Image from 'next/image';
+import { useSocket } from '@/lib/socket/SocketContext';
 
 type AttachmentType = 'file' | 'image' | null;
 
@@ -21,9 +22,87 @@ interface FileAttachment {
   preview?: string;
 }
 
-export default function ChatInput({ selectedRoom }: {
+// Memoize the emoji picker component to prevent re-renders
+const MemoizedEmojiPicker = memo(({ onEmojiClick, theme }: { 
+  onEmojiClick: (emojiObject: { emoji: string }) => void, 
+  theme: Theme
+}) => {
+  return (
+    <EmojiPicker 
+      onEmojiClick={onEmojiClick}
+      theme={theme}
+    />
+  );
+});
+
+MemoizedEmojiPicker.displayName = 'MemoizedEmojiPicker';
+
+// Memoize the attachment preview component
+const AttachmentPreview = memo(({ 
+  attachment, 
+  onRemove, 
+  formatFileSize 
+}: { 
+  attachment: FileAttachment | null,
+  onRemove: () => void,
+  formatFileSize: (bytes: number) => string
+}) => {
+  if (!attachment) return null;
+  
+  return (
+    <div className="mb-3 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg relative">
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        className="absolute top-1 right-1 h-6 w-6 rounded-full bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500"
+        onClick={onRemove}
+      >
+        <X className="h-4 w-4" />
+      </Button>
+      
+      {attachment.type === 'image' && attachment.preview && (
+        <div className="flex items-center">
+          <div className="relative w-20 h-20 rounded-md overflow-hidden mr-3">
+            <Image
+              src={attachment.preview} 
+              alt="Selected image" 
+              className="w-full h-full object-cover"
+              width={80}
+              height={80}
+            />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium truncate">{attachment.file.name}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {formatFileSize(attachment.file.size)}
+            </p>
+          </div>
+        </div>
+      )}
+      
+      {attachment.type === 'file' && (
+        <div className="flex items-center">
+          <div className="w-10 h-10 rounded-md bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3">
+            <Paperclip className="h-5 w-5 text-blue-500 dark:text-blue-300" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium truncate">{attachment.file.name}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {formatFileSize(attachment.file.size)}
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
+
+AttachmentPreview.displayName = 'AttachmentPreview';
+
+// Wrap the main component with React.memo
+const ChatInput = memo(({ selectedRoom }: {
   selectedRoom: ChatRoom;
-}) {
+}) => {
   const { user, token } = useSelector((state: RootState) => state.user);
   const [newMessage, setNewMessage] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -34,7 +113,19 @@ export default function ChatInput({ selectedRoom }: {
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { resolvedTheme } = useTheme();
+  const { sendTypingStatus, joinRoom } = useSocket();
+  
+  // Track if user is currently marked as typing
+  const isTypingRef = useRef(false);
+
+  // Join the chat room when component mounts or room changes
+  useEffect(() => {
+    if (selectedRoom?._id) {
+      joinRoom(selectedRoom._id);
+    }
+  }, [selectedRoom?._id, joinRoom]);
 
   // Auto-resize textarea based on content
   useEffect(() => {
@@ -44,23 +135,81 @@ export default function ChatInput({ selectedRoom }: {
     }
   }, [newMessage]);
 
+  // Function to stop typing
+  const stopTyping = useCallback(() => {
+    if (isTypingRef.current) {
+      console.log('Stopping typing');
+      isTypingRef.current = false;
+      sendTypingStatus(selectedRoom._id, false);
+    }
+  }, [selectedRoom._id, sendTypingStatus]);
+
+  // Function to start typing
+  const startTyping = useCallback(() => {
+    if (!isTypingRef.current) {
+      console.log('Starting typing');
+      isTypingRef.current = true;
+      sendTypingStatus(selectedRoom._id, true);
+    }
+  }, [selectedRoom._id, sendTypingStatus]);
+
+  // Handle typing indicator with a simpler approach
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        emojiPickerRef.current && 
-        !emojiPickerRef.current.contains(event.target as Node) &&
-        emojiButtonRef.current &&
-        !emojiButtonRef.current.contains(event.target as Node)
-      ) {
-        setShowEmojiPicker(false);
+    // Clear any existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+    
+    if (newMessage.trim().length > 0) {
+      // Start typing if not already typing
+      startTyping();
+      
+      // Set timeout to stop typing after inactivity
+      typingTimeoutRef.current = setTimeout(() => {
+        stopTyping();
+      }, 3000);
+    } else {
+      // If message is empty, stop typing immediately
+      stopTyping();
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
       }
     };
+  }, [newMessage, startTyping, stopTyping]);
 
-    document.addEventListener('mousedown', handleClickOutside);
+  // Clean up typing indicator when component unmounts or room changes
+  useEffect(() => {
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      stopTyping();
     };
-  }, []);
+  }, [selectedRoom._id, stopTyping]);
+
+  // Handle text input changes
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setNewMessage(e.target.value);
+    
+    // Reset the typing timeout on each keystroke
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    
+    // Set a new timeout
+    typingTimeoutRef.current = setTimeout(() => {
+      stopTyping();
+    }, 3000);
+  };
+
+  // Handle blur event on textarea
+  const handleBlur = () => {
+    // When user clicks away from the textarea, stop typing
+    stopTyping();
+  };
 
   const handleSendMessage = async () => {
     // Don't allow sending if there's no message and no attachment
@@ -70,6 +219,9 @@ export default function ChatInput({ selectedRoom }: {
     if (isSending) return;
     
     setIsSending(true);
+    
+    // Clear typing indicator when sending message
+    stopTyping();
     
     try {
       if (attachment) {
@@ -110,8 +262,6 @@ export default function ChatInput({ selectedRoom }: {
         );
       }
       
-  
-      
       // Reset state
       setNewMessage('');
       setAttachment(null);
@@ -120,6 +270,11 @@ export default function ChatInput({ selectedRoom }: {
       // You could add error handling UI here
     } finally {
       setIsSending(false);
+      
+      // Focus the textarea after sending the message
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
     }
   };
 
@@ -184,8 +339,8 @@ export default function ChatInput({ selectedRoom }: {
     setShowEmojiPicker(false);
   };
 
-  // Format file size
-  const formatFileSize = (bytes: number): string => {
+  // Format file size - memoize this function
+  const formatFileSize = useCallback((bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
     
     const k = 1024;
@@ -193,59 +348,25 @@ export default function ChatInput({ selectedRoom }: {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
+  }, []);
 
   // Check if the send button should be enabled
   const canSendMessage = (!!newMessage.trim() || !!attachment) && !isSending;
 
+  // Focus textarea when component mounts or room changes
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [selectedRoom._id]);
+
   return (
     <div className="p-4 border-t dark:border-gray-800 shrink-0 bg-white dark:bg-gray-800">
-      {attachment && (
-        <div className="mb-3 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg relative">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="absolute top-1 right-1 h-6 w-6 rounded-full bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500"
-            onClick={handleRemoveAttachment}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-          
-          {attachment.type === 'image' && attachment.preview && (
-            <div className="flex items-center">
-              <div className="relative w-20 h-20 rounded-md overflow-hidden mr-3">
-                <Image
-                  src={attachment.preview} 
-                  alt="Selected image" 
-                  className="w-full h-full object-cover"
-                  width={80}
-                  height={80}
-                />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium truncate">{attachment.file.name}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {formatFileSize(attachment.file.size)}
-                </p>
-              </div>
-            </div>
-          )}
-          
-          {attachment.type === 'file' && (
-            <div className="flex items-center">
-              <div className="w-10 h-10 rounded-md bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3">
-                <Paperclip className="h-5 w-5 text-blue-500 dark:text-blue-300" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium truncate">{attachment.file.name}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {formatFileSize(attachment.file.size)}
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+      <AttachmentPreview 
+        attachment={attachment} 
+        onRemove={handleRemoveAttachment}
+        formatFileSize={formatFileSize}
+      />
       
       <div className="flex items-center gap-2">
         <div className="flex gap-1">
@@ -298,7 +419,8 @@ export default function ChatInput({ selectedRoom }: {
             ref={textareaRef}
             placeholder={"Type a message..."}
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
+            onChange={handleTextChange}
+            onBlur={handleBlur}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey && canSendMessage) {
                 e.preventDefault();
@@ -326,10 +448,9 @@ export default function ChatInput({ selectedRoom }: {
           
           {showEmojiPicker && (
             <div ref={emojiPickerRef} className="absolute bottom-full right-0 mb-2 z-10">
-              <EmojiPicker 
+              <MemoizedEmojiPicker 
                 onEmojiClick={handleEmojiClick}
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                theme={resolvedTheme === 'dark' ? 'dark' : 'light' as any}
+                theme={resolvedTheme === 'dark' ? 'dark' as Theme : 'light' as Theme}
               />
             </div>
           )}
@@ -349,4 +470,8 @@ export default function ChatInput({ selectedRoom }: {
       </div>
     </div>
   );
-} 
+});
+
+ChatInput.displayName = 'ChatInput';
+
+export default ChatInput; 

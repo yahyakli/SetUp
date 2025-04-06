@@ -6,22 +6,33 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
 import { USERS_SERVICE_URL } from '@/constants/API_URLS';
 import MessageAttachment from './MessageAttachment';
+import TypingIndicator from './TypingIndicator';
+import { useSocket } from '@/lib/socket/SocketContext';
 
 interface ChatMessageListProps {
   messages: Message[];
   currentUserId?: string;
   users: Record<string, User>;
   showUserInfo?: boolean;
+  roomId: string;
 }
 
 export default function ChatMessageList({ 
   messages, 
   currentUserId, 
   users, 
-  showUserInfo
+  showUserInfo = false,
+  roomId
 }: ChatMessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const typingIndicatorRef = useRef<HTMLDivElement>(null);
+  const { typingUsers } = useSocket();
+  
+  // Check if anyone is typing in this room (excluding current user)
+  const isAnyoneTyping = (typingUsers[roomId] || [])
+    .filter(userId => userId !== currentUserId)
+    .length > 0;
 
   // Scroll to bottom of messages when messages change
   useEffect(() => {
@@ -32,6 +43,16 @@ export default function ChatMessageList({
       }, 100);
     }
   }, [messages]);
+  
+  // Scroll to typing indicator when someone starts typing
+  useEffect(() => {
+    if (isAnyoneTyping && typingIndicatorRef.current && scrollContainerRef.current) {
+      // Use scrollIntoView with a slight delay to ensure proper rendering
+      setTimeout(() => {
+        typingIndicatorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }, 100);
+    }
+  }, [isAnyoneTyping]);
 
   // Format time for display
   const formatMessageTime = (date: Date) => {
@@ -172,22 +193,30 @@ export default function ChatMessageList({
   };
 
   return (
-    <div className="h-full overflow-y-auto bg-gray-50 dark:bg-gray-900" ref={scrollContainerRef}>
-      <div className="p-4 space-y-8">
-        {messageGroups.map((group) => (
-          <div key={group.date} className="space-y-4">
-            <div className="flex justify-center">
-              <div className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs px-3 py-1 rounded-full">
-                {group.date}
+    <div className="flex flex-col-reverse h-full overflow-y-auto p-4 space-y-reverse space-y-4">
+      <div className="h-full overflow-y-auto bg-gray-50 dark:bg-gray-900" ref={scrollContainerRef}>
+        <div className="p-4 space-y-8">
+          {messageGroups.map((group) => (
+            <div key={group.date} className="space-y-4">
+              <div className="flex justify-center">
+                <div className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs px-3 py-1 rounded-full">
+                  {group.date}
+                </div>
               </div>
+              
+              {group.messages.map((message, messageIndex) => {
+                return renderMessage(message, messageIndex, group);
+              })}
             </div>
-            
-            {group.messages.map((message, messageIndex) => {
-              return renderMessage(message, messageIndex, group);
-            })}
+          ))}
+          
+          {/* Add the typing indicator here with ref */}
+          <div ref={typingIndicatorRef}>
+            <TypingIndicator roomId={roomId} currentUserId={currentUserId} users={users} />
           </div>
-        ))}
-        <div ref={messagesEndRef} />
+          
+          <div ref={messagesEndRef} />
+        </div>
       </div>
     </div>
   );

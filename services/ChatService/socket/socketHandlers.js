@@ -30,6 +30,11 @@ const setupSocketHandlers = (io) => {
       socket.to(`room:${roomId}`).emit('user_typing', { userId, isTyping });
     });
 
+    // Handle read status
+    socket.on('read_message', ({ roomId, userId }) => {
+      socket.to(`room:${roomId}`).emit('message_read', { userId });
+    });
+
     // Handle disconnection
     socket.on('disconnect', () => {
       const userId = activeUsers.get(socket.id);

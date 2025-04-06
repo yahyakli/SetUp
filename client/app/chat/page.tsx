@@ -12,6 +12,7 @@ import EmptyState from '@/components/chat/EmptyState';
 import { useRouter, useParams } from 'next/navigation';
 import axios from 'axios';
 import { CHAT_SERVICE_URL, USERS_SERVICE_URL } from '@/constants/API_URLS';
+import { useSocket } from '@/lib/socket/SocketContext';
 
 export default function ChatPage() {
   const { user, token } = useSelector((state: RootState) => state.user);
@@ -19,6 +20,7 @@ export default function ChatPage() {
   const router = useRouter();
   const params = useParams();
   const roomId = params?.roomId as string;
+  const { socket } = useSocket();
 
   const [selectedRoom, setSelectedRoom] = useState<ChatRoom | null>(null);
   const [showChatList, setShowChatList] = useState(true);
@@ -115,6 +117,123 @@ export default function ChatPage() {
     fetchData();
   }, [token, user?.id, teams]);
 
+  // Set up socket event listeners
+  useEffect(() => {
+    if (!socket || !user?.id) return;
+
+    // Listen for new messages
+    socket.on('new_message', (message: Message) => {
+      // Update messages for the relevant chat room
+      setMessages(prev => {
+        const roomMessages = prev[message.chatRoomId] || [];
+        return {
+          ...prev,
+          [message.chatRoomId]: [message, ...roomMessages]
+        };
+      });
+
+      // Update the last message in chat rooms list
+      setChatRooms(prev => {
+        return prev.map(room => {
+          if (room._id === message.chatRoomId) {
+            return {
+              ...room,
+              lastMessage: {
+                _id: message._id,
+                chatRoomId: message.chatRoomId,
+                content: message.content,
+                contentType: message.contentType || 'text',
+                senderId: message.senderId,
+                readBy: message.readBy || [],
+                createdAt: message.createdAt,
+                updatedAt: message.updatedAt || message.createdAt
+              }
+            };
+          }
+          return room;
+        });
+      });
+    });
+
+    // Listen for messages being read
+    socket.on('messages_read', ({ messageIds, userId, readAt }) => {
+      if (userId === user.id) return; // Skip if it's the current user
+
+      // Update read status for messages
+      setMessages(prev => {
+        const updatedMessages = { ...prev };
+        
+        Object.keys(updatedMessages).forEach(roomId => {
+          updatedMessages[roomId] = updatedMessages[roomId].map(msg => {
+            if (messageIds.includes(msg._id)) {
+              // Check if this user has already read the message
+              const hasRead = msg.readBy?.some(read => read.userId === userId);
+              
+              if (!hasRead) {
+                return {
+                  ...msg,
+                  readBy: [...(msg.readBy || []), { userId, readAt }]
+                };
+              }
+            }
+            return msg;
+          });
+        });
+        
+        return updatedMessages;
+      });
+    });
+
+    // Listen for new chat rooms
+    socket.on('new_chat_room', (room: ChatRoom) => {
+      setChatRooms(prev => [room, ...prev]);
+    });
+
+    // Listen for updated chat rooms
+    socket.on('update_chat_room', (updatedRoom: ChatRoom) => {
+      setChatRooms(prev => 
+        prev.map(room => room._id === updatedRoom._id ? updatedRoom : room)
+      );
+    });
+
+    // Listen for deleted chat rooms
+    socket.on('chat_room_deleted', ({ chatRoomId }) => {
+      setChatRooms(prev => prev.filter(room => room._id !== chatRoomId));
+      
+      // If the deleted room is currently selected, navigate away
+      if (selectedRoom?._id === chatRoomId) {
+        router.push('/chat');
+      }
+    });
+
+    // Clean up listeners on unmount
+    return () => {
+      socket.off('new_message');
+      socket.off('messages_read');
+      socket.off('new_chat_room');
+      socket.off('update_chat_room');
+      socket.off('chat_room_deleted');
+    };
+  }, [socket, user?.id, selectedRoom, router]);
+
+  // Join the selected chat room's socket channel
+  useEffect(() => {
+    if (!socket || !selectedRoom) return;
+    
+    const roomId = String(selectedRoom._id); // Convert to string to ensure consistency
+    
+    console.log(`Joining socket room: ${roomId}`);
+    
+    // Join the room's socket channel - ensure this is only done once per room
+    socket.emit('join_room', roomId);
+    
+    // Leave the room when component unmounts or room changes
+    return () => {
+      console.log(`Leaving socket room: ${roomId}`);
+      socket.emit('leave_room', roomId);
+    };
+  }, [socket, selectedRoom?._id]); // Only depend on _id, not the entire selectedRoom object
+
   // Check if we're on mobile
   useEffect(() => {
     const checkIfMobile = () => {
@@ -199,7 +318,6 @@ export default function ChatPage() {
     router.push('/chat');
   };
 
-
   // Handle sidebar resize
   const handleSidebarResize = (width: number) => {
     setSidebarWidth(width);
@@ -247,6 +365,7 @@ export default function ChatPage() {
                 currentUserId={user?.id}
                 users={users}
                 showUserInfo={selectedRoom.type === 'project'}
+                roomId={selectedRoom._id}
               />
             </div>
 
