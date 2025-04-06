@@ -3,8 +3,12 @@ import Joi from 'joi';
 // Validate Chat Room data
 export const validateChatRoom = (data) => {
   const schema = Joi.object({
-    name: Joi.string().required().min(1).max(100),
     type: Joi.string().valid('project', 'direct').required(),
+    name: Joi.when('type', {
+      is: 'direct',
+      then: Joi.optional(),
+      otherwise: Joi.string().required()
+    }),
     projectId: Joi.when('type', {
       is: 'project',
       then: Joi.number().required(),
@@ -27,7 +31,14 @@ export const validateMessage = (data) => {
       otherwise: Joi.optional()
     }),
     contentType: Joi.string().valid('text', 'file').required(),
-    user_id: Joi.string().required()
+    user_id: Joi.string().required(),
+    attachment: Joi.object({
+      originalName: Joi.string(),
+      fileName: Joi.string(),
+      path: Joi.string(),
+      mimeType: Joi.string(),
+      size: Joi.number()
+    }).optional()
   });
   
   return schema.validate(data);

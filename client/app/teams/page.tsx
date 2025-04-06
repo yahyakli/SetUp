@@ -184,17 +184,17 @@ export default function Page() {
                 >
                   {viewMode === 'list' ? (
                     <>
-                      <div className="flex items-center pl-5">
+                      <div className="flex items-center pl-5 flex-shrink-0">
                         <Users className="h-9 w-9 text-primary/70" />
                       </div>
                       <div className="flex-grow p-4 flex flex-col sm:flex-row sm:items-center">
-                        <div className="sm:flex-grow pr-4 mb-2 sm:mb-0">
-                          <CardTitle className="text-lg font-bold">{team.name}</CardTitle>
-                          <CardDescription className="text-sm line-clamp-1">
+                        <div className="sm:w-1/3 pr-4 mb-2 sm:mb-0">
+                          <CardTitle className="text-lg font-bold truncate">{team.name}</CardTitle>
+                          <CardDescription className="text-sm line-clamp-1 min-h-[1.25rem]">
                             {team.description}
                           </CardDescription>
                         </div>
-                        <div className="flex flex-wrap gap-3 items-center justify-start sm:justify-end">
+                        <div className="sm:w-2/3 flex flex-wrap gap-3 items-center justify-start sm:justify-end">
                           <Badge variant="default">
                             {team.members.length} {team.members.length === 1 ? 'Member' : 'Members'}
                           </Badge>
@@ -211,11 +211,13 @@ export default function Page() {
                           <CardTitle className="text-lg font-bold truncate">
                             {team.name}
                           </CardTitle>
-                          <CardDescription className="text-sm line-clamp-2">
+                          <CardDescription className="text-sm line-clamp-2 min-h-[2.5rem]">
                             {team.description}
                           </CardDescription>
                         </div>
-                        <Users className="h-5 w-5 text-muted-foreground" />
+                        <div className="flex-shrink-0">
+                          <Users className="h-5 w-5 text-muted-foreground" />
+                        </div>
                       </CardHeader>
                       <CardContent className="space-y-3">
                         <div className="flex items-center">

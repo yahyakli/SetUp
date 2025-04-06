@@ -7,21 +7,26 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Plus, GripVertical } from 'lucide-react';
+import { Search, Plus, GripVertical, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
+import UserSelectionModal from './UserSelectionModal';
+import { useMemo } from 'react';
+import { USERS_SERVICE_URL } from '@/constants/API_URLS';
 
 interface ChatRoomsListProps {
-  chatRooms: ChatRoom[];
   selectedRoom: ChatRoom | null;
   onRoomSelect: (room: ChatRoom) => void;
   currentUserId?: string;
   users: Record<string, User>;
   onResize?: (width: number) => void;
   isMobile?: boolean;
+  chatRooms: ChatRoom[];
+  loading: boolean;
 }
 
 export default function ChatRoomsList({
   chatRooms,
+  loading,
   selectedRoom,
   onRoomSelect,
   currentUserId,
@@ -31,6 +36,7 @@ export default function ChatRoomsList({
 }: ChatRoomsListProps) {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [chatFilter, setChatFilter] = React.useState<'all' | 'direct' | 'project'>('all');
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   
   // Initialize width from props or localStorage
   const [width, setWidth] = useState(() => {
@@ -46,16 +52,42 @@ export default function ChatRoomsList({
   const containerRef = useRef<HTMLDivElement>(null);
   const [isResizing, setIsResizing] = useState(false);
 
-  // Filter chat rooms based on search query and filter type
-  const filteredChatRooms = chatRooms.filter(room => {
-    const matchesSearch = room.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = 
-      chatFilter === 'all' || 
-      (chatFilter === 'direct' && room.type === 'direct') || 
-      (chatFilter === 'project' && room.type === 'project');
-    
-    return matchesSearch && matchesFilter;
-  });
+  // Fetch chat rooms
+  
+
+  // Filter chat rooms based on search query and filter type - using useMemo for performance
+  const filteredChatRooms = useMemo(() => {
+    return chatRooms.filter(room => {
+      // For direct chats, we need to find the other participant's name
+      let matchesSearch = true;
+      
+      if (searchQuery) {
+        if (room.type === 'direct') {
+          // For direct chats, search by the other participant's name
+          const otherParticipantId = room.participants.find(id => id !== currentUserId);
+          const otherUser = otherParticipantId ? users[otherParticipantId] : null;
+          
+          if (otherUser) {
+            const fullName = `${otherUser.firstName} ${otherUser.lastName}`.toLowerCase();
+            matchesSearch = fullName.includes(searchQuery.toLowerCase());
+          } else {
+            // If we can't find the other user, use the room name as fallback
+            matchesSearch = (room.name || '').toLowerCase().includes(searchQuery.toLowerCase());
+          }
+        } else {
+          // For project chats, search by room name
+          matchesSearch = (room.name || '').toLowerCase().includes(searchQuery.toLowerCase());
+        }
+      }
+      
+      const matchesFilter = 
+        chatFilter === 'all' || 
+        (chatFilter === 'direct' && room.type === 'direct') || 
+        (chatFilter === 'project' && room.type === 'project');
+      
+      return matchesSearch && matchesFilter;
+    });
+  }, [chatRooms, searchQuery, chatFilter, currentUserId, users]);
 
   // Format date for chat list
   const formatChatDate = (date: Date) => {
@@ -123,7 +155,18 @@ export default function ChatRoomsList({
       style={isMobile ? {} : { width: `${width}px` }}
     >
       <div className="p-4 border-b dark:border-gray-800 shrink-0 bg-white dark:bg-gray-800">
-        <h2 className="text-xl font-bold mb-4 dark:text-white">Messages</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold dark:text-white">Messages</h2>
+          <Button 
+            size="sm" 
+            onClick={() => setIsUserModalOpen(true)}
+            className="dark:hover:bg-gray-700"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            New Conversation
+          </Button>
+        </div>
+        
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
@@ -143,7 +186,11 @@ export default function ChatRoomsList({
       </div>
       
       <div className="flex-1 overflow-y-auto">
-        {filteredChatRooms.length === 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center h-full">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : filteredChatRooms.length === 0 ? (
           <div className="p-4 text-center text-gray-500 dark:text-gray-400">
             No conversations found
           </div>
@@ -164,7 +211,7 @@ export default function ChatRoomsList({
                   <div className="flex items-start gap-3">
                     {room.type === 'direct' ? (
                       <Avatar className="h-12 w-12 border-2 border-white dark:border-gray-800 shadow-sm">
-                        <AvatarImage src={getUserAvatar(room.participants.find(id => id !== currentUserId) || '')} />
+                        <AvatarImage src={getUserAvatar(room.participants.find(id => id !== currentUserId) || '') ? USERS_SERVICE_URL + getUserAvatar(room.participants.find(id => id !== currentUserId) || '') : ''} />
                         <AvatarFallback className="bg-gradient-to-br from-blue-400 to-blue-600 text-white">
                           {getUserInitials(room.participants.find(id => id !== currentUserId) || '')}
                         </AvatarFallback>
@@ -178,11 +225,25 @@ export default function ChatRoomsList({
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-center mb-1">
                         <h3 className={`font-medium truncate dark:text-white ${isUnread ? 'font-bold' : ''}`}>
-                          {room.name}
+                          {room.type === 'direct' ? (
+                            (() => {
+                              const otherParticipantId = room.participants.find(id => id !== currentUserId);
+                              const otherUser = otherParticipantId ? users[otherParticipantId] : null;
+                              
+                              if (otherUser) {
+                                return `${otherUser.firstName} ${otherUser.lastName}`;
+                              } else {
+                                // Fallback to room name if user not found
+                                return room.name || 'Direct Message';
+                              }
+                            })()
+                          ) : (
+                            room.name
+                          )}
                         </h3>
                         {lastMessage && (
                           <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                            {formatChatDate(lastMessage.createdAt)}
+                            {formatChatDate(new Date(lastMessage.createdAt))}
                           </span>
                         )}
                       </div>
@@ -218,13 +279,6 @@ export default function ChatRoomsList({
         )}
       </div>
       
-      <div className="p-4 border-t dark:border-gray-800 shrink-0 bg-white dark:bg-gray-800">
-        <Button className="w-full flex items-center gap-2 dark:hover:bg-gray-700" variant="outline">
-          <Plus className="h-4 w-4" />
-          New Conversation
-        </Button>
-      </div>
-
       {/* Resizer handle - only visible on desktop */}
       {!isMobile && (
         <div 
@@ -243,6 +297,13 @@ export default function ChatRoomsList({
           </div>
         </div>
       )}
+      
+      {/* Add the user selection modal */}
+      <UserSelectionModal   
+        chatRooms={chatRooms}
+        isOpen={isUserModalOpen} 
+        onClose={() => setIsUserModalOpen(false)} 
+      />
     </div>
   );
 } 

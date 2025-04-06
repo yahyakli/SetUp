@@ -5,6 +5,7 @@ import { ChatRoom, User } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ArrowLeft } from 'lucide-react';
+import { USERS_SERVICE_URL } from '@/constants/API_URLS';
 
 interface ChatHeaderProps {
   room: ChatRoom;
@@ -45,8 +46,8 @@ export default function ChatHeader({ room, onBackClick, currentUserId, users }: 
       
       {room.type === 'direct' ? (
         <Avatar>
-          <AvatarImage src={getUserAvatar(room.participants.find(id => id !== currentUserId) || '')} />
-          <AvatarFallback>{getUserInitials(room.participants.find(id => id !== currentUserId) || '')}</AvatarFallback>
+          <AvatarImage src={getUserAvatar(room.participants.find(id => id !== currentUserId) || '') ? USERS_SERVICE_URL + getUserAvatar(room.participants.find(id => id !== currentUserId) || '') : ''} />
+          <AvatarFallback className='bg-gradient-to-br from-blue-400 to-blue-600 text-white'>{getUserInitials(room.participants.find(id => id !== currentUserId) || '')}</AvatarFallback>
         </Avatar>
       ) : (
         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">

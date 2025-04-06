@@ -80,7 +80,7 @@ export default function AssignTeamsModal({
             >
               <div>
                 <h4 className="font-medium">{team.name}</h4>
-                <p className="text-sm text-muted-foreground">{team.description}</p>
+                <p className="text-sm text-muted-foreground line-clamp-1 pr-5 min-h-[1.25rem]">{team.description}</p>
               </div>
               <Button
                 size="sm"

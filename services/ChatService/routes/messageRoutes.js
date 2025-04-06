@@ -14,14 +14,14 @@ import upload from '../middleware/uploadMiddleware.js';
 
 const router = express.Router();
 
-// Create message
-router.post('/', protect, createMessage);
+// Create message (now with optional file upload)
+router.post('/', protect, upload.single('file'), createMessage);
 
 // Get messages by chat room
-router.get('/chat-room/:chatRoomId', protect, getMessagesByChatRoom);
+router.get('/chat-room/:chatRoomId/:userId', protect, getMessagesByChatRoom);
 
 // Get paginated messages
-router.get('/paginated/:chatRoomId', protect, getPaginatedMessages);
+router.get('/paginated/:chatRoomId/:userId', protect, getPaginatedMessages);
 
 // Get more messages based on last message ID
 router.get('/more/:chatRoomId/:lastMessageId', protect, getMoreMessages);

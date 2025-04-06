@@ -242,10 +242,10 @@ export default function ProjectPage() {
                     {project.teams.map((team) => (
                       <Card key={team.id} className="dark:bg-gray-800 group relative">
                         <CardHeader>
-                          <div className="flex justify-between items-start">
+                          <div className="flex justify-between items-center">
                             <div>
                               <CardTitle className="text-lg">{team.name}</CardTitle>
-                              <CardDescription>{team.description}</CardDescription>
+                              <CardDescription className="line-clamp-3 pr-5 min-h-[2.5rem]">{team.description}</CardDescription>
                             </div>
                             {project.owner_id === user?.id && (
                               <Button

@@ -6,10 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Paperclip, Send, Smile, Image as ImageIcon, X } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 import { useTheme } from 'next-themes';
-
-interface ChatInputProps {
-  onSendMessage: (message: string) => void;
-}
+import { CHAT_SERVICE_URL } from '@/constants/API_URLS';
+import axios from 'axios';
+import { ChatRoom } from '@/types';
+import { RootState } from '@/lib/store';
+import { useSelector } from 'react-redux';
+import Image from 'next/image';
 
 type AttachmentType = 'file' | 'image' | null;
 
@@ -19,10 +21,14 @@ interface FileAttachment {
   preview?: string;
 }
 
-export default function ChatInput({ onSendMessage }: ChatInputProps) {
+export default function ChatInput({ selectedRoom }: {
+  selectedRoom: ChatRoom;
+}) {
+  const { user, token } = useSelector((state: RootState) => state.user);
   const [newMessage, setNewMessage] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [attachment, setAttachment] = useState<FileAttachment | null>(null);
+  const [isSending, setIsSending] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
@@ -56,17 +62,65 @@ export default function ChatInput({ onSendMessage }: ChatInputProps) {
     };
   }, []);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
+    // Don't allow sending if there's no message and no attachment
     if (!newMessage.trim() && !attachment) return;
     
-    // In a real app, you would handle the attachment upload here
-    if (attachment) {
-      console.log('Sending message with attachment:', attachment.file);
-    }
+    // Don't allow sending multiple messages at once
+    if (isSending) return;
     
-    onSendMessage(newMessage);
-    setNewMessage('');
-    setAttachment(null);
+    setIsSending(true);
+    
+    try {
+      if (attachment) {
+        // Send message with attachment
+        const formData = new FormData();
+        formData.append('chatRoomId', selectedRoom._id);
+        formData.append('contentType', 'file');
+        formData.append('user_id', user?.id || '');
+        formData.append('file', attachment.file);
+        
+        // If there's also text content, include it
+        if (newMessage.trim()) {
+          formData.append('content', newMessage);
+        }
+        
+        const response = await axios.post(`${CHAT_SERVICE_URL}/api/messages`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        console.log(response);
+      } else {
+        // Send text-only message
+        await axios.post(
+          `${CHAT_SERVICE_URL}/api/messages`,
+          {
+            chatRoomId: selectedRoom._id,
+            content: newMessage,
+            contentType: 'text',
+            user_id: user?.id
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          }
+        );
+      }
+      
+  
+      
+      // Reset state
+      setNewMessage('');
+      setAttachment(null);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      // You could add error handling UI here
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleFileClick = () => {
@@ -141,6 +195,9 @@ export default function ChatInput({ onSendMessage }: ChatInputProps) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  // Check if the send button should be enabled
+  const canSendMessage = (!!newMessage.trim() || !!attachment) && !isSending;
+
   return (
     <div className="p-4 border-t dark:border-gray-800 shrink-0 bg-white dark:bg-gray-800">
       {attachment && (
@@ -157,10 +214,12 @@ export default function ChatInput({ onSendMessage }: ChatInputProps) {
           {attachment.type === 'image' && attachment.preview && (
             <div className="flex items-center">
               <div className="relative w-20 h-20 rounded-md overflow-hidden mr-3">
-                <img 
+                <Image
                   src={attachment.preview} 
                   alt="Selected image" 
                   className="w-full h-full object-cover"
+                  width={80}
+                  height={80}
                 />
               </div>
               <div className="flex-1">
@@ -194,12 +253,12 @@ export default function ChatInput({ onSendMessage }: ChatInputProps) {
             variant="ghost" 
             size="icon" 
             className={`rounded-full ${
-              attachment 
+              attachment || isSending
                 ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed' 
                 : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
             }`}
             onClick={handleFileClick}
-            disabled={!!attachment}
+            disabled={!!attachment || isSending}
           >
             <Paperclip className="h-5 w-5" />
           </Button>
@@ -208,18 +267,19 @@ export default function ChatInput({ onSendMessage }: ChatInputProps) {
             ref={fileInputRef} 
             className="hidden" 
             onChange={handleFileChange}
+            disabled={isSending}
           />
           
           <Button 
             variant="ghost" 
             size="icon" 
             className={`rounded-full ${
-              attachment 
+              attachment || isSending
                 ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed' 
                 : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
             }`}
             onClick={handleImageClick}
-            disabled={!!attachment}
+            disabled={!!attachment || isSending}
           >
             <ImageIcon className="h-5 w-5" />
           </Button>
@@ -229,17 +289,18 @@ export default function ChatInput({ onSendMessage }: ChatInputProps) {
             className="hidden" 
             accept="image/*" 
             onChange={handleImageChange}
+            disabled={isSending}
           />
         </div>
         
         <div className="relative flex-1">
           <Textarea
             ref={textareaRef}
-            placeholder="Type a message..."
+            placeholder={"Type a message..."}
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
+              if (e.key === 'Enter' && !e.shiftKey && canSendMessage) {
                 e.preventDefault();
                 handleSendMessage();
               }
@@ -250,6 +311,7 @@ export default function ChatInput({ onSendMessage }: ChatInputProps) {
               scrollbarWidth: 'none',
               msOverflowStyle: 'none',
             }}
+            disabled={isSending}
           />
           <Button 
             ref={emojiButtonRef}
@@ -257,6 +319,7 @@ export default function ChatInput({ onSendMessage }: ChatInputProps) {
             size="icon" 
             className="absolute right-2 bottom-1 rounded-full text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            disabled={isSending}
           >
             <Smile className="h-5 w-5" />
           </Button>
@@ -274,8 +337,12 @@ export default function ChatInput({ onSendMessage }: ChatInputProps) {
         
         <Button 
           onClick={handleSendMessage} 
-          disabled={!newMessage.trim() && !attachment}
-          className="rounded-full bg-blue-500 hover:bg-blue-600 text-white w-12 h-12"
+          disabled={!canSendMessage}
+          className={`rounded-full ${
+            canSendMessage 
+              ? 'bg-blue-500 hover:bg-blue-600' 
+              : 'bg-blue-300 dark:bg-blue-700'
+          } text-white w-12 h-12`}
         >
           <Send className="h-6 w-6" />
         </Button>

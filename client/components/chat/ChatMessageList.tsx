@@ -4,14 +4,22 @@ import React, { useRef, useEffect } from 'react';
 import { Message, User } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
+import { USERS_SERVICE_URL } from '@/constants/API_URLS';
+import MessageAttachment from './MessageAttachment';
 
 interface ChatMessageListProps {
   messages: Message[];
   currentUserId?: string;
   users: Record<string, User>;
+  showUserInfo?: boolean;
 }
 
-export default function ChatMessageList({ messages, currentUserId, users }: ChatMessageListProps) {
+export default function ChatMessageList({ 
+  messages, 
+  currentUserId, 
+  users, 
+  showUserInfo
+}: ChatMessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -52,7 +60,15 @@ export default function ChatMessageList({ messages, currentUserId, users }: Chat
   const groupMessagesByDate = (messages: Message[]) => {
     const groups: { date: string; messages: Message[] }[] = [];
     
-    messages.forEach(message => {
+    // Ensure messages is a valid array
+    const messageArray = Array.isArray(messages) ? messages : [];
+    
+    // First sort all messages by creation date
+    const sortedMessages = [...messageArray].sort((a, b) => 
+      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+    
+    sortedMessages.forEach(message => {
       const messageDate = new Date(message.createdAt);
       const dateStr = format(messageDate, 'MMMM d, yyyy');
       
@@ -64,10 +80,96 @@ export default function ChatMessageList({ messages, currentUserId, users }: Chat
       }
     });
     
+    // Sort groups by date (oldest first)
+    groups.sort((a, b) => {
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+      return dateA - dateB;
+    });
+    
     return groups;
   };
 
   const messageGroups = groupMessagesByDate(messages);
+
+  // Check if there are no messages
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return (
+      <div className="h-full overflow-y-auto bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center p-8">
+          <div className="mb-4 text-gray-400 dark:text-gray-500">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">No messages yet</h3>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            Start the conversation by sending a message below.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const renderMessage = (message: Message, messageIndex: number, group: { date: string; messages: Message[] }) => {
+    const isCurrentUser = message.senderId === currentUserId;
+    const showAvatar = showUserInfo && messageIndex === 0 || 
+      (showUserInfo && group.messages[messageIndex - 1].senderId !== message.senderId);
+    
+    return (
+      <div 
+        key={message._id} 
+        className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
+      >
+        <div className={`flex items-center gap-2 max-w-[80%] ${
+          !isCurrentUser && !showAvatar && showUserInfo ? 'pl-10' : ''
+        }`}>
+          {!isCurrentUser && showAvatar && showUserInfo ? (
+            <Avatar className="h-10 w-10 border-2 border-white dark:border-gray-800 shadow-sm">
+              <AvatarImage src={USERS_SERVICE_URL + getUserAvatar(message.senderId)} />
+              <AvatarFallback className="bg-gradient-to-br from-green-400 to-green-600 text-white">
+                {getUserInitials(message.senderId)}
+              </AvatarFallback>
+            </Avatar>
+          ) : !isCurrentUser && showUserInfo ? (
+            <div className="w-10 h-10 flex-shrink-0"></div>
+          ) : null}
+          
+          <div>
+            {!isCurrentUser && showAvatar && showUserInfo && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 font-medium">
+                {getUserName(message.senderId)}
+              </p>
+            )}
+            
+            <div className={`rounded-2xl p-3 ${
+              isCurrentUser 
+                ? 'bg-blue-500 text-white rounded-tr-none' 
+                : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-tl-none shadow-sm'
+            }`}>
+              <p>{message.content}</p>
+              
+              {/* Render attachments if they exist */}
+              {message.attachments && message.attachments.length > 0 && (
+                <div className="message-attachments">
+                  {message.attachments.map(attachment => (
+                    <MessageAttachment 
+                      key={attachment._id} 
+                      attachment={attachment} 
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {formatMessageTime(message.createdAt)}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="h-full overflow-y-auto bg-gray-50 dark:bg-gray-900" ref={scrollContainerRef}>
@@ -81,51 +183,7 @@ export default function ChatMessageList({ messages, currentUserId, users }: Chat
             </div>
             
             {group.messages.map((message, messageIndex) => {
-              const isCurrentUser = message.senderId === currentUserId;
-              const showAvatar = messageIndex === 0 || 
-                group.messages[messageIndex - 1].senderId !== message.senderId;
-              
-              return (
-                <div 
-                  key={message._id} 
-                  className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div className={`flex items-center gap-2 max-w-[80%] ${
-                    !isCurrentUser && !showAvatar ? 'pl-10' : ''
-                  }`}>
-                    {!isCurrentUser && showAvatar ? (
-                      <Avatar className="h-10 w-10 border-2 border-white dark:border-gray-800 shadow-sm">
-                        <AvatarImage src={getUserAvatar(message.senderId)} />
-                        <AvatarFallback className="bg-gradient-to-br from-green-400 to-green-600 text-white">
-                          {getUserInitials(message.senderId)}
-                        </AvatarFallback>
-                      </Avatar>
-                    ) : !isCurrentUser ? (
-                      <div className="w-10 h-10 flex-shrink-0"></div>
-                    ) : null}
-                    
-                    <div>
-                      {!isCurrentUser && showAvatar && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 font-medium">
-                          {getUserName(message.senderId)}
-                        </p>
-                      )}
-                      
-                      <div className={`rounded-2xl p-3 ${
-                        isCurrentUser 
-                          ? 'bg-blue-500 text-white rounded-tr-none' 
-                          : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-tl-none shadow-sm'
-                      }`}>
-                        <p>{message.content}</p>
-                      </div>
-                      
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {formatMessageTime(message.createdAt)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              );
+              return renderMessage(message, messageIndex, group);
             })}
           </div>
         ))}

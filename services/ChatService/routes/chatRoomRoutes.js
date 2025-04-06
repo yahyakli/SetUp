@@ -14,7 +14,8 @@ const router = express.Router();
 
 router.route('/')
   .post(protect, createChatRoom)
-  .get(protect, getChatRooms);
+  
+router.get('/by-user/:userId', protect, getChatRooms);
 
 router.route('/:id')
   .get(protect, getChatRoomById)

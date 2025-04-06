@@ -1,17 +1,19 @@
 import multer from 'multer';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import { fileURLToPath } from 'url';
+import fs from 'fs';
 
-// Setup __dirname equivalent for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Ensure uploads directory exists
+const uploadsDir = 'uploads';
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 // Set storage engine
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    // Store files in uploads directory
-    cb(null, path.join(__dirname, '../uploads'));
+    // Store files directly in uploads directory in the project root
+    cb(null, uploadsDir);
   },
   filename: function (req, file, cb) {
     // Create unique filename with original extension

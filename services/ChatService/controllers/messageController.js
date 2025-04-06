@@ -43,24 +43,46 @@ const createMessage = asyncHandler(async (req, res) => {
     readBy: [{ userId: req.body.user_id, readAt: new Date() }]
   });
 
+  // Handle attachment if present
+  if (req.file) {
+    // Create attachment
+    const attachment = await Attachment.create({
+      originalName: req.file.originalname,
+      fileName: req.file.filename,
+      path: `/uploads/${req.file.filename}`,
+      mimeType: req.file.mimetype,
+      size: req.file.size,
+      messageId: message._id,
+      uploadedBy: req.body.user_id
+    });
+    
+    // If attachment was successfully created, update message type
+    if (attachment) {
+      message.contentType = 'file';
+      await message.save();
+    }
+  }
+
   // Update chat room's updatedAt
   chatRoom.updatedAt = new Date();
   await chatRoom.save();
 
-  // Emit socket event for new message
-  req.io.to(`room:${req.body.chatRoomId}`).emit('new_message', message);
+  // Populate attachments before sending response
+  const populatedMessage = await Message.findById(message._id).populate('attachments');
 
-  res.status(201).json(message);
+  // Emit socket event for new message
+  req.io.to(`room:${req.body.chatRoomId}`).emit('new_message', populatedMessage);
+
+  res.status(201).json(populatedMessage);
 });
 
 // @desc    Get messages by chat room ID
 // @route   GET /api/messages/chat-room/:chatRoomId
 // @access  Private
 const getMessagesByChatRoom = asyncHandler(async (req, res) => {
-  // Check if chat room exists and user is participant
   const chatRoom = await ChatRoom.findOne({
     _id: req.params.chatRoomId,
-    participants: req.body.user_id
+    participants: req.params.userId
   });
 
   if (!chatRoom) {
@@ -103,10 +125,10 @@ const getMessagesByChatRoom = asyncHandler(async (req, res) => {
     await Message.updateMany(
       {
         _id: { $in: messageIds },
-        'readBy.userId': { $ne: req.body.user_id }
+        'readBy.userId': { $ne: req.params.userId }
       },
       {
-        $push: { readBy: { userId: req.body.user_id, readAt: new Date() } }
+        $push: { readBy: { userId: req.params.userId, readAt: new Date() } }
       }
     );
   }
@@ -297,7 +319,7 @@ const getPaginatedMessages = asyncHandler(async (req, res) => {
   // Check if chat room exists and user is participant
   const chatRoom = await ChatRoom.findOne({
     _id: req.params.chatRoomId,
-    participants: req.body.user_id
+    participants: req.params.userId
   });
 
   if (!chatRoom) {
@@ -324,10 +346,10 @@ const getPaginatedMessages = asyncHandler(async (req, res) => {
     await Message.updateMany(
       {
         _id: { $in: messageIds },
-        'readBy.userId': { $ne: req.body.user_id }
+        'readBy.userId': { $ne: req.params.userId }
       },
       {
-        $push: { readBy: { userId: req.body.user_id, readAt: new Date() } }
+        $push: { readBy: { userId: req.params.userId, readAt: new Date() } }
       }
     );
   }

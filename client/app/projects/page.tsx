@@ -187,17 +187,17 @@ export default function Page() {
                 >
                   {viewMode === 'list' ? (
                     <>
-                      <div className="flex items-center pl-5">
+                      <div className="flex items-center pl-5 flex-shrink-0">
                         <Folder className="h-9 w-9 text-primary/70" />
                       </div>
                       <div className="flex-grow p-4 flex flex-col sm:flex-row sm:items-center">
-                        <div className="sm:flex-grow pr-4 mb-2 sm:mb-0">
-                          <CardTitle className="text-lg font-bold">{project.name}</CardTitle>
-                          <CardDescription className="text-sm line-clamp-1">
+                        <div className="sm:w-1/3 pr-4 mb-2 sm:mb-0">
+                          <CardTitle className="text-lg font-bold truncate">{project.name}</CardTitle>
+                          <CardDescription className="text-sm line-clamp-1 min-h-[1.25rem]">
                             {project.description}
                           </CardDescription>
                         </div>
-                        <div className="flex flex-wrap gap-3 items-center justify-start sm:justify-end">
+                        <div className="sm:w-2/3 flex flex-wrap gap-3 items-center justify-start sm:justify-end">
                           <Badge
                             variant={
                               project.status === 'Completed' ? 'default' :
@@ -229,11 +229,13 @@ export default function Page() {
                           <CardTitle className="text-lg font-bold truncate">
                             {project.name}
                           </CardTitle>
-                          <CardDescription className="text-sm line-clamp-2">
+                          <CardDescription className="text-sm line-clamp-2 min-h-[2.5rem]">
                             {project.description}
                           </CardDescription>
                         </div>
-                        <Folder className="h-5 w-5 text-muted-foreground" />
+                        <div className="flex-shrink-0">
+                          <Folder className="h-5 w-5 text-muted-foreground" />
+                        </div>
                       </CardHeader>
                       <CardContent className="space-y-3">
                         <div className="flex justify-between items-center">
@@ -249,10 +251,12 @@ export default function Page() {
                         <div className="flex justify-between items-center text-xs text-muted-foreground">
                           <div className="flex items-center">
                             <Users className="h-3 w-3 mr-1" />
-                            {project.teams.length > 0
-                              ? project.teams.map(team => team.name).join(', ')
-                              : 'No teams'
-                            }
+                            <span className="truncate max-w-[100px]">
+                              {project.teams.length > 0
+                                ? project.teams.map(team => team.name).join(', ')
+                                : 'No teams'
+                              }
+                            </span>
                           </div>
                           <div className="flex items-center">
                             <Calendar className="h-3 w-3 mr-1" />

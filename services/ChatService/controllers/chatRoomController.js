@@ -33,8 +33,9 @@ const createChatRoom = asyncHandler(async (req, res) => {
 // @route   GET /api/chat-rooms
 // @access  Private
 const getChatRooms = asyncHandler(async (req, res) => {
+  const userId = req.params.userId;
   const chatRooms = await ChatRoom.find({
-    participants: req.body.user_id
+    participants: userId
   }).sort({ updatedAt: -1 });
 
   res.json(chatRooms);

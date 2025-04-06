@@ -51,7 +51,8 @@ const messageSchema = new mongoose.Schema({
 messageSchema.virtual('attachments', {
   ref: 'Attachment',
   localField: '_id',
-  foreignField: 'messageId'
+  foreignField: 'messageId',
+  justOne: false  // Set to false to get an array of attachments
 });
 
 // Indexes for faster queries
