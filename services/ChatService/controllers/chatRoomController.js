@@ -54,6 +54,7 @@ const getChatRooms = asyncHandler(async (req, res) => {
     { $group: {
       _id: "$chatRoomId",
       content: { $first: "$content" },
+      senderId: { $first: "$senderId" },
       createdAt: { $first: "$createdAt" },
       readBy: { $first: "$readBy" }
     }}
@@ -64,6 +65,7 @@ const getChatRooms = asyncHandler(async (req, res) => {
   lastMessages.forEach(msg => {
     lastMessageMap[msg._id.toString()] = {
       content: msg.content,
+      senderId: msg.senderId,
       createdAt: msg.createdAt,
       readBy: msg.readBy
     };

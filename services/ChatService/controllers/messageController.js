@@ -338,9 +338,6 @@ const getPaginatedMessages = asyncHandler(async (req, res) => {
     .skip(skip)
     .limit(limit)
     .populate('attachments');
-
-  // Mark messages as read
-  const messageIds = messages.map(message => message._id);
   
   // Get total count for pagination
   const total = await Message.countDocuments({ chatRoomId: req.params.chatRoomId });
@@ -364,7 +361,7 @@ const getMoreMessages = asyncHandler(async (req, res) => {
   // Check if chat room exists and user is participant
   const chatRoom = await ChatRoom.findOne({
     _id: req.params.chatRoomId,
-    participants: req.body.user_id
+    participants: req.params.userId
   });
 
   if (!chatRoom) {
@@ -396,21 +393,6 @@ const getMoreMessages = asyncHandler(async (req, res) => {
     .sort({ createdAt: -1 })
     .limit(limit)
     .populate('attachments');
-
-  // Mark messages as read
-  const messageIds = messages.map(message => message._id);
-
-  if (messageIds.length > 0) {
-    await Message.updateMany(
-      {
-        _id: { $in: messageIds },
-        'readBy.userId': { $ne: req.body.user_id }
-      },
-      {
-        $push: { readBy: { userId: req.body.user_id, readAt: new Date() } }
-      }
-    );
-  }
 
   // Check if there are more messages
   const hasMore = messages.length === limit;

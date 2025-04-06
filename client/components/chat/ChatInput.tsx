@@ -7,12 +7,13 @@ import { Paperclip, Send, Smile, Image as ImageIcon, X } from 'lucide-react';
 import EmojiPicker, { Theme } from 'emoji-picker-react';
 import { useTheme } from 'next-themes';
 import { CHAT_SERVICE_URL } from '@/constants/API_URLS';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { ChatRoom } from '@/types';
 import { RootState } from '@/lib/store';
 import { useSelector } from 'react-redux';
 import Image from 'next/image';
-import { useSocket } from '@/lib/socket/SocketContext';
+import { useSocket } from '@/context/SocketContext';
+import { toast } from 'sonner';
 
 type AttachmentType = 'file' | 'image' | null;
 
@@ -241,14 +242,20 @@ const ChatInput = memo(({ selectedRoom }: {
         if (newMessage.trim()) {
           formData.append('content', newMessage);
         }
-        
-        const response = await axios.post(`${CHAT_SERVICE_URL}/api/messages`, formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        console.log(response);
+        try{
+          const response = await axios.post(`${CHAT_SERVICE_URL}/api/messages`, formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          console.log(response);
+        }catch(error){
+          if(error instanceof AxiosError){  
+            toast.error(error.response?.data.message);
+          }
+          console.error('Error sending message:', error);
+        }
       } else {
         // Send text-only message
         await axios.post(

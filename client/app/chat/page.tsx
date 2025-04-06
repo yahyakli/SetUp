@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/lib/store';
-import { ChatRoom, User, Message } from '@/types';
+import { ChatRoom, Message } from '@/types';
 import ChatRoomsList from '@/components/chat/ChatRoomsList';
 import ChatHeader from '@/components/chat/ChatHeader';
 import ChatMessageList from '@/components/chat/ChatMessageList';
@@ -11,22 +11,21 @@ import ChatInput from '@/components/chat/ChatInput';
 import EmptyState from '@/components/chat/EmptyState';
 import { useRouter, useParams } from 'next/navigation';
 import axios from 'axios';
-import { CHAT_SERVICE_URL, USERS_SERVICE_URL } from '@/constants/API_URLS';
-import { useSocketEvents } from '@/lib/socket/useSocketEvents';
+import { CHAT_SERVICE_URL } from '@/constants/API_URLS';
+import { useSocketEvents } from '@/hooks/useSocketEvents';
+import { useChatRooms } from '@/hooks/useChatRooms';
 
 export default function ChatPage() {
   const { user, token } = useSelector((state: RootState) => state.user);
-  const { teams } = useSelector((state: RootState) => state.teams);
   const router = useRouter();
   const params = useParams();
   const roomId = params?.roomId as string;
 
   const [selectedRoom, setSelectedRoom] = useState<ChatRoom | null>(null);
   const [showChatList, setShowChatList] = useState(true);
-  const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [users, setUsers] = useState<Record<string, User>>({});
   const [messages, setMessages] = useState<Record<string, Message[]>>({});
+  const [hasMoreMessages, setHasMoreMessages] = useState(false);
+  console.log("has more: " + hasMoreMessages)
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     // Initialize from localStorage if available, otherwise use default width
     if (typeof window !== 'undefined') {
@@ -37,97 +36,16 @@ export default function ChatPage() {
   });
   const [isMobile, setIsMobile] = useState(false);
 
-  // Fetch team users and chat rooms
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!token || !user?.id) return;
-      
-      // Only fetch if we don't have chat rooms yet
-      if (chatRooms.length > 0) {
-        setLoading(false); // Ensure loading is false if we have data
-        return;
-      }
-      
-      setLoading(true);
-      
-      try {
-        // 1. First collect all user IDs from teams
-        const userIds = new Set<string>();
-        
-        teams.forEach(team => {
-          if (team.members && team.members.length > 0) {
-            team.members.forEach(member => {
-              if (member.user_id !== user.id) { // Exclude current user
-                userIds.add(member.user_id);
-              }
-            });
-          }
-        });
-        
-        // 2. Fetch chat rooms
-        const roomsResponse = await axios.get(`${CHAT_SERVICE_URL}/api/chat-rooms/by-user/${user.id}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (roomsResponse.status === 200) {
-          const rooms = roomsResponse.data;
-          setChatRooms(rooms);
-          
-          // Add participant IDs to the set of users to fetch
-          rooms.forEach((room: ChatRoom) => {
-            if (room.participants) {
-              room.participants.forEach((participantId: string) => {
-                userIds.add(participantId);
-              });
-            }
-            
-            if (room.lastMessage && room.lastMessage.senderId) {
-              userIds.add(room.lastMessage.senderId);
-            }
-          });
-          
-          // 3. Fetch all users in a single batch request
-          if (userIds.size > 0) {
-            const userResponse = await axios.post(
-              `${USERS_SERVICE_URL}/api/users/batch`,
-              Array.from(userIds),
-              {
-                headers: {
-                  'Authorization': `Bearer ${token}`
-                }
-              }
-            );
-            
-            if (userResponse.status === 200) {
-              const fetchedUsers = userResponse.data;
-              const usersMap: Record<string, User> = {};
-              
-              fetchedUsers.forEach((fetchedUser: User) => {
-                usersMap[fetchedUser.id] = fetchedUser;
-              });
-              
-              setUsers(usersMap);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchData();
-  }, [token, user?.id, teams, chatRooms.length]);
+  // Use the custom hook to get chat rooms and users
+  const { chatRooms, users, loading, updateChatRooms } = useChatRooms();
+  const apiCallsInProgressRef = useRef<Record<string, boolean>>({});
 
   // Use the custom hook for socket events
   useSocketEvents({
     userId: user?.id,
     selectedRoom,
     setMessages,
-    setChatRooms
+    setChatRooms: updateChatRooms
   });
 
   // Check if we're on mobile
@@ -146,44 +64,60 @@ export default function ChatPage() {
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
 
-  // Fetch messages for a specific room - memoize this function
-  const fetchMessagesForRoom = useCallback(async (roomId: string) => {
-    if (!token || !user?.id) return;
-    
-    // Don't fetch if we already have messages for this room
-    if (messages[roomId] && messages[roomId].length > 0) {
-      return;
-    }
-    
-    try {
-      const response = await axios.get(`${CHAT_SERVICE_URL}/api/messages/paginated/${roomId}/${user?.id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (response.status === 200) {
-        setMessages(prev => ({
-          ...prev,
-          [roomId]: response.data.messages
-        }));
+  // Memoize the fetch messages function to prevent unnecessary re-renders
+  const fetchMessagesForRoom = useMemo(() => {
+    return async (roomId: string) => {
+      if (!token || !user?.id) return;
+
+      // Don't fetch if we already have messages for this room
+      if (messages[roomId] && messages[roomId].length > 0) {
+        return;
       }
-    } catch (error) {
-      console.error(`Error fetching messages for room ${roomId}:`, error);
-    }
+
+      // Prevent duplicate API calls
+      if (apiCallsInProgressRef.current[`messages_${roomId}`]) {
+        return;
+      }
+
+      apiCallsInProgressRef.current[`messages_${roomId}`] = true;
+
+      try {
+        console.log(`Fetching messages for room ${roomId}...`);
+        const response = await axios.get(`${CHAT_SERVICE_URL}/api/messages/paginated/${roomId}/${user?.id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.status === 200) {
+          setMessages(prev => ({
+            ...prev,
+            [roomId]: response.data.messages
+          }));
+          setHasMoreMessages(response.data.pagination.hasMore);
+        }
+      } catch (error) {
+        console.error(`Error fetching messages for room ${roomId}:`, error);
+      } finally {
+        apiCallsInProgressRef.current[`messages_${roomId}`] = false;
+      }
+    };
   }, [token, user?.id]);
+
+  // Memoize chat rooms to prevent unnecessary re-renders
+  const memoizedChatRooms = useMemo(() => chatRooms, [chatRooms]);
 
   // Set selected room based on URL parameter
   useEffect(() => {
-    if (roomId && chatRooms.length > 0) {
-      const room = chatRooms.find(room => room._id === roomId);
+    if (roomId && memoizedChatRooms.length > 0) {
+      const room = memoizedChatRooms.find(room => room._id === roomId);
       if (room) {
         setSelectedRoom(room);
         // On mobile, hide the chat list when a room is selected
         if (isMobile) {
           setShowChatList(false);
         }
-        
+
         // Fetch messages for this room if we haven't already
         fetchMessagesForRoom(roomId);
       }
@@ -194,20 +128,62 @@ export default function ChatPage() {
         setShowChatList(true);
       }
     }
-  }, [roomId, chatRooms, isMobile, fetchMessagesForRoom]);
+  }, [roomId, memoizedChatRooms, isMobile, fetchMessagesForRoom]);
+
+  // Function to load more messages
+  const loadMoreMessages = async (roomId: string, lastMessageId: string) => {
+    if (!token || !user?.id) return;
+
+    // Prevent duplicate API calls
+    if (apiCallsInProgressRef.current[`more_messages_${roomId}`]) {
+      return;
+    }
+
+    apiCallsInProgressRef.current[`more_messages_${roomId}`] = true;
+
+    try {
+      console.log(`Loading more messages for room ${roomId} before message ${lastMessageId}...`);
+      const response = await axios.get(
+        `${CHAT_SERVICE_URL}/api/messages/more/${roomId}/${lastMessageId}/${user?.id}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      if (response.status === 200) {
+        // Prepend the new messages to the existing ones
+        setMessages(prev => ({
+          ...prev,
+          [roomId]: [...response.data.messages, ...(prev[roomId] || [])]
+        }));
+        setHasMoreMessages(response.data.hasMore);
+      }
+    } catch (error) {
+      console.error(`Error loading more messages for room ${roomId}:`, error);
+    } finally {
+      apiCallsInProgressRef.current[`more_messages_${roomId}`] = false;
+    }
+  };
 
   // Get messages for selected room
   const currentMessages = selectedRoom && messages[selectedRoom._id] ? messages[selectedRoom._id] : [];
 
-  // Handle room selection - memoize this function
-  const handleRoomSelect = useCallback((room: ChatRoom) => {
-    // Update the URL with the selected room ID
-    router.push(`/chat/${room._id}`);
-    
-    // Fetch messages if we haven't already
-    if (!messages[room._id] || messages[room._id].length === 0) {
-      fetchMessagesForRoom(room._id);
-    }
+  // Get hasMoreMessages for selected room
+  const currentRoomHasMoreMessages = selectedRoom ? hasMoreMessages : false;
+
+  // Memoize the handleRoomSelect function
+  const handleRoomSelect = useMemo(() => {
+    return (room: ChatRoom) => {
+      // Update the URL with the selected room ID
+      router.push(`/chat/${room._id}`);
+
+      // Fetch messages if we haven't already
+      if (!messages[room._id] || messages[room._id].length === 0) {
+        fetchMessagesForRoom(room._id);
+      }
+    };
   }, [router, messages, fetchMessagesForRoom]);
 
   // Handle back button on mobile
@@ -265,6 +241,10 @@ export default function ChatPage() {
                 users={users}
                 showUserInfo={selectedRoom.type === 'project'}
                 roomId={selectedRoom._id}
+                onLoadMoreMessages={(lastMessageId) =>
+                  loadMoreMessages(selectedRoom._id, lastMessageId)
+                }
+                hasMoreMessages={currentRoomHasMoreMessages}
               />
             </div>
 

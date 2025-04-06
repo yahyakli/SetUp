@@ -1,5 +1,5 @@
-import { useEffect, useCallback } from 'react';
-import { useSocket } from './SocketContext';
+import { useEffect } from 'react';
+import { useSocket } from '../context/SocketContext';
 import { Message, ChatRoom } from '@/types';
 import { useRouter } from 'next/navigation';
 
@@ -12,10 +12,16 @@ export function useSocketEvents({
   userId?: string;
   selectedRoom: ChatRoom | null;
   setMessages: React.Dispatch<React.SetStateAction<Record<string, Message[]>>>;
-  setChatRooms: React.Dispatch<React.SetStateAction<ChatRoom[]>>;
+  setChatRooms: ((updatedRooms: React.SetStateAction<ChatRoom[]>) => void);
 }) {
   const { socket } = useSocket();
   const router = useRouter();
+
+  // Modify the helper function
+  const updateChatRooms = (updater: (prev: ChatRoom[]) => ChatRoom[]) => {
+    // Just pass the updater function directly to setChatRooms
+    setChatRooms(updater as React.SetStateAction<ChatRoom[]>);
+  };
 
   // Set up socket event listeners
   useEffect(() => {
@@ -33,8 +39,8 @@ export function useSocketEvents({
       });
 
       // Update the last message in chat rooms list
-      setChatRooms(prev => {
-        return prev.map(room => {
+      updateChatRooms((prev: ChatRoom[]) => {
+        return prev.map((room: ChatRoom) => {
           if (room._id === message.chatRoomId) {
             return {
               ...room,
@@ -76,7 +82,10 @@ export function useSocketEvents({
               if (!hasRead) {
                 return {
                   ...msg,
-                  readBy: [...(msg.readBy || []), { userId: readerId, readAt }]
+                  readBy: [...(msg.readBy || []), { 
+                    userId: readerId, 
+                    readAt: new Date(readAt)
+                  }]
                 };
               }
             }
@@ -90,19 +99,19 @@ export function useSocketEvents({
 
     // Listen for new chat rooms
     const handleNewChatRoom = (room: ChatRoom) => {
-      setChatRooms(prev => [room, ...prev]);
+      updateChatRooms((prev: ChatRoom[]) => [room, ...prev]);
     };
 
     // Listen for updated chat rooms
     const handleUpdateChatRoom = (updatedRoom: ChatRoom) => {
-      setChatRooms(prev => 
+      updateChatRooms((prev: ChatRoom[]) => 
         prev.map(room => room._id === updatedRoom._id ? updatedRoom : room)
       );
     };
 
     // Listen for deleted chat rooms
     const handleChatRoomDeleted = ({ chatRoomId }: { chatRoomId: string }) => {
-      setChatRooms(prev => prev.filter(room => room._id !== chatRoomId));
+      updateChatRooms((prev: ChatRoom[]) => prev.filter(room => room._id !== chatRoomId));
       
       // If the deleted room is currently selected, navigate away
       if (selectedRoom?._id === chatRoomId) {

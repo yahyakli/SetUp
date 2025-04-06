@@ -37,6 +37,7 @@ export default function ChatRoomsList({
   const [searchQuery, setSearchQuery] = React.useState('');
   const [chatFilter, setChatFilter] = React.useState<'all' | 'direct' | 'project'>('all');
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  console.log(chatRooms)
   
   // Initialize width from props or localStorage
   const [width, setWidth] = useState(() => {
@@ -198,6 +199,7 @@ export default function ChatRoomsList({
           <div className="divide-y dark:divide-gray-800">
             {filteredChatRooms.map((room) => {
               const lastMessage = room.lastMessage;
+              console.log(lastMessage)
               const isUnread = lastMessage && !lastMessage.readBy.some(read => read.userId === currentUserId);
               
               return (
@@ -256,13 +258,11 @@ export default function ChatRoomsList({
                               : 'text-gray-500 dark:text-gray-400'
                           }`}>
                             {lastMessage.senderId === currentUserId ? 'You: ' : ''}
-                            {lastMessage.content}
+                            {lastMessage.content || 'File or Image'}
                           </p>
                           
                           {isUnread && (
-                            <Badge variant="default" className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center bg-blue-500">
-                              <span className="text-xs">1</span>
-                            </Badge>
+                            <Badge variant="default" className="ml-2 h-3 w-3 rounded-full p-0 flex items-center justify-center bg-blue-500"></Badge>
                           )}
                         </div>
                       )}

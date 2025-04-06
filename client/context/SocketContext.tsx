@@ -1,10 +1,13 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/lib/store';
 import { CHAT_SERVICE_URL } from '@/constants/API_URLS';
+
+// Create a global socket instance outside of the component
+let globalSocket: Socket | null = null;
 
 interface SocketContextType {
   socket: Socket | null;
@@ -26,36 +29,48 @@ const SocketContext = createContext<SocketContextType>({
 
 export const useSocket = () => useContext(SocketContext);
 
-export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
+export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { token, user } = useSelector((state: RootState) => state.user);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Record<string, string[]>>({});
-  const { user, token } = useSelector((state: RootState) => state.user);
+  const socketInitializedRef = useRef(false);
 
+  // Initialize socket connection only once
   useEffect(() => {
-    // Only connect if we have a user and token
-    if (!user?.id || !token) return;
-
-    console.log('Attempting to connect socket...');
+    if (socketInitializedRef.current || !token || !user?.id) return;
     
-    // Create socket connection
-    const socketInstance = io(CHAT_SERVICE_URL, {
-      auth: {
-        token
-      }
-    });
-
+    console.log('Initializing socket connection...');
+    
+    // Use the global socket if it exists, otherwise create a new one
+    if (!globalSocket) {
+      globalSocket = io(CHAT_SERVICE_URL, {
+        auth: {
+          token
+        },
+        transports: ['websocket'],
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000
+      });
+    }
+    
+    setSocket(globalSocket);
+    socketInitializedRef.current = true;
+    
     // Set up event listeners
-    socketInstance.on('connect', () => {
+    globalSocket.on('connect', () => {
       console.log('Socket connected successfully');
       setIsConnected(true);
       
       // Authenticate with user ID
-      socketInstance.emit('authenticate', user.id);
-      console.log(`Sent authentication for user ${user.id}`);
+      if (globalSocket) {
+        globalSocket.emit('authenticate', user.id);
+        console.log(`Sent authentication for user ${user.id}`);
+      }
     });
 
-    socketInstance.on('disconnect', () => {
+    globalSocket.on('disconnect', () => {
       console.log('Socket disconnected');
       setIsConnected(false);
       // Clear typing users on disconnect
@@ -63,19 +78,22 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     // Add more detailed error logging
-    socketInstance.on('connect_error', (error) => {
+    globalSocket.on('connect_error', (error) => {
       console.error('Socket connection error:', error.message);
       setIsConnected(false);
     });
 
     // Listen for typing indicator events
-    socketInstance.on('user_typing', ({ userId, isTyping }) => {
+    globalSocket.on('user_typing', ({ userId, isTyping }) => {
       console.log('Received typing event:', { userId, isTyping });
       
-      // We need to determine which room this typing event belongs to
-      // Since the backend doesn't include roomId in the response,
-      // we'll need to update our state based on the active room
+      // Skip processing if userId is undefined
+      if (!userId) {
+        console.warn('Received typing event with undefined userId, ignoring');
+        return;
+      }
       
+      // Get the active room from the event
       setTypingUsers(prevTypingUsers => {
         // Create a new object to avoid mutating state
         const newTypingUsers = { ...prevTypingUsers };
@@ -96,18 +114,26 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         return newTypingUsers;
       });
     });
-
-    // Save socket instance
-    setSocket(socketInstance);
-
-    // Clean up on unmount
+    
+    // Clean up on unmount - but don't disconnect the socket
     return () => {
-      console.log('Disconnecting socket');
-      socketInstance.disconnect();
+      if (globalSocket) {
+        globalSocket.off('connect');
+        globalSocket.off('disconnect');
+        globalSocket.off('connect_error');
+        globalSocket.off('user_typing');
+      }
     };
-  }, [user?.id, token]);
+  }, [token, user?.id]);
 
-  // Add a function to explicitly join a room
+  // Send typing status to server
+  const sendTypingStatus = (roomId: string, isTyping: boolean) => {
+    if (socket && user?.id) {
+      socket.emit('typing', { roomId, isTyping, userId: user.id });
+    }
+  };
+
+  // Join a chat room
   const joinRoom = (roomId: string) => {
     if (socket && isConnected) {
       console.log(`Joining room: ${roomId}`);
@@ -138,18 +164,6 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         const newTypingUsers = { ...prev };
         delete newTypingUsers[roomId];
         return newTypingUsers;
-      });
-    }
-  };
-
-  // Add a function to send typing status
-  const sendTypingStatus = (roomId: string, isTyping: boolean) => {
-    if (socket && isConnected && user) {
-      console.log('Sending typing status:', { roomId, userId: user.id, isTyping });
-      socket.emit('typing', {
-        roomId,
-        userId: user.id,
-        isTyping
       });
     }
   };

@@ -24,7 +24,7 @@ router.get('/chat-room/:chatRoomId/:userId', protect, getMessagesByChatRoom);
 router.get('/paginated/:chatRoomId/:userId', protect, getPaginatedMessages);
 
 // Get more messages based on last message ID
-router.get('/more/:chatRoomId/:lastMessageId', protect, getMoreMessages);
+router.get('/more/:chatRoomId/:lastMessageId/:userId', protect, getMoreMessages);
 
 // Mark messages as read
 router.put('/read', protect, markMessagesAsRead);

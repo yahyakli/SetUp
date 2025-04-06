@@ -6,7 +6,7 @@ import ReduxProvider from "@/lib/ReduxProvider.client";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { AppContextProvider } from "@/context/AppContext";
 import NavigationProgress from "../components/NavigationProgress";
-import { SocketProvider } from '@/lib/socket/SocketContext';
+import { SocketProvider } from '@/context/SocketContext';
 
 const inter = Inter({ subsets: ["latin"] });
 

@@ -1,5 +1,5 @@
-import React from 'react';
-import { useSocket } from '@/lib/socket/SocketContext';
+import React, { useEffect } from 'react';
+import { useSocket } from '@/context/SocketContext';
 import { User } from '@/types';
 
 interface TypingIndicatorProps {
@@ -11,20 +11,49 @@ interface TypingIndicatorProps {
 export default function TypingIndicator({ roomId, currentUserId, users }: TypingIndicatorProps) {
   const { typingUsers } = useSocket();
   
+  // Debug the users object
+  useEffect(() => {
+    console.log('TypingIndicator - Users object:', users);
+    console.log('TypingIndicator - Room ID:', roomId);
+    console.log('TypingIndicator - Typing users state:', typingUsers);
+  }, [users, roomId, typingUsers]);
+  
   // Get users who are typing in this room (excluding current user)
   const typingUserIds = (typingUsers[roomId] || [])
     .filter(userId => userId !== currentUserId);
-  
-  console.log('Typing users for room:', roomId, typingUserIds);
   
   if (typingUserIds.length === 0) {
     return null;
   }
 
-  // Get user names for display
+  // Log the typing user IDs for debugging
+  console.log('Typing user IDs:', typingUserIds);
+  
+  // Get user names for display with better error handling
   const typingUserNames = typingUserIds.map(userId => {
-    const user = users[userId];
-    return user ? `${user.firstName} ${user.lastName}` : 'Someone';
+    try {
+      // Check if users object exists and has the user
+      if (!users) {
+        console.log('Users object is undefined or null');
+        return 'Someone';
+      }
+      
+      const user = users[userId];
+      if (!user) {
+        console.log(`User with ID ${userId} not found in users object`);
+        return 'Someone';
+      }
+      
+      if (!user.firstName || !user.lastName) {
+        console.log(`User ${userId} is missing firstName or lastName:`, user);
+        return user.firstName || user.lastName || 'Someone';
+      }
+      
+      return `${user.firstName} ${user.lastName}`;
+    } catch (error) {
+      console.error('Error getting user name:', error);
+      return 'Someone';
+    }
   });
 
   // Format the typing message

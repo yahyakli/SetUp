@@ -1,13 +1,12 @@
 "use client";
 
-import React, { useRef, useEffect, useMemo, useCallback } from 'react';
+import React, { useRef, useEffect, useMemo, useCallback, useState } from 'react';
 import { Message, User } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
 import { USERS_SERVICE_URL } from '@/constants/API_URLS';
 import MessageAttachment from './MessageAttachment';
 import TypingIndicator from './TypingIndicator';
-import { useSocket } from '@/lib/socket/SocketContext';
 
 interface ChatMessageListProps {
   messages: Message[];
@@ -15,6 +14,8 @@ interface ChatMessageListProps {
   users: Record<string, User>;
   showUserInfo?: boolean;
   roomId: string;
+  onLoadMoreMessages?: (lastMessageId: string) => void;
+  hasMoreMessages?: boolean;
 }
 
 export default function ChatMessageList({ 
@@ -22,38 +23,173 @@ export default function ChatMessageList({
   currentUserId, 
   users, 
   showUserInfo = false,
-  roomId
+  roomId,
+  onLoadMoreMessages,
+  hasMoreMessages = false
 }: ChatMessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const typingIndicatorRef = useRef<HTMLDivElement>(null);
-  const { typingUsers } = useSocket();
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [previousMessagesLength, setPreviousMessagesLength] = useState(0);
+  const [previousScrollHeight, setPreviousScrollHeight] = useState(0);
+  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [firstVisibleMessageId, setFirstVisibleMessageId] = useState<string | null>(null);
+  const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
   
-  // Check if anyone is typing in this room (excluding current user)
-  const isAnyoneTyping = (typingUsers[roomId] || [])
-    .filter(userId => userId !== currentUserId)
-    .length > 0;
 
-  // Scroll to bottom of messages when messages change
+  // Only scroll to bottom on initial load or when new messages arrive
   useEffect(() => {
-    if (messagesEndRef.current && scrollContainerRef.current) {
+    // Only auto-scroll on initial load or when we explicitly want to scroll to bottom
+    if ((isInitialLoad || shouldScrollToBottom) && messagesEndRef.current && scrollContainerRef.current) {
       // Use scrollIntoView with a slight delay to ensure proper rendering
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
+        // After initial load, set flag to false
+        if (isInitialLoad) setIsInitialLoad(false);
       }, 100);
     }
-  }, [messages]);
+  }, [messages, shouldScrollToBottom, isInitialLoad]);
   
-  // Scroll to typing indicator when someone starts typing
+  // Handle scroll to load more messages with improved position tracking
   useEffect(() => {
-    if (isAnyoneTyping && typingIndicatorRef.current && scrollContainerRef.current) {
-      // Use scrollIntoView with a slight delay to ensure proper rendering
-      setTimeout(() => {
-        typingIndicatorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-      }, 100);
+    const scrollContainer = scrollContainerRef.current;
+    
+    if (!scrollContainer) return;
+    
+    const handleScroll = () => {
+      // If we're near the top (within 50px) and there are more messages to load
+      if (scrollContainer.scrollTop < 50 && hasMoreMessages && !isLoadingMore && messages.length > 0) {
+        setIsLoadingMore(true);
+        
+        // Find the first visible message to use as an anchor
+        if (messages && messages.length > 0) {
+          // Get all message elements
+          const messageElements = Array.from(scrollContainer.querySelectorAll('[data-message-id]'));
+          
+          // Find the first visible message
+          for (const element of messageElements) {
+            const rect = element.getBoundingClientRect();
+            const containerRect = scrollContainer.getBoundingClientRect();
+            
+            // If the element is visible in the viewport
+            if (rect.top >= containerRect.top && rect.bottom <= containerRect.bottom) {
+              const messageId = element.getAttribute('data-message-id');
+              if (messageId) {
+                setFirstVisibleMessageId(messageId);
+                break;
+              }
+            }
+          }
+        }
+        
+        // Store current scroll position and message count before loading more
+        setPreviousScrollHeight(scrollContainer.scrollHeight);
+        setPreviousMessagesLength(messages.length);
+        
+        // Get the oldest message ID
+        const oldestMessage = [...messages].sort(
+          (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        )[0];
+        
+        if (oldestMessage && onLoadMoreMessages) {
+          // Explicitly set shouldScrollToBottom to false when loading more
+          setShouldScrollToBottom(false);
+          onLoadMoreMessages(oldestMessage._id);
+        }
+      }
+    };
+    
+    scrollContainer.addEventListener('scroll', handleScroll);
+    
+    return () => {
+      scrollContainer.removeEventListener('scroll', handleScroll);
+    };
+  }, [messages, hasMoreMessages, isLoadingMore, onLoadMoreMessages]);
+  
+  // Maintain scroll position when new messages are loaded at the top
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
+    
+    if (!scrollContainer || !isLoadingMore) return;
+    
+    // If we've loaded more messages (messages length increased and we were loading more)
+    if (messages.length > previousMessagesLength && previousScrollHeight > 0) {
+      // If we have a reference message ID, scroll to it
+      if (firstVisibleMessageId) {
+        // Find the message element by ID
+        const messageElement = scrollContainer.querySelector(`[data-message-id="${firstVisibleMessageId}"]`);
+        
+        if (messageElement) {
+          // Scroll to the element with a slight delay to ensure DOM has updated
+          setTimeout(() => {
+            messageElement.scrollIntoView({ block: 'start', behavior: 'auto' });
+            
+            // Reset loading state but keep shouldScrollToBottom false
+            setIsLoadingMore(false);
+            setPreviousScrollHeight(0);
+            setFirstVisibleMessageId(null);
+          }, 50);
+        } else {
+          // Fallback to the old method if we can't find the element
+          const newScrollHeight = scrollContainer.scrollHeight;
+          const scrollHeightDifference = newScrollHeight - previousScrollHeight;
+          
+          if (scrollHeightDifference > 0) {
+            setTimeout(() => {
+              if (scrollContainer) {
+                scrollContainer.scrollTop = scrollHeightDifference;
+              }
+              
+              // Reset states
+              setIsLoadingMore(false);
+              setPreviousScrollHeight(0);
+              setFirstVisibleMessageId(null);
+            }, 50);
+          }
+        }
+      } else {
+        // Fallback to the old method if we don't have a reference message
+        const newScrollHeight = scrollContainer.scrollHeight;
+        const scrollHeightDifference = newScrollHeight - previousScrollHeight;
+        
+        if (scrollHeightDifference > 0) {
+          setTimeout(() => {
+            if (scrollContainer) {
+              scrollContainer.scrollTop = scrollHeightDifference;
+            }
+            
+            // Reset states
+            setIsLoadingMore(false);
+            setPreviousScrollHeight(0);
+          }, 50);
+        }
+      }
     }
-  }, [isAnyoneTyping]);
-
+  }, [messages, isLoadingMore, previousMessagesLength, previousScrollHeight, firstVisibleMessageId]);
+  
+  // Handle user manually scrolling
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer) return;
+    
+    const handleUserScroll = () => {
+      // If user scrolls up more than 100px from bottom, disable auto-scrolling
+      const isNearBottom = 
+        scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight < 100;
+      
+      if (!isNearBottom && shouldScrollToBottom) {
+        setShouldScrollToBottom(false);
+      } else if (isNearBottom && !shouldScrollToBottom && !isLoadingMore) {
+        setShouldScrollToBottom(true);
+      }
+    };
+    
+    scrollContainer.addEventListener('scroll', handleUserScroll);
+    return () => scrollContainer.removeEventListener('scroll', handleUserScroll);
+  }, [shouldScrollToBottom, isLoadingMore]);
+  
   // Format time for display
   const formatMessageTime = (date: Date) => {
     return format(date, 'h:mm a');
@@ -144,6 +280,10 @@ export default function ChatMessageList({
       <div 
         key={message._id} 
         className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
+        data-message-id={message._id}
+        ref={el => {
+          messageRefs.current[message._id] = el;
+        }}
       >
         <div className={`flex items-center gap-2 max-w-[80%] ${
           !isCurrentUser && !showAvatar && showUserInfo ? 'pl-10' : ''
@@ -199,6 +339,24 @@ export default function ChatMessageList({
     <div className="flex flex-col-reverse h-full overflow-y-auto p-4 space-y-reverse space-y-4">
       <div className="h-full overflow-y-auto bg-gray-50 dark:bg-gray-900" ref={scrollContainerRef}>
         <div className="p-4 space-y-8">
+          {hasMoreMessages && (
+            <div className="flex justify-center py-2">
+              {isLoadingMore ? (
+                <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Loading more messages...
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  Scroll to top to load more messages
+                </div>
+              )}
+            </div>
+          )}
+          
           {messageGroups.map((group) => (
             <div key={group.date} className="space-y-4">
               <div className="flex justify-center">
