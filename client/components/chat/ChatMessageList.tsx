@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useMemo, useCallback } from 'react';
 import { Message, User } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
@@ -77,12 +77,12 @@ export default function ChatMessageList({
     return user ? `${user.firstName[0]}${user.lastName[0]}` : 'UN';
   };
 
-  // Group messages by date
-  const groupMessagesByDate = (messages: Message[]) => {
+  // Function to group messages by date - define this first
+  const groupMessagesByDate = useCallback((messagesArray: Message[]) => {
     const groups: { date: string; messages: Message[] }[] = [];
     
     // Ensure messages is a valid array
-    const messageArray = Array.isArray(messages) ? messages : [];
+    const messageArray = Array.isArray(messagesArray) ? messagesArray : [];
     
     // First sort all messages by creation date
     const sortedMessages = [...messageArray].sort((a, b) => 
@@ -109,9 +109,12 @@ export default function ChatMessageList({
     });
     
     return groups;
-  };
+  }, []);
 
-  const messageGroups = groupMessagesByDate(messages);
+  // Now use the function in useMemo
+  const messageGroups = useMemo(() => {
+    return groupMessagesByDate(messages);
+  }, [messages, groupMessagesByDate]);
 
   // Check if there are no messages
   if (!Array.isArray(messages) || messages.length === 0) {

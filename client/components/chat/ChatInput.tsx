@@ -120,21 +120,6 @@ const ChatInput = memo(({ selectedRoom }: {
   // Track if user is currently marked as typing
   const isTypingRef = useRef(false);
 
-  // Join the chat room when component mounts or room changes
-  useEffect(() => {
-    if (selectedRoom?._id) {
-      joinRoom(selectedRoom._id);
-    }
-  }, [selectedRoom?._id, joinRoom]);
-
-  // Auto-resize textarea based on content
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 150)}px`;
-    }
-  }, [newMessage]);
-
   // Function to stop typing
   const stopTyping = useCallback(() => {
     if (isTypingRef.current) {
@@ -152,6 +137,26 @@ const ChatInput = memo(({ selectedRoom }: {
       sendTypingStatus(selectedRoom._id, true);
     }
   }, [selectedRoom._id, sendTypingStatus]);
+
+  // Join the chat room when component mounts or room changes
+  useEffect(() => {
+    if (selectedRoom?._id) {
+      joinRoom(selectedRoom._id);
+    }
+    
+    // Clean up typing indicator when component unmounts or room changes
+    return () => {
+      stopTyping();
+    };
+  }, [selectedRoom?._id, joinRoom, stopTyping]);
+
+  // Auto-resize textarea based on content
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 150)}px`;
+    }
+  }, [newMessage]);
 
   // Handle typing indicator with a simpler approach
   useEffect(() => {
