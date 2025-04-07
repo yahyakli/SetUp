@@ -38,7 +38,7 @@ export default function ChatPage() {
   const [isMobile, setIsMobile] = useState(false);
 
   // Use the custom hook to get chat rooms and users
-  const { chatRooms, users, loading, updateChatRooms } = useChatRooms();
+  const { chatRooms, users, loading, updateChatRooms, fetchUserData } = useChatRooms();
   const apiCallsInProgressRef = useRef<Record<string, boolean>>({});
 
   // Use the custom hook for socket events
@@ -46,7 +46,9 @@ export default function ChatPage() {
     userId: user?.id,
     selectedRoom,
     setMessages,
-    setChatRooms: updateChatRooms
+    setChatRooms: updateChatRooms,
+    token,
+    fetchUserData
   });
 
   // Check if we're on mobile

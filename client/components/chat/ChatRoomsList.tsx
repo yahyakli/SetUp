@@ -119,13 +119,27 @@ export default function ChatRoomsList({
   // Get user initials from ID
   const getUserInitials = (userId: string) => {
     const user = users[userId];
-    return user ? `${user.firstName[0]}${user.lastName[0]}` : 'UN';
+    if (!user) {
+      console.log(`User data not found for ID: ${userId}`);
+      return 'UN';
+    }
+    return user.firstName && user.lastName ? 
+      `${user.firstName[0]}${user.lastName[0]}` : 'UN';
   };
 
   // Get user avatar from ID
   const getUserAvatar = (userId: string) => {
     const user = users[userId];
     return user?.avatar || '';
+  };
+
+  // Get user name from ID
+  const getUserName = (userId: string) => {
+    const user = users[userId];
+    if (!user) {
+      return 'Unknown User';
+    }
+    return `${user.firstName} ${user.lastName}`;
   };
 
   // Handle mouse down on resizer
@@ -183,12 +197,18 @@ export default function ChatRoomsList({
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold dark:text-white">Messages</h2>
           <Button 
-            size="sm" 
+            size={isMobile || width < 350 ? "icon" : "sm"}
             onClick={() => setIsUserModalOpen(true)}
             className="dark:hover:bg-gray-700"
           >
-            <Plus className="h-4 w-4 mr-2" />
-            New Conversation
+            {isMobile || width < 350 ? (
+              <Plus className="h-4 w-4" />
+            ) : (
+              <>
+                <Plus className="h-4 w-4 mr-2" />
+                New Conversation
+              </>
+            )}
           </Button>
         </div>
         
@@ -259,14 +279,10 @@ export default function ChatRoomsList({
                           {room.type === 'direct' ? (
                             (() => {
                               const otherParticipantId = room.participants.find(id => id !== currentUserId);
-                              const otherUser = otherParticipantId ? users[otherParticipantId] : null;
-                              
-                              if (otherUser) {
-                                return `${otherUser.firstName} ${otherUser.lastName}`;
-                              } else {
-                                // Fallback to room name if user not found
-                                return room.name || 'Direct Message';
+                              if (!otherParticipantId) {
+                                return 'Direct Message';
                               }
+                              return getUserName(otherParticipantId);
                             })()
                           ) : (
                             room.name

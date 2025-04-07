@@ -124,5 +124,32 @@ export function useChatRooms() {
     }
   };
 
-  return { chatRooms, users, loading, updateChatRooms };
+  // Add this function to fetch user data for a specific user ID
+  const fetchUserData = async (userId: string) => {
+    if (!token || !userId) return null;
+    
+    try {
+      const response = await axios.get(`${USERS_SERVICE_URL}/api/users/${userId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.status === 200) {
+        const userData = response.data;
+        // Update the global users cache
+        globalUsers[userId] = userData;
+        setUsers(prevUsers => ({
+          ...prevUsers,
+          [userId]: userData
+        }));
+        return userData;
+      }
+    } catch (error) {
+      console.error(`Error fetching user data for ID ${userId}:`, error);
+    }
+    return null;
+  };
+
+  return { chatRooms, users, loading, updateChatRooms, fetchUserData };
 } 

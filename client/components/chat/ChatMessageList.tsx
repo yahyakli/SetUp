@@ -23,6 +23,7 @@ interface ChatMessageListProps {
   hasMoreMessages?: boolean;
 }
 
+
 export default function ChatMessageList({ 
   messages, 
   currentUserId, 
@@ -42,170 +43,109 @@ export default function ChatMessageList({
   const [previousScrollHeight, setPreviousScrollHeight] = useState(0);
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const [firstVisibleMessageId, setFirstVisibleMessageId] = useState<string | null>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
   
-  // Modify the useEffect for socket events to update the messages array correctly
-  useEffect(() => {
-    // Only auto-scroll on initial load or when we explicitly want to scroll to bottom
-    if ((isInitialLoad || shouldScrollToBottom) && messagesEndRef.current && scrollContainerRef.current) {
-      // Use scrollIntoView with a slight delay to ensure proper rendering
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
-        // After initial load, set flag to false
-        if (isInitialLoad) setIsInitialLoad(false);
-      }, 100);
-    }
-    
-    // When new messages arrive (messages length increases), check if we should auto-scroll
-    if (messages.length > previousMessagesLength && !isLoadingMore) {
-      // If the last message is from the current user, always scroll to bottom
-      const lastMessage = messages[messages.length - 1];
-      if (lastMessage && lastMessage.senderId === currentUserId) {
-        setShouldScrollToBottom(true);
-      }
-      
-      setPreviousMessagesLength(messages.length);
-    }
-  }, [messages, shouldScrollToBottom, isInitialLoad, isLoadingMore, previousMessagesLength, currentUserId]);
-  
-  // Handle scroll to load more messages with improved position tracking
+  // Single useEffect for scroll position management and auto-scroll
   useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer || !messagesEndRef.current) return;
     
+    // Handle initial load - always scroll to bottom
+    if (isInitialLoad && messages.length > 0) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
+      setIsInitialLoad(false);
+      return;
+    }
+    
+    // If we're loading older messages, maintain scroll position
+    if (isLoadingMore && messages.length > previousMessagesLength) {
+      // Calculate new content height
+      const heightDifference = scrollContainer.scrollHeight - previousScrollHeight;
+      
+      // Set scroll position to maintain view at same messages
+      if (heightDifference > 0) {
+        // Use setTimeout to ensure this happens after render
+        setTimeout(() => {
+          scrollContainer.scrollTop = heightDifference;
+          
+          // Reset loading state AFTER setting the scroll position
+          setTimeout(() => {
+            setIsLoadingMore(false);
+          }, 100);
+        }, 0);
+      } else {
+        setIsLoadingMore(false);
+      }
+      
+      // Critical: Set previousMessagesLength but DO NOT scroll
+      setPreviousScrollHeight(0);
+      setPreviousMessagesLength(messages.length);
+      return; // Important: Skip the rest of the effect during pagination
+    }
+    
+    // For new messages (not from pagination), check if we should auto-scroll
+    if (messages.length > previousMessagesLength && !isLoadingMore) {
+      // Only auto-scroll if:
+      // 1. User sent the message OR
+      // 2. User is already at bottom OR 
+      // 3. shouldScrollToBottom is true AND there's been no recent pagination
+      const isUserAtBottom = 
+        scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight < 100;
+      
+      // Try to identify the newest message
+      const lastMessage = messages[messages.length - 1];
+      const isUserMessage = lastMessage?.senderId === currentUserId;
+      
+      if (isUserMessage || isUserAtBottom || shouldScrollToBottom) {
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+    
+    // Always update previous length for comparison
+    if (!isLoadingMore) {
+      setPreviousMessagesLength(messages.length);
+    }
+  }, [messages, isInitialLoad, isLoadingMore, previousMessagesLength, previousScrollHeight, currentUserId, shouldScrollToBottom]);
+  
+  // Handle scroll event for loading more messages and tracking position
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
     if (!scrollContainer) return;
     
     const handleScroll = () => {
-      // If we're near the top (within 50px) and there are more messages to load
+      // Update auto-scroll flag based on user scroll position
+      const isAtBottom = 
+        scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight < 100;
+      setShouldScrollToBottom(isAtBottom);
+      
+      // Check if we should load more messages
       if (scrollContainer.scrollTop < 50 && hasMoreMessages && !isLoadingMore && messages.length > 0) {
+        // Set loading state
         setIsLoadingMore(true);
         
-        // Find the first visible message to use as an anchor
-        if (messages && messages.length > 0) {
-          // Get all message elements
-          const messageElements = Array.from(scrollContainer.querySelectorAll('[data-message-id]'));
-          
-          // Find the first visible message
-          for (const element of messageElements) {
-            const rect = element.getBoundingClientRect();
-            const containerRect = scrollContainer.getBoundingClientRect();
-            
-            // If the element is visible in the viewport
-            if (rect.top >= containerRect.top && rect.bottom <= containerRect.bottom) {
-              const messageId = element.getAttribute('data-message-id');
-              if (messageId) {
-                setFirstVisibleMessageId(messageId);
-                break;
-              }
-            }
-          }
-        }
-        
-        // Store current scroll position and message count before loading more
+        // Store current scroll height before loading more
         setPreviousScrollHeight(scrollContainer.scrollHeight);
         setPreviousMessagesLength(messages.length);
         
-        // Get the oldest message ID
+        // Get oldest message and load more
         const oldestMessage = [...messages].sort(
           (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
         )[0];
         
         if (oldestMessage && onLoadMoreMessages) {
-          // Explicitly set shouldScrollToBottom to false when loading more
-          setShouldScrollToBottom(false);
           onLoadMoreMessages(oldestMessage._id);
         }
       }
     };
     
-    scrollContainer.addEventListener('scroll', handleScroll);
+    const debouncedScroll = debounce(handleScroll, 100);
+    scrollContainer.addEventListener('scroll', debouncedScroll);
     
     return () => {
-      scrollContainer.removeEventListener('scroll', handleScroll);
+      scrollContainer.removeEventListener('scroll', debouncedScroll);
+      debouncedScroll.cancel();
     };
   }, [messages, hasMoreMessages, isLoadingMore, onLoadMoreMessages]);
-  
-  // Maintain scroll position when new messages are loaded at the top
-  useEffect(() => {
-    const scrollContainer = scrollContainerRef.current;
-    
-    if (!scrollContainer || !isLoadingMore) return;
-    
-    // If we've loaded more messages (messages length increased and we were loading more)
-    if (messages.length > previousMessagesLength && previousScrollHeight > 0) {
-      // If we have a reference message ID, scroll to it
-      if (firstVisibleMessageId) {
-        // Find the message element by ID
-        const messageElement = scrollContainer.querySelector(`[data-message-id="${firstVisibleMessageId}"]`);
-        
-        if (messageElement) {
-          // Scroll to the element with a slight delay to ensure DOM has updated
-          setTimeout(() => {
-            messageElement.scrollIntoView({ block: 'start', behavior: 'auto' });
-            
-            // Reset loading state but keep shouldScrollToBottom false
-            setIsLoadingMore(false);
-            setPreviousScrollHeight(0);
-            setFirstVisibleMessageId(null);
-          }, 50);
-        } else {
-          // Fallback to the old method if we can't find the element
-          const newScrollHeight = scrollContainer.scrollHeight;
-          const scrollHeightDifference = newScrollHeight - previousScrollHeight;
-          
-          if (scrollHeightDifference > 0) {
-            setTimeout(() => {
-              if (scrollContainer) {
-                scrollContainer.scrollTop = scrollHeightDifference;
-              }
-              
-              // Reset states
-              setIsLoadingMore(false);
-              setPreviousScrollHeight(0);
-              setFirstVisibleMessageId(null);
-            }, 50);
-          }
-        }
-      } else {
-        // Fallback to the old method if we don't have a reference message
-        const newScrollHeight = scrollContainer.scrollHeight;
-        const scrollHeightDifference = newScrollHeight - previousScrollHeight;
-        
-        if (scrollHeightDifference > 0) {
-          setTimeout(() => {
-            if (scrollContainer) {
-              scrollContainer.scrollTop = scrollHeightDifference;
-            }
-            
-            // Reset states
-            setIsLoadingMore(false);
-            setPreviousScrollHeight(0);
-          }, 50);
-        }
-      }
-    }
-  }, [messages, isLoadingMore, previousMessagesLength, previousScrollHeight, firstVisibleMessageId]);
-  
-  // Handle user manually scrolling
-  useEffect(() => {
-    const scrollContainer = scrollContainerRef.current;
-    if (!scrollContainer) return;
-    
-    const handleUserScroll = () => {
-      // If user scrolls up more than 100px from bottom, disable auto-scrolling
-      const isNearBottom = 
-        scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight < 100;
-      
-      if (!isNearBottom && shouldScrollToBottom) {
-        setShouldScrollToBottom(false);
-      } else if (isNearBottom && !shouldScrollToBottom && !isLoadingMore) {
-        setShouldScrollToBottom(true);
-      }
-    };
-    
-    scrollContainer.addEventListener('scroll', handleUserScroll);
-    return () => scrollContainer.removeEventListener('scroll', handleUserScroll);
-  }, [shouldScrollToBottom, isLoadingMore]);
   
   // Format time for display
   const formatMessageTime = (date: Date) => {

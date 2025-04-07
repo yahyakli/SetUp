@@ -2,17 +2,23 @@ import { useEffect } from 'react';
 import { useSocket } from '../context/SocketContext';
 import { Message, ChatRoom } from '@/types';
 import { useRouter } from 'next/navigation';
+import axios from 'axios';
+import { USERS_SERVICE_URL } from '@/constants/API_URLS';
 
 export function useSocketEvents({
   userId,
   selectedRoom,
   setMessages,
-  setChatRooms
+  setChatRooms,
+  token,
+  fetchUserData
 }: {
   userId?: string;
   selectedRoom: ChatRoom | null;
   setMessages: React.Dispatch<React.SetStateAction<Record<string, Message[]>>>;
   setChatRooms: ((updatedRooms: React.SetStateAction<ChatRoom[]>) => void);
+  token?: string;
+  fetchUserData?: (userId: string) => Promise<any>;
 }) {
   const { socket } = useSocket();
   const router = useRouter();
@@ -131,7 +137,17 @@ export function useSocketEvents({
     };
 
     // Listen for new chat rooms
-    const handleNewChatRoom = (room: ChatRoom) => {
+    const handleNewChatRoom = async (room: ChatRoom) => {
+      // If we have a fetchUserData function, fetch any missing user data
+      if (fetchUserData && room.participants) {
+        // Fetch user data for any participants we don't have yet
+        for (const participantId of room.participants) {
+          if (participantId !== userId) {
+            await fetchUserData(participantId);
+          }
+        }
+      }
+      
       updateChatRooms((prev: ChatRoom[]) => [room, ...prev]);
     };
 
@@ -169,7 +185,7 @@ export function useSocketEvents({
       socket.off('chat_room_deleted', handleChatRoomDeleted);
       socket.off('last_message_updated', handleLastMessageUpdated); // NEW
     };
-  }, [socket, userId, selectedRoom, router, setMessages, setChatRooms]);
+  }, [socket, userId, selectedRoom, router, setMessages, setChatRooms, fetchUserData]);
 
   // Join the selected chat room's socket channel
   useEffect(() => {
