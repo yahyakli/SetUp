@@ -25,7 +25,6 @@ export default function ChatPage() {
   const [showChatList, setShowChatList] = useState(true);
   const [messages, setMessages] = useState<Record<string, Message[]>>({});
   const [hasMoreMessages, setHasMoreMessages] = useState(false);
-  console.log("has more: " + hasMoreMessages)
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     // Initialize from localStorage if available, otherwise use default width
     if (typeof window !== 'undefined') {

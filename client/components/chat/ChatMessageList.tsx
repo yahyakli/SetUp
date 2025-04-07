@@ -4,9 +4,12 @@ import React, { useRef, useEffect, useMemo, useCallback, useState } from 'react'
 import { Message, User } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
-import { USERS_SERVICE_URL } from '@/constants/API_URLS';
+import { CHAT_SERVICE_URL, USERS_SERVICE_URL } from '@/constants/API_URLS';
 import MessageAttachment from './MessageAttachment';
 import TypingIndicator from './TypingIndicator';
+import axios from 'axios';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/lib/store';
 
 interface ChatMessageListProps {
   messages: Message[];
@@ -27,6 +30,7 @@ export default function ChatMessageList({
   onLoadMoreMessages,
   hasMoreMessages = false
 }: ChatMessageListProps) {
+  const { token } = useSelector((state: RootState) => state.user);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const typingIndicatorRef = useRef<HTMLDivElement>(null);
@@ -38,6 +42,9 @@ export default function ChatMessageList({
   const [firstVisibleMessageId, setFirstVisibleMessageId] = useState<string | null>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
   
+  // Add state to track unread messages
+  const [unreadMessageIds, setUnreadMessageIds] = useState<string[]>([]);
+  const [hasMarkedAsRead, setHasMarkedAsRead] = useState(false);
 
   // Only scroll to bottom on initial load or when new messages arrive
   useEffect(() => {
@@ -251,6 +258,79 @@ export default function ChatMessageList({
   const messageGroups = useMemo(() => {
     return groupMessagesByDate(messages);
   }, [messages, groupMessagesByDate]);
+
+  // Identify unread messages when messages change
+  useEffect(() => {
+    if (!currentUserId || messages.length === 0 || hasMarkedAsRead) return;
+    
+    // Find messages that don't have the current user in readBy array
+    const unreadIds = messages
+      .filter(message => 
+        message.senderId !== currentUserId && // Don't mark your own messages
+        (!message.readBy || !message.readBy.some(readBy => readBy.userId === currentUserId))
+      )
+      .map(message => message._id);
+    
+    if (unreadIds.length > 0) {
+      setUnreadMessageIds(unreadIds);
+    }
+  }, [messages, currentUserId, hasMarkedAsRead]);
+
+  // Send read status update when unread messages are visible
+  useEffect(() => {
+    const markMessagesAsRead = async () => {
+      if (unreadMessageIds.length === 0 || !currentUserId || !roomId) return;
+      
+      try {
+        await axios.put(CHAT_SERVICE_URL + '/api/messages/read', {
+          messageIds: unreadMessageIds,
+          roomId: roomId
+        }, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        // Clear the unread messages after successful update
+        setUnreadMessageIds([]);
+        setHasMarkedAsRead(true);
+      } catch (error) {
+        console.error('Failed to mark messages as read:', error);
+        // We could retry after a delay if needed
+      }
+    };
+
+    // Check if user is viewing the messages (scrolled to bottom or actively viewing)
+    const checkVisibility = () => {
+      if (unreadMessageIds.length === 0) return;
+      
+      const scrollContainer = scrollContainerRef.current;
+      if (!scrollContainer) return;
+      
+      // If user is near bottom or has scrolled to see messages, mark as read
+      const isNearBottom = 
+        scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight < 200;
+      
+      if (isNearBottom || shouldScrollToBottom) {
+        markMessagesAsRead();
+      }
+    };
+    
+    // Check visibility when unread messages change
+    checkVisibility();
+    
+    // Also check when user scrolls
+    const scrollContainer = scrollContainerRef.current;
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', checkVisibility);
+      return () => scrollContainer.removeEventListener('scroll', checkVisibility);
+    }
+  }, [unreadMessageIds, currentUserId, roomId, shouldScrollToBottom]);
+
+  // Reset read status when changing rooms
+  useEffect(() => {
+    setHasMarkedAsRead(false);
+  }, [roomId]);
 
   // Check if there are no messages
   if (!Array.isArray(messages) || messages.length === 0) {

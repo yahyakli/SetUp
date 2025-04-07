@@ -37,7 +37,6 @@ export default function ChatRoomsList({
   const [searchQuery, setSearchQuery] = React.useState('');
   const [chatFilter, setChatFilter] = React.useState<'all' | 'direct' | 'project'>('all');
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
-  console.log(chatRooms)
   
   // Initialize width from props or localStorage
   const [width, setWidth] = useState(() => {
@@ -53,8 +52,6 @@ export default function ChatRoomsList({
   const containerRef = useRef<HTMLDivElement>(null);
   const [isResizing, setIsResizing] = useState(false);
 
-  // Fetch chat rooms
-  
 
   // Filter chat rooms based on search query and filter type - using useMemo for performance
   const filteredChatRooms = useMemo(() => {
@@ -199,7 +196,6 @@ export default function ChatRoomsList({
           <div className="divide-y dark:divide-gray-800">
             {filteredChatRooms.map((room) => {
               const lastMessage = room.lastMessage;
-              console.log(lastMessage)
               const isUnread = lastMessage && !lastMessage.readBy.some(read => read.userId === currentUserId);
               
               return (
