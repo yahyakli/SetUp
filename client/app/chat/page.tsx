@@ -14,9 +14,11 @@ import axios from 'axios';
 import { CHAT_SERVICE_URL } from '@/constants/API_URLS';
 import { useSocketEvents } from '@/hooks/useSocketEvents';
 import { useChatRooms } from '@/hooks/useChatRooms';
+import { useSocket } from '@/context/SocketContext';
 
 export default function ChatPage() {
   const { user, token } = useSelector((state: RootState) => state.user);
+  const { socket } = useSocket();
   const router = useRouter();
   const params = useParams();
   const roomId = params?.roomId as string;
@@ -198,6 +200,26 @@ export default function ChatPage() {
     // Save to localStorage
     localStorage.setItem('chatSidebarWidth', width.toString());
   };
+
+  // In the ChatPage component, ensure all users join all their chat rooms
+  useEffect(() => {
+    if (!socket || !chatRooms.length) return;
+    
+    console.log('Joining all chat rooms');
+    
+    // Join all chat rooms to receive updates
+    chatRooms.forEach(room => {
+      socket.emit('join_room', room._id);
+      console.log(`Joined room: ${room._id}`);
+    });
+    
+    return () => {
+      // Leave all rooms on unmount
+      chatRooms.forEach(room => {
+        socket.emit('leave_room', room._id);
+      });
+    };
+  }, [socket, chatRooms]);
 
   return (
     <div className="h-full flex flex-col md:flex-row">

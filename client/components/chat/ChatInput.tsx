@@ -14,6 +14,7 @@ import { useSelector } from 'react-redux';
 import Image from 'next/image';
 import { useSocket } from '@/context/SocketContext';
 import { toast } from 'sonner';
+import { debounce } from 'lodash';
 
 type AttachmentType = 'file' | 'image' | null;
 
@@ -116,28 +117,10 @@ const ChatInput = memo(({ selectedRoom }: {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { resolvedTheme } = useTheme();
-  const { sendTypingStatus, joinRoom } = useSocket();
+  const { sendTypingStatus, joinRoom, socket } = useSocket();
   
   // Track if user is currently marked as typing
   const isTypingRef = useRef(false);
-
-  // Function to stop typing
-  const stopTyping = useCallback(() => {
-    if (isTypingRef.current) {
-      console.log('Stopping typing');
-      isTypingRef.current = false;
-      sendTypingStatus(selectedRoom._id, false);
-    }
-  }, [selectedRoom._id, sendTypingStatus]);
-
-  // Function to start typing
-  const startTyping = useCallback(() => {
-    if (!isTypingRef.current) {
-      console.log('Starting typing');
-      isTypingRef.current = true;
-      sendTypingStatus(selectedRoom._id, true);
-    }
-  }, [selectedRoom._id, sendTypingStatus]);
 
   // Join the chat room when component mounts or room changes
   useEffect(() => {
@@ -147,9 +130,11 @@ const ChatInput = memo(({ selectedRoom }: {
     
     // Clean up typing indicator when component unmounts or room changes
     return () => {
-      stopTyping();
+      if (isTypingRef.current) {
+        sendTypingStatus(selectedRoom._id, false);
+      }
     };
-  }, [selectedRoom?._id, joinRoom, stopTyping]);
+  }, [selectedRoom?._id, joinRoom, sendTypingStatus]);
 
   // Auto-resize textarea based on content
   useEffect(() => {
@@ -159,42 +144,51 @@ const ChatInput = memo(({ selectedRoom }: {
     }
   }, [newMessage]);
 
-  // Handle typing indicator with a simpler approach
+  // Improve the typing indicator logic
   useEffect(() => {
-    // Clear any existing timeout
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-      typingTimeoutRef.current = null;
-    }
+    // Debounce typing indicator to prevent rapid state changes
+    const handleTypingStatus = debounce(() => {
+      if (newMessage.trim().length > 0) {
+        // Start typing if not already typing
+        if (!isTypingRef.current) {
+          console.log('Starting typing');
+          isTypingRef.current = true;
+          sendTypingStatus(selectedRoom._id, true);
+        }
+        
+        // Set timeout to stop typing after inactivity
+        if (typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current);
+        }
+        
+        typingTimeoutRef.current = setTimeout(() => {
+          if (isTypingRef.current) {
+            console.log('Stopping typing due to inactivity');
+            isTypingRef.current = false;
+            sendTypingStatus(selectedRoom._id, false);
+          }
+        }, 3000);
+      } else {
+        // If message is empty, stop typing immediately
+        if (isTypingRef.current) {
+          console.log('Stopping typing due to empty message');
+          isTypingRef.current = false;
+          sendTypingStatus(selectedRoom._id, false);
+        }
+      }
+    }, 300); // Debounce for 300ms
     
-    if (newMessage.trim().length > 0) {
-      // Start typing if not already typing
-      startTyping();
-      
-      // Set timeout to stop typing after inactivity
-      typingTimeoutRef.current = setTimeout(() => {
-        stopTyping();
-      }, 3000);
-    } else {
-      // If message is empty, stop typing immediately
-      stopTyping();
-    }
+    handleTypingStatus();
     
     // Cleanup on unmount
     return () => {
+      handleTypingStatus.cancel();
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = null;
       }
     };
-  }, [newMessage, startTyping, stopTyping]);
-
-  // Clean up typing indicator when component unmounts or room changes
-  useEffect(() => {
-    return () => {
-      stopTyping();
-    };
-  }, [selectedRoom._id, stopTyping]);
+  }, [newMessage, selectedRoom._id, sendTypingStatus]);
 
   // Handle text input changes
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -207,14 +201,22 @@ const ChatInput = memo(({ selectedRoom }: {
     
     // Set a new timeout
     typingTimeoutRef.current = setTimeout(() => {
-      stopTyping();
+      if (isTypingRef.current) {
+        console.log('Stopping typing due to inactivity');
+        isTypingRef.current = false;
+        sendTypingStatus(selectedRoom._id, false);
+      }
     }, 3000);
   };
 
   // Handle blur event on textarea
   const handleBlur = () => {
     // When user clicks away from the textarea, stop typing
-    stopTyping();
+    if (isTypingRef.current) {
+      console.log('Stopping typing due to blur');
+      isTypingRef.current = false;
+      sendTypingStatus(selectedRoom._id, false);
+    }
   };
 
   const handleSendMessage = async () => {
@@ -227,9 +229,15 @@ const ChatInput = memo(({ selectedRoom }: {
     setIsSending(true);
     
     // Clear typing indicator when sending message
-    stopTyping();
+    if (isTypingRef.current) {
+      console.log('Stopping typing due to sending message');
+      isTypingRef.current = false;
+      sendTypingStatus(selectedRoom._id, false);
+    }
     
     try {
+      let response;
+      
       if (attachment) {
         // Send message with attachment
         const formData = new FormData();
@@ -242,23 +250,25 @@ const ChatInput = memo(({ selectedRoom }: {
         if (newMessage.trim()) {
           formData.append('content', newMessage);
         }
-        try{
-          const response = await axios.post(`${CHAT_SERVICE_URL}/api/messages`, formData, {
+        
+        try {
+          response = await axios.post(`${CHAT_SERVICE_URL}/api/messages`, formData, {
             headers: {
               'Content-Type': 'multipart/form-data',
               Authorization: `Bearer ${token}`,
             },
           });
           console.log(response);
-        }catch(error){
-          if(error instanceof AxiosError){  
+        } catch(error) {
+          if(error instanceof AxiosError) {  
             toast.error(error.response?.data.message);
           }
           console.error('Error sending message:', error);
+          throw error;
         }
       } else {
         // Send text-only message
-        await axios.post(
+        response = await axios.post(
           `${CHAT_SERVICE_URL}/api/messages`,
           {
             chatRoomId: selectedRoom._id,
@@ -277,6 +287,19 @@ const ChatInput = memo(({ selectedRoom }: {
       // Reset state
       setNewMessage('');
       setAttachment(null);
+      
+      // Only emit update_last_message, let the server handle broadcasting
+      if (socket && response?.data) {
+        console.log('🔄 Emitting update_last_message with:', {
+          roomId: selectedRoom._id,
+          message: response.data
+        });
+        
+        socket.emit('update_last_message', {
+          roomId: selectedRoom._id,
+          message: response.data
+        });
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       // You could add error handling UI here

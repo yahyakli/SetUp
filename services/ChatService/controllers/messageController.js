@@ -70,8 +70,15 @@ const createMessage = asyncHandler(async (req, res) => {
   // Populate attachments before sending response
   const populatedMessage = await Message.findById(message._id).populate('attachments');
 
-  // Emit socket event for new message
+  // Instead of emitting new_message directly, use the socket event that will handle both
+  // new_message and last_message_updated
   req.io.to(`room:${req.body.chatRoomId}`).emit('new_message', populatedMessage);
+  
+  // Explicitly emit last_message_updated to ensure all clients update their chat room list
+  req.io.to(`room:${req.body.chatRoomId}`).emit('last_message_updated', {
+    roomId: req.body.chatRoomId,
+    message: populatedMessage
+  });
 
   res.status(201).json(populatedMessage);
 });
@@ -273,10 +280,11 @@ const deleteAttachment = asyncHandler(async (req, res) => {
 });
 
 // @desc    Mark messages as read
-// @route   PUT /api/messages/read
+// @route   PUT /api/messages/read/:userId
 // @access  Private
 const markMessagesAsRead = asyncHandler(async (req, res) => {
   const { messageIds, chatRoomId } = req.body;
+  const userId = req.params.userId;
 
   if (!messageIds || !Array.isArray(messageIds) || messageIds.length === 0) {
     res.status(400);
@@ -293,10 +301,10 @@ const markMessagesAsRead = asyncHandler(async (req, res) => {
   await Message.updateMany(
     {
       _id: { $in: messageIds },
-      'readBy.userId': { $ne: req.params.userId }
+      'readBy.userId': { $ne: userId }
     },
     {
-      $push: { readBy: { userId: req.params.userId, readAt: new Date() } }
+      $push: { readBy: { userId: userId, readAt: new Date() } }
     }
   );
 
@@ -304,7 +312,7 @@ const markMessagesAsRead = asyncHandler(async (req, res) => {
   if (chatRoomId) {
     req.io.to(`room:${chatRoomId}`).emit('messages_read', {
       messageIds,
-      userId: req.params.userId,
+      userId: userId,
       readAt: new Date()
     });
   }

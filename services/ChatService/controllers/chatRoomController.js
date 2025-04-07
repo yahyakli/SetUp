@@ -53,6 +53,7 @@ const getChatRooms = asyncHandler(async (req, res) => {
     // Group by chat room and get the first (most recent) message
     { $group: {
       _id: "$chatRoomId",
+      id: {$first: "$_id"},
       content: { $first: "$content" },
       senderId: { $first: "$senderId" },
       createdAt: { $first: "$createdAt" },
@@ -64,6 +65,7 @@ const getChatRooms = asyncHandler(async (req, res) => {
   const lastMessageMap = {};
   lastMessages.forEach(msg => {
     lastMessageMap[msg._id.toString()] = {
+      _id: msg.id,
       content: msg.content,
       senderId: msg.senderId,
       createdAt: msg.createdAt,

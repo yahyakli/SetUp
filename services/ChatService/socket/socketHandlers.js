@@ -27,12 +27,63 @@ const setupSocketHandlers = (io) => {
 
     // Handle typing indicators
     socket.on('typing', ({ roomId, userId, isTyping }) => {
-      socket.to(`room:${roomId}`).emit('user_typing', { userId, isTyping });
+      if (!roomId || !userId) {
+        console.warn('Invalid typing event data:', { roomId, userId, isTyping });
+        return;
+      }
+      
+      console.log(`User ${userId} ${isTyping ? 'started' : 'stopped'} typing in room ${roomId}`);
+      
+      // Broadcast to all users in the room except the sender
+      socket.to(`room:${roomId}`).emit('user_typing', { 
+        userId, 
+        isTyping,
+        roomId 
+      });
     });
 
     // Handle read status
-    socket.on('read_message', ({ roomId, userId }) => {
-      socket.to(`room:${roomId}`).emit('message_read', { userId });
+    socket.on('read_message', ({ roomId, messageIds, userId }) => {
+      // Broadcast to all users in the room except the sender
+      socket.to(`room:${roomId}`).emit('messages_read', { 
+        messageIds, 
+        userId, 
+        readAt: new Date() 
+      });
+      console.log(`User ${userId} read messages in room ${roomId}:`, messageIds);
+    });
+
+    // Handle new message - ensure it updates the last message for all users
+    socket.on('new_message', (message) => {
+      console.log(`New message in room ${message.chatRoomId}`);
+      
+      // Broadcast the new message to all users in the room except the sender
+      socket.to(`room:${message.chatRoomId}`).emit('new_message', message);
+      
+      // Also broadcast last_message_updated to all users in the room including the sender
+      io.to(`room:${message.chatRoomId}`).emit('last_message_updated', {
+        roomId: message.chatRoomId,
+        message
+      });
+    });
+
+    // Handle last message update
+    socket.on('update_last_message', ({ roomId, message }) => {
+      console.log('💬 Received update_last_message:', {
+        roomId,
+        message: message ? { 
+          _id: message._id,
+          content: message.content,
+          senderId: message.senderId
+        } : 'missing'
+      });
+      
+      // Broadcast to ALL users in the room (including sender)
+      io.to(`room:${roomId}`).emit('last_message_updated', {
+        roomId,
+        message
+      });
+      console.log(`📢 Broadcast last_message_updated for room ${roomId}`);
     });
 
     // Handle disconnection

@@ -34,30 +34,33 @@ export function useSocketEvents({
         const roomMessages = prev[message.chatRoomId] || [];
         return {
           ...prev,
-          [message.chatRoomId]: [message, ...roomMessages]
+          [message.chatRoomId]: [...roomMessages, message]
         };
       });
+    };
 
-      // Update the last message in chat rooms list
+    // NEW: Listen for last message updates
+    const handleLastMessageUpdated = ({ roomId, message }: { roomId: string, message: Message }) => {
+      // Keep this one for debugging the specific feature
+      console.log('🔄 Last message updated event received:', { roomId, message });
+      
       updateChatRooms((prev: ChatRoom[]) => {
-        return prev.map((room: ChatRoom) => {
-          if (room._id === message.chatRoomId) {
-            return {
-              ...room,
-              lastMessage: {
-                _id: message._id,
-                chatRoomId: message.chatRoomId,
-                content: message.content,
-                contentType: message.contentType || 'text',
-                senderId: message.senderId,
-                readBy: message.readBy || [],
-                createdAt: message.createdAt,
-                updatedAt: message.updatedAt || message.createdAt
-              }
-            };
-          }
-          return room;
-        });
+        const roomIndex = prev.findIndex(room => room._id === roomId);
+        
+        if (roomIndex === -1) {
+          console.warn('Could not find room with ID:', roomId);
+          return prev;
+        }
+        
+        const updatedRooms = [...prev];
+        updatedRooms[roomIndex] = {
+          ...updatedRooms[roomIndex],
+          lastMessage: message
+        };
+        
+        const [updatedRoom] = updatedRooms.splice(roomIndex, 1);
+        const result = [updatedRoom, ...updatedRooms];
+        return result;
       });
     };
 
@@ -67,7 +70,7 @@ export function useSocketEvents({
       userId: string, 
       readAt: string 
     }) => {
-      if (readerId === userId) return; // Skip if it's the current user
+      if (readerId === userId) return;
 
       // Update read status for messages
       setMessages(prev => {
@@ -77,7 +80,9 @@ export function useSocketEvents({
           updatedMessages[roomId] = updatedMessages[roomId].map(msg => {
             if (messageIds.includes(msg._id)) {
               // Check if this user has already read the message
-              const hasRead = msg.readBy?.some(read => read.userId === readerId);
+              const hasRead = msg.readBy?.some(read => 
+                typeof read === 'object' && read.userId === readerId
+              );
               
               if (!hasRead) {
                 return {
@@ -94,6 +99,34 @@ export function useSocketEvents({
         });
         
         return updatedMessages;
+      });
+      
+      // IMPORTANT: Also update the chat rooms list to reflect read status changes
+      updateChatRooms((prev: ChatRoom[]) => {
+        return prev.map(room => {
+          // Check if the last message of this room is in the messageIds
+          if (room.lastMessage && messageIds.includes(room.lastMessage._id)) {
+            // Check if the reader has already read this message
+            const hasRead = room.lastMessage.readBy?.some(read => 
+              typeof read === 'object' && read.userId === readerId
+            );
+            
+            if (!hasRead) {
+              // Update the lastMessage readBy array
+              return {
+                ...room,
+                lastMessage: {
+                  ...room.lastMessage,
+                  readBy: [...(room.lastMessage.readBy || []), {
+                    userId: readerId,
+                    readAt: new Date(readAt)
+                  }]
+                }
+              };
+            }
+          }
+          return room;
+        });
       });
     };
 
@@ -125,6 +158,7 @@ export function useSocketEvents({
     socket.on('new_chat_room', handleNewChatRoom);
     socket.on('update_chat_room', handleUpdateChatRoom);
     socket.on('chat_room_deleted', handleChatRoomDeleted);
+    socket.on('last_message_updated', handleLastMessageUpdated); // NEW
 
     // Clean up listeners on unmount
     return () => {
@@ -133,6 +167,7 @@ export function useSocketEvents({
       socket.off('new_chat_room', handleNewChatRoom);
       socket.off('update_chat_room', handleUpdateChatRoom);
       socket.off('chat_room_deleted', handleChatRoomDeleted);
+      socket.off('last_message_updated', handleLastMessageUpdated); // NEW
     };
   }, [socket, userId, selectedRoom, router, setMessages, setChatRooms]);
 
@@ -140,17 +175,12 @@ export function useSocketEvents({
   useEffect(() => {
     if (!socket || !selectedRoom) return;
     
-    const roomId = String(selectedRoom._id); // Convert to string to ensure consistency
+    const roomId = String(selectedRoom._id);
     
-    console.log(`Joining socket room: ${roomId}`);
-    
-    // Join the room's socket channel - ensure this is only done once per room
     socket.emit('join_room', roomId);
     
-    // Leave the room when component unmounts or room changes
     return () => {
-      console.log(`Leaving socket room: ${roomId}`);
       socket.emit('leave_room', roomId);
     };
-  }, [socket, selectedRoom?._id]); // Only depend on _id, not the entire selectedRoom object
+  }, [socket, selectedRoom?._id]);
 } 

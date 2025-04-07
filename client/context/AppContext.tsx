@@ -7,7 +7,7 @@ import { initTasks } from "@/lib/features/TasksSlice";
 import { initTeams, setTeamsLoading } from "@/lib/features/TeamsSlice";
 import { fetchUser } from "@/lib/features/userSlice";
 import { AppDispatch, RootState } from "@/lib/store";
-import { Team } from "@/types";
+import { Message, Team } from "@/types";
 import axios from "axios";
 import { createContext, useContext, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -17,6 +17,9 @@ type AppContextType = {
   isLoading: boolean;
   authCheckComplete: boolean;
   isAuthenticated: boolean;
+  lastMessages: Record<string, Message>;
+  updateLastMessage: (roomId: string, message: Message) => void;
+  markLastMessageAsRead: (roomId: string, messageId: string) => void;
 };
 
 // Create the context with default values
@@ -24,6 +27,9 @@ const AppContext = createContext<AppContextType>({
   isLoading: true,
   authCheckComplete: false,
   isAuthenticated: false,
+  lastMessages: {},
+  updateLastMessage: () => {},
+  markLastMessageAsRead: () => {},
 });
 
 // Custom hook to use the AppContext
@@ -33,6 +39,38 @@ export const AppContextProvider = ({ children }: { children: React.ReactNode }) 
   const dispatch = useDispatch<AppDispatch>();
   const { token, isLoading, user } = useSelector((state: RootState) => state.user);
   const [authCheckComplete, setAuthCheckComplete] = useState(false);
+  const [lastMessages, setLastMessages] = useState<Record<string, Message>>({});
+
+  // Function to update the last message for a chat room
+  const updateLastMessage = (roomId: string, message: Message) => {
+    setLastMessages(prev => ({
+      ...prev,
+      [roomId]: message
+    }));
+  };
+
+  // Function to mark a last message as read
+  const markLastMessageAsRead = (roomId: string, messageId: string) => {
+    setLastMessages(prev => {
+      // Only update if the message ID matches the last message for this room
+      if (prev[roomId] && prev[roomId]._id === messageId) {
+        // Create a new message object with updated readBy array
+        const updatedMessage = { 
+          ...prev[roomId],
+          readBy: [
+            ...(prev[roomId].readBy || []),
+            { userId: user?.id || '', readAt: new Date() }
+          ]
+        };
+        
+        return {
+          ...prev,
+          [roomId]: updatedMessage
+        };
+      }
+      return prev;
+    });
+  };
 
   // Check authentication status
   useEffect(() => {
@@ -138,7 +176,10 @@ export const AppContextProvider = ({ children }: { children: React.ReactNode }) 
   const contextValue: AppContextType = {
     isLoading,
     authCheckComplete,
-    isAuthenticated: !!token
+    isAuthenticated: !!token,
+    lastMessages,
+    updateLastMessage,
+    markLastMessageAsRead
   };
 
   return (

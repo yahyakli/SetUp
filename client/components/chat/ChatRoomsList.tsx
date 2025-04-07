@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import UserSelectionModal from './UserSelectionModal';
 import { useMemo } from 'react';
 import { USERS_SERVICE_URL } from '@/constants/API_URLS';
+import { useAppContext } from '@/context/AppContext';
 
 interface ChatRoomsListProps {
   selectedRoom: ChatRoom | null;
@@ -37,6 +38,7 @@ export default function ChatRoomsList({
   const [searchQuery, setSearchQuery] = React.useState('');
   const [chatFilter, setChatFilter] = React.useState<'all' | 'direct' | 'project'>('all');
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const { lastMessages, updateLastMessage } = useAppContext();
   
   // Initialize width from props or localStorage
   const [width, setWidth] = useState(() => {
@@ -53,9 +55,10 @@ export default function ChatRoomsList({
   const [isResizing, setIsResizing] = useState(false);
 
 
-  // Filter chat rooms based on search query and filter type - using useMemo for performance
+  // Filter and sort chat rooms based on search query, filter type, and last message time
   const filteredChatRooms = useMemo(() => {
-    return chatRooms.filter(room => {
+    // First filter the rooms
+    const filtered = chatRooms.filter(room => {
       // For direct chats, we need to find the other participant's name
       let matchesSearch = true;
       
@@ -85,7 +88,18 @@ export default function ChatRoomsList({
       
       return matchesSearch && matchesFilter;
     });
-  }, [chatRooms, searchQuery, chatFilter, currentUserId, users]);
+    
+    // Then sort by last message timestamp (most recent first)
+    return filtered.sort((a, b) => {
+      // Use the lastMessages from context if available, otherwise fall back to room.lastMessage
+      const messageA = lastMessages[a._id] || a.lastMessage;
+      const messageB = lastMessages[b._id] || b.lastMessage;
+      
+      const timeA = messageA ? new Date(messageA.createdAt).getTime() : 0;
+      const timeB = messageB ? new Date(messageB.createdAt).getTime() : 0;
+      return timeB - timeA; // Descending order (newest first)
+    });
+  }, [chatRooms, searchQuery, chatFilter, currentUserId, users, lastMessages]);
 
   // Format date for chat list
   const formatChatDate = (date: Date) => {
@@ -146,6 +160,19 @@ export default function ChatRoomsList({
     document.addEventListener('mouseup', handleMouseUp);
   };
 
+  // Handle room selection and update last message in context
+  const handleRoomSelect = (room: ChatRoom) => {
+    onRoomSelect(room);
+    
+    // If the room has a last message, update it in the context
+    if (room.lastMessage) {
+      // Use the lastMessages from context if available, otherwise use room.lastMessage
+      const lastMessage = lastMessages[room._id] || room.lastMessage;
+      // Update the last message in context
+      updateLastMessage(room._id, lastMessage);
+    }
+  };
+
   return (
     <div 
       ref={containerRef}
@@ -195,15 +222,22 @@ export default function ChatRoomsList({
         ) : (
           <div className="divide-y dark:divide-gray-800">
             {filteredChatRooms.map((room) => {
-              const lastMessage = room.lastMessage;
-              const isUnread = lastMessage && !lastMessage.readBy.some(read => read.userId === currentUserId);
+              // Use lastMessages from context if available, otherwise use room.lastMessage
+              const lastMessage = lastMessages[room._id] || room.lastMessage;
+              const lastMessageKey = lastMessage ? `${lastMessage._id}-${lastMessage.updatedAt}` : 'no-message';
+              
+              // Check if the message is unread based on the lastMessages in context
+              const isUnread = lastMessage && !lastMessage.readBy.some(read => 
+                (typeof read === 'object' ? read.userId : read) === currentUserId
+              );
+              
               return (
                 <div
-                  key={room._id}
+                  key={`${room._id}-${lastMessageKey}`}
                   className={`p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${
                     selectedRoom?._id === room._id ? 'bg-blue-50 dark:bg-gray-700 border-l-4 border-blue-500 dark:border-blue-400' : ''
                   }`}
-                  onClick={() => onRoomSelect(room)}
+                  onClick={() => handleRoomSelect(room)}
                 >
                   <div className="flex items-start gap-3">
                     {room.type === 'direct' ? (

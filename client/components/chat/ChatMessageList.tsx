@@ -10,6 +10,8 @@ import TypingIndicator from './TypingIndicator';
 import axios from 'axios';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/lib/store';
+import { debounce } from 'lodash';
+import { useAppContext } from '@/context/AppContext';
 
 interface ChatMessageListProps {
   messages: Message[];
@@ -31,6 +33,7 @@ export default function ChatMessageList({
   hasMoreMessages = false
 }: ChatMessageListProps) {
   const { token } = useSelector((state: RootState) => state.user);
+  const { markLastMessageAsRead, updateLastMessage, lastMessages } = useAppContext();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const typingIndicatorRef = useRef<HTMLDivElement>(null);
@@ -42,7 +45,7 @@ export default function ChatMessageList({
   const [firstVisibleMessageId, setFirstVisibleMessageId] = useState<string | null>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
   
-  // Only scroll to bottom on initial load or when new messages arrive
+  // Modify the useEffect for socket events to update the messages array correctly
   useEffect(() => {
     // Only auto-scroll on initial load or when we explicitly want to scroll to bottom
     if ((isInitialLoad || shouldScrollToBottom) && messagesEndRef.current && scrollContainerRef.current) {
@@ -53,7 +56,18 @@ export default function ChatMessageList({
         if (isInitialLoad) setIsInitialLoad(false);
       }, 100);
     }
-  }, [messages, shouldScrollToBottom, isInitialLoad]);
+    
+    // When new messages arrive (messages length increases), check if we should auto-scroll
+    if (messages.length > previousMessagesLength && !isLoadingMore) {
+      // If the last message is from the current user, always scroll to bottom
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage && lastMessage.senderId === currentUserId) {
+        setShouldScrollToBottom(true);
+      }
+      
+      setPreviousMessagesLength(messages.length);
+    }
+  }, [messages, shouldScrollToBottom, isInitialLoad, isLoadingMore, previousMessagesLength, currentUserId]);
   
   // Handle scroll to load more messages with improved position tracking
   useEffect(() => {
@@ -255,59 +269,99 @@ export default function ChatMessageList({
     return groupMessagesByDate(messages);
   }, [messages, groupMessagesByDate]);
 
-  // Add an intersection observer to track visible messages
+  // Update the last message in context when messages change
+  useEffect(() => {
+    if (messages.length > 0 && roomId) {
+      // Find the most recent message
+      const sortedMessages = [...messages].sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      
+      // Only update if the last message is different from what's already in context
+      const lastMessage = sortedMessages[0];
+      const currentLastMessage = lastMessages[roomId];
+      
+      if (!currentLastMessage || currentLastMessage._id !== lastMessage._id) {
+        updateLastMessage(roomId, lastMessage);
+      }
+    }
+  }, [messages, roomId, updateLastMessage, lastMessages]);
+
+  // Modify the useEffect for marking messages as read
   useEffect(() => {
     if (!currentUserId || !roomId || !token) return;
     
     // Create a map to track which messages have been marked as read
     const readMessageMap = new Map<string, boolean>();
+    const messageIdsToMark: string[] = [];
     
-    // Function to mark a single message as read
-    const markMessageAsRead = async (messageId: string) => {
-      // Skip if already marked as read or is the user's own message
-      const message = messages.find(m => m._id === messageId);
-      if (!message) return;
-      if (message.senderId === currentUserId) return; // Don't mark your own messages
+    // Function to mark messages as read
+    const markMessagesAsRead = async () => {
+      if (messageIdsToMark.length === 0) return;
       
-      // Check if message is already read by current user
-      const isAlreadyRead = Array.isArray(message.readBy) && 
-        message.readBy.some(readBy => 
-          typeof readBy === 'object' && 
-          readBy.userId === currentUserId
-        );
-      
-      if (isAlreadyRead) return;
-      if (readMessageMap.get(messageId)) return;
-      
-      // Mark locally to prevent duplicate requests
-      readMessageMap.set(messageId, true);
+      const messageIdsToSend = [...messageIdsToMark];
+      messageIdsToMark.length = 0; // Clear the array
       
       try {
-        await axios.put(CHAT_SERVICE_URL + '/api/messages/read/' + currentUserId, {
-          messageIds: [messageId],
-          roomId: roomId
+        await axios.put(`${CHAT_SERVICE_URL}/api/messages/read/${currentUserId}`, {
+          messageIds: messageIdsToSend,
+          chatRoomId: roomId
         }, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
+        
+        // Add to read map to prevent duplicate requests
+        messageIdsToSend.forEach(id => {
+          readMessageMap.set(id, true);
+          // Also update the last message read status in context
+          markLastMessageAsRead(roomId, id);
+        });
+        
+        console.log('Marked messages as read:', messageIdsToSend);
       } catch (error) {
-        console.error('Failed to mark message as read:', error);
-        // Remove from map to allow retry
-        readMessageMap.delete(messageId);
+        console.error('Failed to mark messages as read:', error);
       }
     };
     
+    // Debounced version of markMessagesAsRead to avoid too many requests
+    const debouncedMarkAsRead = debounce(markMessagesAsRead, 500);
+    
     // Set up intersection observer to detect when messages are visible
     const observer = new IntersectionObserver((entries) => {
+      let shouldMarkAsRead = false;
+      
       entries.forEach(entry => {
         if (entry.isIntersecting) {
           const messageId = entry.target.getAttribute('data-message-id');
           if (messageId) {
-            markMessageAsRead(messageId);
+            const message = messages.find(m => m._id === messageId);
+            
+            // Skip if already marked as read or is the user's own message
+            if (!message) return;
+            if (message.senderId === currentUserId) return; // Don't mark your own messages
+            
+            // Check if message is already read by current user
+            const isAlreadyRead = Array.isArray(message.readBy) && 
+              message.readBy.some(readBy => 
+                typeof readBy === 'object' && 
+                readBy.userId === currentUserId
+              );
+            
+            if (isAlreadyRead) return;
+            if (readMessageMap.get(messageId)) return;
+            
+            // Add to list of messages to mark as read
+            messageIdsToMark.push(messageId);
+            shouldMarkAsRead = true;
           }
         }
       });
+      
+      if (shouldMarkAsRead) {
+        debouncedMarkAsRead();
+      }
     }, {
       root: scrollContainerRef.current,
       threshold: 0.5 // Message is considered visible when 50% is in view
@@ -319,10 +373,45 @@ export default function ChatMessageList({
     });
     
     return () => {
-      // Clean up observer
+      // Clean up observer and cancel any pending debounced calls
       observer.disconnect();
+      debouncedMarkAsRead.cancel();
     };
-  }, [messages, currentUserId, roomId, token]);
+  }, [messages, currentUserId, roomId, token, markLastMessageAsRead]);
+
+  // Also update the effect for marking the last message as read when entering a chat room
+  useEffect(() => {
+    if (!currentUserId || !roomId || !token || !messages.length) return;
+    
+    // Find the last message in the room
+    const lastMessage = messages[messages.length - 1];
+    
+    // Check if the last message is not from the current user and is unread
+    if (lastMessage && 
+        lastMessage.senderId !== currentUserId && 
+        !lastMessage.readBy?.some(read => 
+          typeof read === 'object' && read.userId === currentUserId
+        )) {
+      
+      console.log('Marking last message as read on room entry:', lastMessage._id);
+      
+      // Mark the last message as read
+      axios.put(`${CHAT_SERVICE_URL}/api/messages/read/${currentUserId}`, {
+        messageIds: [lastMessage._id],
+        chatRoomId: roomId
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      }).then(() => {
+        console.log('Successfully marked last message as read on room entry');
+        // Update the last message read status in context
+        markLastMessageAsRead(roomId, lastMessage._id);
+      }).catch(error => {
+        console.error('Failed to mark last message as read on room entry:', error);
+      });
+    }
+  }, [roomId, currentUserId, token, messages, markLastMessageAsRead]);
 
   // Check if there are no messages
   if (!Array.isArray(messages) || messages.length === 0) {

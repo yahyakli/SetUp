@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useSocket } from '@/context/SocketContext';
 import { User } from '@/types';
 
@@ -12,8 +12,10 @@ export default function TypingIndicator({ roomId, currentUserId, users }: Typing
   const { typingUsers } = useSocket();
   
   // Get users who are typing in this room (excluding current user)
-  const typingUserIds = (typingUsers[roomId] || [])
-    .filter(userId => userId !== currentUserId);
+  const typingUserIds = useMemo(() => {
+    const roomTypingUsers = typingUsers[roomId] || [];
+    return roomTypingUsers.filter(userId => userId !== currentUserId);
+  }, [typingUsers, roomId, currentUserId]);
   
   if (typingUserIds.length === 0) {
     return null;
@@ -23,20 +25,16 @@ export default function TypingIndicator({ roomId, currentUserId, users }: Typing
   const typingUserNames = typingUserIds.map(userId => {
     try {
       // Check if users object exists and has the user
-      if (!users) {
+      if (!users || !users[userId]) {
         return 'Someone';
       }
       
       const user = users[userId];
-      if (!user) {
+      if (!user.firstName && !user.lastName) {
         return 'Someone';
       }
       
-      if (!user.firstName || !user.lastName) {
-        return user.firstName || user.lastName || 'Someone';
-      }
-      
-      return `${user.firstName} ${user.lastName}`;
+      return `${user.firstName || ''} ${user.lastName || ''}`.trim();
     } catch (error) {
       console.error('Error getting user name:', error);
       return 'Someone';

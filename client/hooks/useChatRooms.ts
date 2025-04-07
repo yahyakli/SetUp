@@ -22,7 +22,6 @@ export function useChatRooms() {
     const fetchData = async () => {
       if (!token || !user?.id) return;
       
-      // Skip if we already have data or a fetch is in progress
       if ((globalChatRooms.length > 0 && Object.keys(globalUsers).length > 0) || apiCallInProgressRef.current) {
         setLoading(false);
         return;
@@ -111,16 +110,17 @@ export function useChatRooms() {
   }, [token, user?.id, teams]);
 
   // Function to update chat rooms (e.g., when a new message arrives)
-  const updateChatRooms = (updatedRoomsOrFn: ChatRoom[] | ((prev: ChatRoom[]) => ChatRoom[])) => {
-    if (typeof updatedRoomsOrFn === 'function') {
-      // It's an updater function
-      const newRooms = updatedRoomsOrFn(chatRooms);
-      globalChatRooms = newRooms;
-      setChatRooms(newRooms);
+  const updateChatRooms = (updaterOrRooms: ChatRoom[] | ((prev: ChatRoom[]) => ChatRoom[])) => {
+    if (typeof updaterOrRooms === 'function') {
+      const newRooms = updaterOrRooms(chatRooms);
+      
+      if (JSON.stringify(newRooms) !== JSON.stringify(chatRooms)) {
+        globalChatRooms = [...newRooms];
+        setChatRooms([...newRooms]);
+      }
     } else {
-      // It's a direct array
-      globalChatRooms = updatedRoomsOrFn;
-      setChatRooms(updatedRoomsOrFn);
+      globalChatRooms = [...updaterOrRooms];
+      setChatRooms([...updaterOrRooms]);
     }
   };
 
