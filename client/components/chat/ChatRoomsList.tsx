@@ -197,7 +197,6 @@ export default function ChatRoomsList({
             {filteredChatRooms.map((room) => {
               const lastMessage = room.lastMessage;
               const isUnread = lastMessage && !lastMessage.readBy.some(read => read.userId === currentUserId);
-              
               return (
                 <div
                   key={room._id}

@@ -42,10 +42,6 @@ export default function ChatMessageList({
   const [firstVisibleMessageId, setFirstVisibleMessageId] = useState<string | null>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
   
-  // Add state to track unread messages
-  const [unreadMessageIds, setUnreadMessageIds] = useState<string[]>([]);
-  const [hasMarkedAsRead, setHasMarkedAsRead] = useState(false);
-
   // Only scroll to bottom on initial load or when new messages arrive
   useEffect(() => {
     // Only auto-scroll on initial load or when we explicitly want to scroll to bottom
@@ -259,78 +255,74 @@ export default function ChatMessageList({
     return groupMessagesByDate(messages);
   }, [messages, groupMessagesByDate]);
 
-  // Identify unread messages when messages change
+  // Add an intersection observer to track visible messages
   useEffect(() => {
-    if (!currentUserId || messages.length === 0 || hasMarkedAsRead) return;
+    if (!currentUserId || !roomId || !token) return;
     
-    // Find messages that don't have the current user in readBy array
-    const unreadIds = messages
-      .filter(message => 
-        message.senderId !== currentUserId && // Don't mark your own messages
-        (!message.readBy || !message.readBy.some(readBy => readBy.userId === currentUserId))
-      )
-      .map(message => message._id);
+    // Create a map to track which messages have been marked as read
+    const readMessageMap = new Map<string, boolean>();
     
-    if (unreadIds.length > 0) {
-      setUnreadMessageIds(unreadIds);
-    }
-  }, [messages, currentUserId, hasMarkedAsRead]);
-
-  // Send read status update when unread messages are visible
-  useEffect(() => {
-    const markMessagesAsRead = async () => {
-      if (unreadMessageIds.length === 0 || !currentUserId || !roomId) return;
+    // Function to mark a single message as read
+    const markMessageAsRead = async (messageId: string) => {
+      // Skip if already marked as read or is the user's own message
+      const message = messages.find(m => m._id === messageId);
+      if (!message) return;
+      if (message.senderId === currentUserId) return; // Don't mark your own messages
+      
+      // Check if message is already read by current user
+      const isAlreadyRead = Array.isArray(message.readBy) && 
+        message.readBy.some(readBy => 
+          typeof readBy === 'object' && 
+          readBy.userId === currentUserId
+        );
+      
+      if (isAlreadyRead) return;
+      if (readMessageMap.get(messageId)) return;
+      
+      // Mark locally to prevent duplicate requests
+      readMessageMap.set(messageId, true);
       
       try {
-        await axios.put(CHAT_SERVICE_URL + '/api/messages/read', {
-          messageIds: unreadMessageIds,
+        await axios.put(CHAT_SERVICE_URL + '/api/messages/read/' + currentUserId, {
+          messageIds: [messageId],
           roomId: roomId
         }, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
-        
-        // Clear the unread messages after successful update
-        setUnreadMessageIds([]);
-        setHasMarkedAsRead(true);
       } catch (error) {
-        console.error('Failed to mark messages as read:', error);
-        // We could retry after a delay if needed
-      }
-    };
-
-    // Check if user is viewing the messages (scrolled to bottom or actively viewing)
-    const checkVisibility = () => {
-      if (unreadMessageIds.length === 0) return;
-      
-      const scrollContainer = scrollContainerRef.current;
-      if (!scrollContainer) return;
-      
-      // If user is near bottom or has scrolled to see messages, mark as read
-      const isNearBottom = 
-        scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight < 200;
-      
-      if (isNearBottom || shouldScrollToBottom) {
-        markMessagesAsRead();
+        console.error('Failed to mark message as read:', error);
+        // Remove from map to allow retry
+        readMessageMap.delete(messageId);
       }
     };
     
-    // Check visibility when unread messages change
-    checkVisibility();
+    // Set up intersection observer to detect when messages are visible
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const messageId = entry.target.getAttribute('data-message-id');
+          if (messageId) {
+            markMessageAsRead(messageId);
+          }
+        }
+      });
+    }, {
+      root: scrollContainerRef.current,
+      threshold: 0.5 // Message is considered visible when 50% is in view
+    });
     
-    // Also check when user scrolls
-    const scrollContainer = scrollContainerRef.current;
-    if (scrollContainer) {
-      scrollContainer.addEventListener('scroll', checkVisibility);
-      return () => scrollContainer.removeEventListener('scroll', checkVisibility);
-    }
-  }, [unreadMessageIds, currentUserId, roomId, shouldScrollToBottom]);
-
-  // Reset read status when changing rooms
-  useEffect(() => {
-    setHasMarkedAsRead(false);
-  }, [roomId]);
+    // Observe all message elements
+    Object.values(messageRefs.current).forEach(ref => {
+      if (ref) observer.observe(ref);
+    });
+    
+    return () => {
+      // Clean up observer
+      observer.disconnect();
+    };
+  }, [messages, currentUserId, roomId, token]);
 
   // Check if there are no messages
   if (!Array.isArray(messages) || messages.length === 0) {
@@ -355,6 +347,17 @@ export default function ChatMessageList({
     const isCurrentUser = message.senderId === currentUserId;
     const showAvatar = showUserInfo && messageIndex === 0 || 
       (showUserInfo && group.messages[messageIndex - 1].senderId !== message.senderId);
+    
+    // Get users who have read this message (excluding the sender)
+    const readByUsers = message.readBy 
+      ? message.readBy
+          .filter(readBy => readBy.userId !== message.senderId) // Don't show sender in read receipts
+          .map(readBy => {
+            const user = users[readBy.userId];
+            return user ? { ...user, readAt: readBy.readAt } : null;
+          })
+          .filter(Boolean) // Filter out undefined users
+      : [];
     
     return (
       <div 
@@ -406,9 +409,31 @@ export default function ChatMessageList({
               )}
             </div>
             
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              {formatMessageTime(message.createdAt)}
-            </p>
+            <div className="flex items-center mt-1 justify-end">
+              {/* Read receipts - show avatars of users who read the message */}
+              {isCurrentUser && readByUsers.length > 0 && (
+                <div className="flex -space-x-1 mr-2" title="Read by">
+                  {readByUsers.slice(0, 3).map(user => (
+                    <Avatar 
+                      key={user?.id} 
+                      className="h-4 w-4 border border-white dark:border-gray-800"
+                      title={`${user?.firstName} ${user?.lastName} • ${format(new Date(user?.readAt || ''), 'h:mm a')}`}
+                    >
+                      <AvatarImage src={(USERS_SERVICE_URL || '') + user?.avatar} />
+                      <AvatarFallback className="text-[8px]">
+                        {user?.firstName[0]}{user?.lastName[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                  ))}
+                  {readByUsers.length > 3 && (
+                    <span className="text-xs text-gray-500 ml-1">+{readByUsers.length - 3}</span>
+                  )}
+                </div>
+              )}
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {formatMessageTime(message.createdAt)}
+              </p>
+            </div>
           </div>
         </div>
       </div>

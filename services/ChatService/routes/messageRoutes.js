@@ -27,7 +27,7 @@ router.get('/paginated/:chatRoomId/:userId', protect, getPaginatedMessages);
 router.get('/more/:chatRoomId/:lastMessageId/:userId', protect, getMoreMessages);
 
 // Mark messages as read
-router.put('/read', protect, markMessagesAsRead);
+router.put('/read/:userId', protect, markMessagesAsRead);
 
 // Upload attachment to message
 router.post('/:messageId/attachments', protect, upload.single('file'), uploadAttachment);

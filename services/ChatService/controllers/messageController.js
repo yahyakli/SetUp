@@ -293,10 +293,10 @@ const markMessagesAsRead = asyncHandler(async (req, res) => {
   await Message.updateMany(
     {
       _id: { $in: messageIds },
-      'readBy.userId': { $ne: req.body.user_id }
+      'readBy.userId': { $ne: req.params.userId }
     },
     {
-      $push: { readBy: { userId: req.body.user_id, readAt: new Date() } }
+      $push: { readBy: { userId: req.params.userId, readAt: new Date() } }
     }
   );
 
@@ -304,7 +304,7 @@ const markMessagesAsRead = asyncHandler(async (req, res) => {
   if (chatRoomId) {
     req.io.to(`room:${chatRoomId}`).emit('messages_read', {
       messageIds,
-      userId: req.body.user_id,
+      userId: req.params.userId,
       readAt: new Date()
     });
   }
