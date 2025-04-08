@@ -134,11 +134,13 @@ export default function ProjectChatTab({ project }: ProjectChatTabProps) {
           }
         }
       );
-      
-      toast.success('Successfully joined the chat room');
-      
-      // Navigate to the chat room
-      router.push(`/chat/${chatRoomId}`);
+      if (response.status === 200) {
+        toast.success('Successfully joined the chat room');
+        // Navigate to the chat room
+        router.push(`/chat/${chatRoomId}`);
+      } else {
+        toast.error('Failed to join the chat room');
+      }
     } catch (error) {
       console.error('Error joining chat room:', error);
       toast.error('Failed to join the chat room');
@@ -195,7 +197,7 @@ export default function ProjectChatTab({ project }: ProjectChatTabProps) {
         <CardHeader>
           <CardTitle>Join Project Chat Room</CardTitle>
           <CardDescription>
-            This project has a chat room, but you're not a participant yet
+            This project has a chat room, but you&apos;re not a participant yet
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -278,7 +280,7 @@ export default function ProjectChatTab({ project }: ProjectChatTabProps) {
       <CardHeader>
         <CardTitle>No Chat Room Available</CardTitle>
         <CardDescription>
-          This project doesn't have a chat room yet
+          This project doesn&apos;t have a chat room yet
         </CardDescription>
       </CardHeader>
       <CardContent>

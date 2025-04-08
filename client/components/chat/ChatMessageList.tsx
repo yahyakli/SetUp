@@ -21,6 +21,7 @@ interface ChatMessageListProps {
   roomId: string;
   onLoadMoreMessages?: (lastMessageId: string) => void;
   hasMoreMessages?: boolean;
+  roomType: 'direct' | 'group' | 'project';
 }
 
 
@@ -31,7 +32,8 @@ export default function ChatMessageList({
   showUserInfo = false,
   roomId,
   onLoadMoreMessages,
-  hasMoreMessages = false
+  hasMoreMessages = false,
+  roomType
 }: ChatMessageListProps) {
   const { token } = useSelector((state: RootState) => state.user);
   const { markLastMessageAsRead, updateLastMessage, lastMessages } = useAppContext();
@@ -388,6 +390,9 @@ export default function ChatMessageList({
           .filter(Boolean) // Filter out undefined users
       : [];
     
+    // Determine if read receipts should be shown
+    const shouldShowReadReceipts = isCurrentUser && readByUsers.length > 0 && roomType !== 'project';
+    
     return (
       <div 
         key={message._id} 
@@ -397,18 +402,18 @@ export default function ChatMessageList({
           messageRefs.current[message._id] = el;
         }}
       >
-        <div className={`flex items-center gap-2 max-w-[80%] ${
-          !isCurrentUser && !showAvatar && showUserInfo ? 'pl-10' : ''
-        }`}>
-          {!isCurrentUser && showAvatar && showUserInfo ? (
-            <Avatar className="h-10 w-10 border-2 border-white dark:border-gray-800 shadow-sm">
-              <AvatarImage src={USERS_SERVICE_URL + getUserAvatar(message.senderId)} />
-              <AvatarFallback className="bg-gradient-to-br from-green-400 to-green-600 text-white">
-                {getUserInitials(message.senderId)}
-              </AvatarFallback>
-            </Avatar>
-          ) : !isCurrentUser && showUserInfo ? (
-            <div className="w-10 h-10 flex-shrink-0"></div>
+        <div className={`flex items-center gap-2 max-w-[80%]`}>
+          {!isCurrentUser && showUserInfo ? (
+            showAvatar ? (
+              <Avatar className="h-10 w-10 border-2 border-white dark:border-gray-800 shadow-sm">
+                <AvatarImage src={USERS_SERVICE_URL + getUserAvatar(message.senderId)} />
+                <AvatarFallback className="bg-gradient-to-br from-green-400 to-green-600 text-white">
+                  {getUserInitials(message.senderId)}
+                </AvatarFallback>
+              </Avatar>
+            ) : (
+              <div className="w-10 h-10 flex-shrink-0 opacity-0"></div>
+            )
           ) : null}
           
           <div>
@@ -440,7 +445,7 @@ export default function ChatMessageList({
             
             <div className="flex items-center mt-1 justify-end">
               {/* Read receipts - show avatars of users who read the message */}
-              {isCurrentUser && readByUsers.length > 0 && (
+              {shouldShowReadReceipts && (
                 <div className="flex -space-x-1 mr-2" title="Read by">
                   {readByUsers.slice(0, 3).map(user => (
                     <Avatar 

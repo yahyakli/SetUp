@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/lib/store';
 import { ChatRoom, Message } from '@/types';
@@ -238,8 +238,8 @@ export default function ChatPage() {
     };
   }, [socket, chatRooms, user?.id]);
 
-  // Add this function to the ChatPage component
-  const refreshChatRooms = () => {
+  // Wrap refreshChatRooms in useCallback to prevent unnecessary re-renders
+  const refreshChatRooms = useCallback(() => {
     if (!socket || !chatRooms.length) return;
     
     console.log('Manually refreshing chat rooms');
@@ -253,7 +253,7 @@ export default function ChatPage() {
         });
       }
     });
-  };
+  }, [socket, chatRooms]);
 
   // Add this useEffect to trigger the refresh when returning to the chat list
   useEffect(() => {
@@ -261,7 +261,7 @@ export default function ChatPage() {
       // When returning to the chat list on mobile, refresh the rooms
       refreshChatRooms();
     }
-  }, [isMobile, showChatList, chatRooms, socket, refreshChatRooms]);
+  }, [isMobile, showChatList, chatRooms, refreshChatRooms]);
 
   // Add this useEffect for socket reconnection
   useEffect(() => {
@@ -331,6 +331,7 @@ export default function ChatPage() {
                   loadMoreMessages(selectedRoom._id, lastMessageId)
                 }
                 hasMoreMessages={currentRoomHasMoreMessages}
+                roomType={selectedRoom.type}
               />
             </div>
 
