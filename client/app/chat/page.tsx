@@ -194,6 +194,8 @@ export default function ChatPage() {
     setShowChatList(true);
     // Remove room ID from URL
     router.push('/chat');
+    // Refresh chat rooms when returning to the list
+    setTimeout(refreshChatRooms, 100);
   };
 
   // Handle sidebar resize
@@ -203,23 +205,84 @@ export default function ChatPage() {
     localStorage.setItem('chatSidebarWidth', width.toString());
   };
 
-  // In the ChatPage component, ensure all users join all their chat rooms
+  // Modify the existing useEffect for joining rooms
   useEffect(() => {
-    if (!socket || !chatRooms.length) return;
+    if (!socket || !chatRooms.length || !user?.id) return;
     
     console.log('Joining all chat rooms');
     
-    // Join all chat rooms to receive updates
-    chatRooms.forEach(room => {
-      socket.emit('join_room', room._id);
-      console.log(`Joined room: ${room._id}`);
-    });
+    // Function to join all rooms
+    const joinAllRooms = () => {
+      chatRooms.forEach(room => {
+        socket.emit('join_room', room._id);
+        console.log(`Joined room: ${room._id}`);
+      });
+    };
+    
+    // Join immediately
+    joinAllRooms();
+    
+    // Also join on reconnection
+    socket.on('connect', joinAllRooms);
     
     return () => {
-      // Leave all rooms on unmount
+      // Clean up
+      socket.off('connect', joinAllRooms);
+      
+      // Only leave the rooms if we're completely unmounting
+      if (window.location.pathname !== '/chat' && !window.location.pathname.startsWith('/chat/')) {
+        chatRooms.forEach(room => {
+          socket.emit('leave_room', room._id);
+        });
+      }
+    };
+  }, [socket, chatRooms, user?.id]);
+
+  // Add this function to the ChatPage component
+  const refreshChatRooms = () => {
+    if (!socket || !chatRooms.length) return;
+    
+    console.log('Manually refreshing chat rooms');
+    
+    // Request last message updates for all rooms
+    chatRooms.forEach(room => {
+      if (room.lastMessage) {
+        socket.emit('update_last_message', {
+          roomId: room._id,
+          message: room.lastMessage
+        });
+      }
+    });
+  };
+
+  // Add this useEffect to trigger the refresh when returning to the chat list
+  useEffect(() => {
+    if (isMobile && showChatList && chatRooms.length > 0) {
+      // When returning to the chat list on mobile, refresh the rooms
+      refreshChatRooms();
+    }
+  }, [isMobile, showChatList, chatRooms, socket, refreshChatRooms]);
+
+  // Add this useEffect for socket reconnection
+  useEffect(() => {
+    if (!socket) return;
+    
+    const handleReconnect = () => {
+      console.log('Socket reconnected - refreshing chat rooms');
+      
+      // Rejoin all rooms
       chatRooms.forEach(room => {
-        socket.emit('leave_room', room._id);
+        socket.emit('join_room', room._id);
       });
+      
+      // Request last message updates
+      refreshChatRooms();
+    };
+    
+    socket.on('connect', handleReconnect);
+    
+    return () => {
+      socket.off('connect', handleReconnect);
     };
   }, [socket, chatRooms]);
 

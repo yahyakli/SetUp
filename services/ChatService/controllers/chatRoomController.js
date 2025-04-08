@@ -265,6 +265,60 @@ const deleteChatRoom = asyncHandler(async (req, res) => {
   res.json({ message: 'Chat room removed' });
 });
 
+// @desc    Get chat rooms by project ID
+// @route   GET /api/chat-rooms/by-project/:projectId/:userId
+// @access  Private
+const getChatRoomsByProject = asyncHandler(async (req, res) => {
+  const projectId = req.params.projectId;
+  const userId = req.params.userId;
+  
+  // First check if a chat room exists for this project
+  const projectChatRoom = await ChatRoom.findOne({
+    projectId: projectId
+  });
+  
+  // Case 1: No chat room exists for this project
+  if (!projectChatRoom) {
+    return res.status(200).json({
+      ok: false, 
+      status: 'NOT_FOUND',
+      message: 'No chat room exists for this project'
+    });
+  }
+  
+  // Case 2: Chat room exists but user is not a participant
+  if (!projectChatRoom.participants.includes(userId)) {
+    return res.status(200).json({
+      ok: false,
+      status: 'NOT_PARTICIPANT',
+      message: 'You are not a participant in this project chat room',
+      chatRoomId: projectChatRoom._id
+    });
+  }
+  
+  // Case 3: Chat room exists and user is a participant
+  // Get the last message for the chat room
+  const lastMessage = await Message.findOne({ 
+    chatRoomId: projectChatRoom._id
+  }).sort({ createdAt: -1 });
+  
+  // Convert to object and add last message
+  const chatRoomObj = projectChatRoom.toObject();
+  chatRoomObj.lastMessage = lastMessage ? {
+    _id: lastMessage._id,
+    content: lastMessage.content,
+    senderId: lastMessage.senderId,
+    createdAt: lastMessage.createdAt,
+    readBy: lastMessage.readBy
+  } : null;
+
+  res.status(200).json({
+    ok: true, 
+    status: 'SUCCESS',
+    chatRoom: chatRoomObj
+  });
+});
+
 export {
   createChatRoom,
   getChatRooms,
@@ -272,5 +326,6 @@ export {
   updateChatRoom,
   addParticipant,
   removeParticipant,
-  deleteChatRoom
+  deleteChatRoom,
+  getChatRoomsByProject
 };

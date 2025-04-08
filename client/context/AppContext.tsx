@@ -172,6 +172,7 @@ export const AppContextProvider = ({ children }: { children: React.ReactNode }) 
     }
   };
 
+
   // Context value
   const contextValue: AppContextType = {
     isLoading,

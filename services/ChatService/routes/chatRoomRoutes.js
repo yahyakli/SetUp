@@ -6,7 +6,8 @@ import {
   updateChatRoom,
   addParticipant,
   removeParticipant,
-  deleteChatRoom
+  deleteChatRoom,
+  getChatRoomsByProject
 } from '../controllers/chatRoomController.js';
 import { protect } from '../middleware/authMiddleware.js';
 
@@ -16,6 +17,8 @@ router.route('/')
   .post(protect, createChatRoom)
   
 router.get('/by-user/:userId', protect, getChatRooms);
+
+router.get('/by-project/:projectId/:userId', protect, getChatRoomsByProject);
 
 router.route('/:id')
   .get(protect, getChatRoomById)

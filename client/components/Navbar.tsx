@@ -77,7 +77,12 @@ export const Navbar = () => {
     }
   };
 
-  const isActive = (path: string) => pathname === path;
+  const isActive = (path: string) => {
+    if (path === '/dashboard') {
+      return pathname === '/dashboard';
+    }
+    return pathname.startsWith(path);
+  };
 
   const getPendingInvitationsCount = () => {
     return invitations.filter(inv => inv.status === 'pending').length;

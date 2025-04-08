@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ChatRoom, User } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -187,6 +187,39 @@ export default function ChatRoomsList({
     }
   };
 
+  useEffect(() => {
+    // This effect ensures that lastMessages from context are properly reflected in the UI
+    if (Object.keys(lastMessages).length > 0) {
+      // Force a re-render when lastMessages change
+      const timer = setTimeout(() => {
+        console.log('Refreshing chat rooms list with latest messages');
+        // This is just to trigger a re-render
+        setSearchQuery(searchQuery);
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [lastMessages]);
+
+  useEffect(() => {
+    // Force refresh when chat rooms change, but avoid infinite loops
+    if (chatRooms.length > 0) {
+      // Use a ref to track which rooms we've already processed
+      const processedRooms = new Set();
+      
+      chatRooms.forEach(room => {
+        if (room.lastMessage && !processedRooms.has(room._id)) {
+          // Only update if the message in context is different or doesn't exist
+          const existingMessage = lastMessages[room._id];
+          if (!existingMessage || existingMessage._id !== room.lastMessage._id) {
+            updateLastMessage(room._id, room.lastMessage);
+          }
+          processedRooms.add(room._id);
+        }
+      });
+    }
+  }, [chatRooms]); // Remove updateLastMessage from dependencies
+
   return (
     <div 
       ref={containerRef}
@@ -196,20 +229,22 @@ export default function ChatRoomsList({
       <div className="p-4 border-b dark:border-gray-800 shrink-0 bg-white dark:bg-gray-800">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold dark:text-white">Messages</h2>
-          <Button 
-            size={isMobile || width < 350 ? "icon" : "sm"}
-            onClick={() => setIsUserModalOpen(true)}
-            className="dark:hover:bg-gray-700"
-          >
-            {isMobile || width < 350 ? (
-              <Plus className="h-4 w-4" />
-            ) : (
-              <>
-                <Plus className="h-4 w-4 mr-2" />
-                New Conversation
-              </>
-            )}
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              size={isMobile || width < 350 ? "icon" : "sm"}
+              onClick={() => setIsUserModalOpen(true)}
+              className="dark:hover:bg-gray-700"
+            >
+              {isMobile || width < 350 ? (
+                <Plus className="h-4 w-4" />
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Conversation
+                </>
+              )}
+            </Button>
+          </div>
         </div>
         
         <div className="relative">

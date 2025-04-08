@@ -24,7 +24,8 @@ import {
   CheckSquare,
   Info,
   Plus,
-  X
+  X,
+  MessageSquare
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
@@ -55,6 +56,7 @@ import { updateProject } from '@/lib/features/ProjectsSlice'
 import RemoveTeamModal from '@/components/RemoveTeamModal'
 import Link from 'next/link'
 import ProjectTasksTab from '@/components/ProjectTasksTab'
+import ProjectChatTab from '@/components/ProjectChatTab'
 
 export default function ProjectPage() {
   const dispatch = useDispatch()
@@ -148,10 +150,10 @@ export default function ProjectPage() {
     <AppLayout>
       <div className="p-6 space-y-6 dark:bg-gray-900 bg-gray-50">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center gap-18">
           <div>
             <h1 className="text-3xl font-bold dark:text-white">{project.name}</h1>
-            <p className="text-muted-foreground">{project.description}</p>
+            <p className="mt-5 text-muted-foreground">{project.description}</p>
           </div>
           <Badge
             variant={
@@ -163,7 +165,7 @@ export default function ProjectPage() {
           </Badge>
         </div>
 
-        {/* Tabs - Updated to use currentTab from URL */}
+        {/* Tabs - Updated to include chat tab */}
         <Tabs value={currentTab} className="space-y-6" onValueChange={handleTabChange}>
           <TabsList>
             <TabsTrigger value="info" className="flex items-center gap-2">
@@ -177,6 +179,10 @@ export default function ProjectPage() {
             <TabsTrigger value="tasks" className="flex items-center gap-2">
               <CheckSquare className="h-4 w-4" />
               Tasks
+            </TabsTrigger>
+            <TabsTrigger value="chat" className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Chat
             </TabsTrigger>
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
@@ -288,6 +294,11 @@ export default function ProjectPage() {
                 <ProjectTasksTab project={project} />
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Chat Tab */}
+          <TabsContent value="chat">
+            <ProjectChatTab project={project} />
           </TabsContent>
 
           {/* Settings Tab */}

@@ -116,6 +116,25 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
   }, [token, user?.id]);
 
+  // Add reconnection logic to your socket context
+  useEffect(() => {
+    if (!socket) return;
+    
+    const handleReconnect = () => {
+      console.log('Socket reconnected');
+      // Emit an event to request latest data
+      socket.emit('request_latest_data');
+    };
+    
+    socket.on('connect', handleReconnect);
+    socket.on('reconnect', handleReconnect);
+    
+    return () => {
+      socket.off('connect', handleReconnect);
+      socket.off('reconnect', handleReconnect);
+    };
+  }, [socket]);
+
   // Send typing status to server
   const sendTypingStatus = (roomId: string, isTyping: boolean) => {
     if (socket && user?.id) {

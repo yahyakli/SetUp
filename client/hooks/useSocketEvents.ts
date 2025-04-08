@@ -1,24 +1,27 @@
 import { useEffect } from 'react';
 import { useSocket } from '../context/SocketContext';
-import { Message, ChatRoom } from '@/types';
+import { Message, ChatRoom, User } from '@/types';
 import { useRouter } from 'next/navigation';
-import axios from 'axios';
-import { USERS_SERVICE_URL } from '@/constants/API_URLS';
+
+// Add this interface at the top of the file, after the imports
+interface ReadReceipt {
+  userId: string;
+  readAt: Date;
+}
 
 export function useSocketEvents({
   userId,
   selectedRoom,
   setMessages,
   setChatRooms,
-  token,
   fetchUserData
 }: {
   userId?: string;
   selectedRoom: ChatRoom | null;
   setMessages: React.Dispatch<React.SetStateAction<Record<string, Message[]>>>;
-  setChatRooms: ((updatedRooms: React.SetStateAction<ChatRoom[]>) => void);
-  token?: string;
-  fetchUserData?: (userId: string) => Promise<any>;
+  setChatRooms: (updatedRooms: React.SetStateAction<ChatRoom[]>) => void;
+  token: string | null;
+  fetchUserData?: (userId: string) => Promise<User>;
 }) {
   const { socket } = useSocket();
   const router = useRouter();
@@ -36,7 +39,7 @@ export function useSocketEvents({
     // Listen for new messages
     const handleNewMessage = (message: Message) => {
       // Update messages for the relevant chat room
-      setMessages(prev => {
+      setMessages((prev: Record<string, Message[]>) => {
         const roomMessages = prev[message.chatRoomId] || [];
         return {
           ...prev,
@@ -45,12 +48,14 @@ export function useSocketEvents({
       });
     };
 
-    // NEW: Listen for last message updates
+    // Listen for last message updates - this is the critical part
     const handleLastMessageUpdated = ({ roomId, message }: { roomId: string, message: Message }) => {
-      // Keep this one for debugging the specific feature
       console.log('🔄 Last message updated event received:', { roomId, message });
       
+      // IMPORTANT: Always update the chat rooms list regardless of which room is selected
+      // This needs to happen even if we're not viewing the room
       updateChatRooms((prev: ChatRoom[]) => {
+        // Find the room that needs updating
         const roomIndex = prev.findIndex(room => room._id === roomId);
         
         if (roomIndex === -1) {
@@ -58,16 +63,37 @@ export function useSocketEvents({
           return prev;
         }
         
+        // Create a copy of the rooms array
         const updatedRooms = [...prev];
+        
+        // Update the last message of the specific room
         updatedRooms[roomIndex] = {
           ...updatedRooms[roomIndex],
           lastMessage: message
         };
         
+        // Move the updated room to the top of the list
         const [updatedRoom] = updatedRooms.splice(roomIndex, 1);
-        const result = [updatedRoom, ...updatedRooms];
-        return result;
+        return [updatedRoom, ...updatedRooms];
       });
+      
+      // Then update the messages for the room if we're viewing it
+      if (selectedRoom?._id === roomId) {
+        setMessages((prev: Record<string, Message[]>) => {
+          const roomMessages = prev[roomId] || [];
+          
+          // Check if the message already exists in the list
+          const messageExists = roomMessages.some((msg: Message) => msg._id === message._id);
+          
+          if (!messageExists) {
+            return {
+              ...prev,
+              [roomId]: [...roomMessages, message]
+            };
+          }
+          return prev;
+        });
+      }
     };
 
     // Listen for messages being read
@@ -79,14 +105,14 @@ export function useSocketEvents({
       if (readerId === userId) return;
 
       // Update read status for messages
-      setMessages(prev => {
+      setMessages((prev: Record<string, Message[]>) => {
         const updatedMessages = { ...prev };
         
         Object.keys(updatedMessages).forEach(roomId => {
-          updatedMessages[roomId] = updatedMessages[roomId].map(msg => {
+          updatedMessages[roomId] = updatedMessages[roomId].map((msg: Message) => {
             if (messageIds.includes(msg._id)) {
               // Check if this user has already read the message
-              const hasRead = msg.readBy?.some(read => 
+              const hasRead = msg.readBy?.some((read: ReadReceipt) => 
                 typeof read === 'object' && read.userId === readerId
               );
               
@@ -174,7 +200,7 @@ export function useSocketEvents({
     socket.on('new_chat_room', handleNewChatRoom);
     socket.on('update_chat_room', handleUpdateChatRoom);
     socket.on('chat_room_deleted', handleChatRoomDeleted);
-    socket.on('last_message_updated', handleLastMessageUpdated); // NEW
+    socket.on('last_message_updated', handleLastMessageUpdated);
 
     // Clean up listeners on unmount
     return () => {
@@ -183,7 +209,7 @@ export function useSocketEvents({
       socket.off('new_chat_room', handleNewChatRoom);
       socket.off('update_chat_room', handleUpdateChatRoom);
       socket.off('chat_room_deleted', handleChatRoomDeleted);
-      socket.off('last_message_updated', handleLastMessageUpdated); // NEW
+      socket.off('last_message_updated', handleLastMessageUpdated);
     };
   }, [socket, userId, selectedRoom, router, setMessages, setChatRooms, fetchUserData]);
 
@@ -199,4 +225,24 @@ export function useSocketEvents({
       socket.emit('leave_room', roomId);
     };
   }, [socket, selectedRoom?._id]);
+
+  // Add this at the end of the useEffect for socket events
+  useEffect(() => {
+    if (!socket || !userId) return;
+    
+    // Join all rooms that the user is part of
+    const joinAllRooms = () => {
+      console.log('Rejoining all chat rooms after connection');
+      if (selectedRoom) {
+        socket.emit('join_room', selectedRoom._id);
+      }
+    };
+    
+    // Listen for reconnection events
+    socket.on('connect', joinAllRooms);
+    
+    return () => {
+      socket.off('connect', joinAllRooms);
+    };
+  }, [socket, userId, selectedRoom]);
 } 
