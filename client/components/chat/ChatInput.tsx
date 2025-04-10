@@ -146,43 +146,49 @@ const ChatInput = memo(({ selectedRoom }: {
 
   // Improve the typing indicator logic
   useEffect(() => {
-    // Debounce typing indicator to prevent rapid state changes
-    const handleTypingStatus = debounce(() => {
-      if (newMessage.trim().length > 0) {
-        // Start typing if not already typing
-        if (!isTypingRef.current) {
-          console.log('Starting typing');
-          isTypingRef.current = true;
-          sendTypingStatus(selectedRoom._id, true);
-        }
-        
-        // Set timeout to stop typing after inactivity
-        if (typingTimeoutRef.current) {
-          clearTimeout(typingTimeoutRef.current);
-        }
-        
-        typingTimeoutRef.current = setTimeout(() => {
-          if (isTypingRef.current) {
-            console.log('Stopping typing due to inactivity');
-            isTypingRef.current = false;
-            sendTypingStatus(selectedRoom._id, false);
-          }
-        }, 3000);
-      } else {
-        // If message is empty, stop typing immediately
-        if (isTypingRef.current) {
-          console.log('Stopping typing due to empty message');
-          isTypingRef.current = false;
-          sendTypingStatus(selectedRoom._id, false);
-        }
+    // Function to immediately log and set typing status
+    const setTypingStatus = (isTyping: boolean) => {
+      if (isTyping && !isTypingRef.current) {
+        console.log('Starting typing');
+        isTypingRef.current = true;
+        sendTypingStatus(selectedRoom._id, true);
+      } else if (!isTyping && isTypingRef.current) {
+        console.log('Stopping typing due to empty message');
+        isTypingRef.current = false;
+        sendTypingStatus(selectedRoom._id, false);
       }
-    }, 300); // Debounce for 300ms
+    };
+
+    // Debounce only the stop typing event
+    const debouncedStopTyping = debounce(() => {
+      if (isTypingRef.current) {
+        console.log('Stopping typing due to inactivity');
+        isTypingRef.current = false;
+        sendTypingStatus(selectedRoom._id, false);
+      }
+    }, 3000);
     
-    handleTypingStatus();
+    if (newMessage.trim().length > 0) {
+      // Start typing immediately (no debounce)
+      setTypingStatus(true);
+      
+      // Set timeout to stop typing after inactivity
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      
+      typingTimeoutRef.current = setTimeout(() => {
+        debouncedStopTyping();
+      }, 3000);
+    } else {
+      // If message is empty, stop typing immediately
+      setTypingStatus(false);
+      debouncedStopTyping.cancel();
+    }
     
     // Cleanup on unmount
     return () => {
-      handleTypingStatus.cancel();
+      debouncedStopTyping.cancel();
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = null;
