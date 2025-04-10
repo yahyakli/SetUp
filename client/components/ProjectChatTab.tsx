@@ -105,12 +105,14 @@ export default function ProjectChatTab({ project }: ProjectChatTabProps) {
           }
         }
       );
-      
-      setChatRoom(response.data);
-      toast.success('Project chat room created successfully');
-      
-      // Navigate to the chat room
-      router.push(`/chat/${response.data._id}`);
+
+      if (response.status === 201) {
+        setChatRoom(response.data);
+        toast.success('Project chat room created successfully');
+        setTimeout(() => {
+          router.push(`/chat/${response.data._id}`);
+        }, 1000);
+      }
     } catch (error) {
       console.error('Error creating project chat room:', error);
       toast.error('Failed to create project chat room');

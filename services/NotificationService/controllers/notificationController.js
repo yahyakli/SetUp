@@ -30,11 +30,6 @@ class NotificationController {
     try {
       const userId = req.params.userId;
 
-      // Check if the requesting user matches the userId or has admin privileges
-      if (req.user.id !== userId && req.user.role !== 'admin') {
-        return res.status(403).json({ message: 'Forbidden: Cannot access other users\' notifications' });
-      }
-
       const notifications = await Notification.find({ userId })
         .sort({ createdAt: -1 })
         .limit(parseInt(req.query.limit) || 50);
@@ -50,11 +45,6 @@ class NotificationController {
   async getUnreadCount(req, res) {
     try {
       const userId = req.params.userId;
-
-      // Check permissions
-      if (req.user.id !== userId && req.user.role !== 'admin') {
-        return res.status(403).json({ message: 'Forbidden: Cannot access other users\' notifications' });
-      }
 
       const count = await Notification.countDocuments({
         userId,
@@ -80,7 +70,7 @@ class NotificationController {
       }
 
       // Check permissions
-      if (req.user.id !== notification.userId && req.user.role !== 'admin') {
+      if (req.params.userId !== notification.userId) {
         return res.status(403).json({ message: 'Forbidden: Cannot modify other users\' notifications' });
       }
 
@@ -98,11 +88,6 @@ class NotificationController {
   async markAllAsRead(req, res) {
     try {
       const userId = req.params.userId;
-
-      // Check permissions
-      if (req.user.id !== userId && req.user.role !== 'admin') {
-        return res.status(403).json({ message: 'Forbidden: Cannot modify other users\' notifications' });
-      }
 
       await Notification.updateMany(
         { userId, read: false },
@@ -133,10 +118,6 @@ class NotificationController {
         return res.status(404).json({ message: 'Notification not found' });
       }
 
-      // Check permissions
-      if (req.user.id !== notification.userId && req.user.role !== 'admin') {
-        return res.status(403).json({ message: 'Forbidden: Cannot modify other users\' notifications' });
-      }
 
       // Update fields
       Object.keys(value).forEach(key => {
@@ -163,11 +144,6 @@ class NotificationController {
 
       if (!notification) {
         return res.status(404).json({ message: 'Notification not found' });
-      }
-
-      // Check permissions
-      if (req.user.id !== notification.userId && req.user.role !== 'admin') {
-        return res.status(403).json({ message: 'Forbidden: Cannot delete other users\' notifications' });
       }
 
       await notification.remove();

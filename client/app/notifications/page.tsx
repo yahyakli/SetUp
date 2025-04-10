@@ -14,33 +14,27 @@ import { toast } from "sonner";
 import axios from "axios";
 import { PROJECT_SERVICE_URL } from "@/constants/API_URLS";
 
-// This would typically come from your API
-const mockNotifications = [
-  {
-    id: 1,
-    title: "New Project Created",
-    description: "Project 'Marketing Campaign' has been created",
-    time: "2 hours ago",
-    read: false,
-  },
-  {
-    id: 2,
-    title: "Task Assigned",
-    description: "You have been assigned to 'Design Homepage'",
-    time: "5 hours ago",
-    read: true,
-  },
-];
+
 
 export default function NotificationsPage() {
   const dispatch = useDispatch();
   const { invitations } = useSelector((state: RootState) => state.Invitations);
+  const { notifications } = useSelector((state: RootState) => state.notification)
   const { token } = useSelector((state: RootState) => state.user);
   const [activeTab, setActiveTab] = useState("notifications");
-  const [isLoading, setIsLoading] = useState<{ [key: string]: boolean }>({});
+  const [acceptLoading, setAcceptLoading] = useState<{ [key: string]: boolean }>({});
+  const [declineLoading, setDeclineLoading] = useState<{ [key: string]: boolean }>({});
+
+  const formatDate = (dateString: Date) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  }
 
   const handleAcceptInvitation = async (Invitoken: string) => {
-    setIsLoading(prev => ({ ...prev, [Invitoken]: true }));
+    setAcceptLoading(prev => ({ ...prev, [Invitoken]: true }));
 
     try {
       const res = await axios.post(PROJECT_SERVICE_URL + '/api/invitations/accept', { token: Invitoken }, {
@@ -63,12 +57,12 @@ export default function NotificationsPage() {
         toast.error('Failed to accept invitation');
       }
     } finally {
-      setIsLoading(prev => ({ ...prev, [Invitoken]: false }));
+      setAcceptLoading(prev => ({ ...prev, [Invitoken]: false }));
     }
   };
 
   const handleDeclineInvitation = async (Invitoken: string) => {
-    setIsLoading(prev => ({ ...prev, [Invitoken]: true }));
+    setDeclineLoading(prev => ({ ...prev, [Invitoken]: true }));
 
     try {
       const res = await axios.post(PROJECT_SERVICE_URL + '/api/invitations/decline', { token: Invitoken }, {
@@ -88,7 +82,7 @@ export default function NotificationsPage() {
         toast.error('Failed to decline invitation');
       }
     } finally {
-      setIsLoading(prev => ({ ...prev, [Invitoken]: false }));
+      setDeclineLoading(prev => ({ ...prev, [Invitoken]: false }));
     }
   };
 
@@ -131,18 +125,18 @@ export default function NotificationsPage() {
 
             <TabsContent value="notifications">
               <div className="space-y-4">
-                {mockNotifications.map((notification) => (
-                  <Card key={notification.id} className={notification.read ? 'opacity-80' : ''}>
+                {notifications.length > 0 ? notifications.map((notification) => (
+                  <Card key={notification._id} className={notification.read ? 'opacity-80' : ''}>
                     <CardHeader className="flex flex-row items-center gap-4">
                       <Bell className={`h-5 w-5 ${notification.read ? 'text-muted-foreground' : 'text-blue-500'}`} />
                       <div className="space-y-1">
                         <CardTitle className="text-base">{notification.title}</CardTitle>
-                        <CardDescription>{notification.description}</CardDescription>
+                        <CardDescription>{notification.content}</CardDescription>
                       </div>
                     </CardHeader>
                     <CardContent>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">{notification.time}</span>
+                        <span className="text-sm text-muted-foreground">{formatDate(notification.createdAt)}</span>
                         {!notification.read && (
                           <Button variant="ghost" size="sm">
                             Mark as read
@@ -151,13 +145,21 @@ export default function NotificationsPage() {
                       </div>
                     </CardContent>
                   </Card>
-                ))}
+                )) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <Bell className="h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No notifications yet</h3>
+                    <p className="text-muted-foreground max-w-sm">
+                      When you receive notifications about your projects and teams, they&#39;ll appear here.
+                    </p>
+                  </div>
+                )}
               </div>
             </TabsContent>
 
             <TabsContent value="invitations">
               <div className="space-y-4">
-                {invitations.map((invitation) => (
+                {invitations.length > 0 ? invitations.map((invitation) => (
                   <Card key={invitation.id}>
                     <CardHeader className="flex flex-row items-center gap-4">
                       <UserPlus className="h-5 w-5 text-blue-500" />
@@ -186,23 +188,31 @@ export default function NotificationsPage() {
                             variant="default"
                             size="sm"
                             onClick={() => handleAcceptInvitation(invitation.token)}
-                            disabled={isLoading[invitation.token]}
+                            disabled={acceptLoading[invitation.token] || declineLoading[invitation.token]}
                           >
-                            {isLoading[invitation.token] ? 'Accepting...' : 'Accept'}
+                            {acceptLoading[invitation.token] ? 'Accepting...' : 'Accept'}
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleDeclineInvitation(invitation.token)}
-                            disabled={isLoading[invitation.token]}
+                            disabled={acceptLoading[invitation.token] || declineLoading[invitation.token]}
                           >
-                            {isLoading[invitation.token] ? 'Declining...' : 'Decline'}
+                            {declineLoading[invitation.token] ? 'Declining...' : 'Decline'}
                           </Button>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
-                ))}
+                )) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <UserPlus className="h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No pending invitations</h3>
+                    <p className="text-muted-foreground max-w-sm">
+                      When you receive invitations to join teams, they&#39;ll appear here for you to accept or decline.
+                    </p>
+                  </div>
+                )}
               </div>
             </TabsContent>
           </Tabs>

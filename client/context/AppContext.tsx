@@ -1,7 +1,8 @@
 "use client";
 
-import { PROJECT_SERVICE_URL, TASK_SERVICE_URL } from "@/constants/API_URLS";
+import { NOTIFICATION_SERVICE_URL, PROJECT_SERVICE_URL, TASK_SERVICE_URL } from "@/constants/API_URLS";
 import { initInvitations } from "@/lib/features/InvitationsSlice";
+import { initNotifications } from "@/lib/features/NotificationsSlice";
 import { initProjects, setProjectLoading } from "@/lib/features/ProjectsSlice";
 import { initTasks } from "@/lib/features/TasksSlice";
 import { initTeams, setTeamsLoading } from "@/lib/features/TeamsSlice";
@@ -94,6 +95,7 @@ export const AppContextProvider = ({ children }: { children: React.ReactNode }) 
       initProjectFunc();
       getUserInvitations();
       getUserTasks();
+      getUserNotifications();
     }
   }, [user?.id, token]);
 
@@ -172,6 +174,21 @@ export const AppContextProvider = ({ children }: { children: React.ReactNode }) 
     }
   };
 
+  const getUserNotifications = async () => {
+    try {
+      const res = await axios.get(NOTIFICATION_SERVICE_URL + "/api/notifications/user/" + user?.id, {
+        headers: {
+          Authorization: "Bearer "+ token
+        }
+      });
+
+      if (res.status === 200){
+        dispatch(initNotifications(res.data));
+      }
+    }catch(err){
+      console.log(err);
+    }
+  }
 
   // Context value
   const contextValue: AppContextType = {

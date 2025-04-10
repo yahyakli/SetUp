@@ -4,6 +4,7 @@ import TeamsReducer from './features/TeamsSlice';
 import ProjectReducer from './features/ProjectsSlice';
 import InvitationsReducer from './features/InvitationsSlice';
 import TaskReducer from './features/TasksSlice';
+import NotificationReducer from './features/NotificationsSlice';
 export const store = configureStore({
   reducer: {
     user: userReducer,
@@ -11,6 +12,7 @@ export const store = configureStore({
     projects: ProjectReducer,
     Invitations: InvitationsReducer,
     tasks: TaskReducer,
+    notification: NotificationReducer
   },
 });
 

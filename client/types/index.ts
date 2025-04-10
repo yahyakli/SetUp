@@ -155,3 +155,13 @@ export interface MessageAttachment {
   uploadedBy: string;
   createdAt: Date;
 }
+
+export interface Notification {
+  _id: string;
+  title: string;
+  userId: string;
+  type: string;
+  content: string;
+  read: boolean;
+  createdAt: Date;
+}

@@ -205,7 +205,10 @@ export default function ChatPage() {
     localStorage.setItem('chatSidebarWidth', width.toString());
   };
 
-  // Modify the existing useEffect for joining rooms
+  // Add this ref at the component level
+  const joinedRef = useRef(false);
+
+  // Modify the useEffect for joining rooms
   useEffect(() => {
     if (!socket || !chatRooms.length || !user?.id) return;
     
@@ -213,10 +216,15 @@ export default function ChatPage() {
     
     // Function to join all rooms
     const joinAllRooms = () => {
-      chatRooms.forEach(room => {
-        socket.emit('join_room', room._id);
-        console.log(`Joined room: ${room._id}`);
-      });
+      // Only join if we haven't already joined in this render cycle
+      if (!joinedRef.current) {
+        joinedRef.current = true;
+        
+        chatRooms.forEach(room => {
+          socket.emit('join_room', room._id);
+          console.log(`Joined room: ${room._id}`);
+        });
+      }
     };
     
     // Join immediately
@@ -228,6 +236,7 @@ export default function ChatPage() {
     return () => {
       // Clean up
       socket.off('connect', joinAllRooms);
+      joinedRef.current = false;
       
       // Only leave the rooms if we're completely unmounting
       if (window.location.pathname !== '/chat' && !window.location.pathname.startsWith('/chat/')) {
@@ -238,21 +247,33 @@ export default function ChatPage() {
     };
   }, [socket, chatRooms, user?.id]);
 
-  // Wrap refreshChatRooms in useCallback to prevent unnecessary re-renders
+  // Add debouncing to refreshChatRooms
+  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const refreshChatRooms = useCallback(() => {
     if (!socket || !chatRooms.length) return;
     
-    console.log('Manually refreshing chat rooms');
+    // Clear any existing timeout
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
+    }
     
-    // Request last message updates for all rooms
-    chatRooms.forEach(room => {
-      if (room.lastMessage) {
-        socket.emit('update_last_message', {
-          roomId: room._id,
-          message: room.lastMessage
-        });
-      }
-    });
+    // Set a new timeout to debounce the refresh
+    refreshTimeoutRef.current = setTimeout(() => {
+      console.log('Manually refreshing chat rooms');
+      
+      // Request last message updates for all rooms
+      chatRooms.forEach(room => {
+        if (room.lastMessage) {
+          socket.emit('update_last_message', {
+            roomId: room._id,
+            message: room.lastMessage
+          });
+        }
+      });
+      
+      refreshTimeoutRef.current = null;
+    }, 1000); // Debounce for 1 second
   }, [socket, chatRooms]);
 
   // Add this useEffect to trigger the refresh when returning to the chat list
