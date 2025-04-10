@@ -35,26 +35,26 @@ export default function ChatHeader({ room, onBackClick, currentUserId, users }: 
 
   return (
     <div className="p-4 border-b dark:border-gray-800 flex items-center gap-3 shrink-0">
-      <Button 
-        variant="ghost" 
-        size="icon" 
-        className="md:hidden" 
+      <Button
+        variant="ghost"
+        size="icon"
+        className="md:hidden"
         onClick={onBackClick}
       >
         <ArrowLeft className="h-5 w-5" />
       </Button>
-      
+
       {room.type === 'direct' ? (
         <Avatar>
           <AvatarImage src={getUserAvatar(room.participants.find(id => id !== currentUserId) || '') ? USERS_SERVICE_URL + getUserAvatar(room.participants.find(id => id !== currentUserId) || '') : ''} />
           <AvatarFallback className='bg-gradient-to-br from-blue-400 to-blue-600 text-white'>{getUserInitials(room.participants.find(id => id !== currentUserId) || '')}</AvatarFallback>
         </Avatar>
       ) : (
-        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-          <span className="text-sm font-medium">{room.name.substring(0, 2).toUpperCase()}</span>
-        </div>
+        <Avatar>
+          <AvatarFallback className='bg-gradient-to-br from-blue-400 to-blue-600 text-white'>{room.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+        </Avatar>
       )}
-      
+
       <div>
         <h3 className="font-medium dark:text-white">{room.name}</h3>
         {room.type === 'project' ? (

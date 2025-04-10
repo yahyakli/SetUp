@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useSocket } from '../context/SocketContext';
 import { Message, ChatRoom, User } from '@/types';
 import { useRouter } from 'next/navigation';
@@ -32,6 +32,74 @@ export function useSocketEvents({
     setChatRooms(updater as React.SetStateAction<ChatRoom[]>);
   };
 
+  // Debounced update function to reduce frequent state changes
+  const debouncedUpdateChatRooms = useCallback(
+    (() => {
+      let timeout: NodeJS.Timeout | null = null;
+      let pendingUpdates: Record<string, { roomId: string, message: Message }> = {};
+      
+      return (roomId: string, message: Message) => {
+        // Store the latest update for this room
+        pendingUpdates[roomId] = { roomId, message };
+        
+        // Clear existing timeout
+        if (timeout) clearTimeout(timeout);
+        
+        // Set new timeout to process all pending updates
+        timeout = setTimeout(() => {
+          // Process all pending updates at once
+          updateChatRooms((prev: ChatRoom[]) => {
+            const updatedRooms = [...prev];
+            const movedRooms: ChatRoom[] = [];
+            
+            // Apply all pending updates
+            Object.values(pendingUpdates).forEach(({ roomId, message }) => {
+              const roomIndex = updatedRooms.findIndex(room => room._id === roomId);
+              if (roomIndex !== -1) {
+                const room = updatedRooms[roomIndex];
+                const updatedRoom = {
+                  ...room,
+                  lastMessage: message
+                };
+                
+                // Remove from current position
+                updatedRooms.splice(roomIndex, 1);
+                // Add to moved rooms
+                movedRooms.push(updatedRoom);
+              }
+            });
+            
+            // Reset pending updates
+            pendingUpdates = {};
+            
+            // Return updated rooms with moved rooms at the top
+            return [...movedRooms, ...updatedRooms];
+          });
+          
+          // Update messages for the selected room if needed
+          if (selectedRoom && pendingUpdates[selectedRoom._id]) {
+            const { roomId, message } = pendingUpdates[selectedRoom._id];
+            setMessages((prev: Record<string, Message[]>) => {
+              const roomMessages = prev[roomId] || [];
+              const messageExists = roomMessages.some((msg: Message) => msg._id === message._id);
+              
+              if (!messageExists) {
+                return {
+                  ...prev,
+                  [roomId]: [...roomMessages, message]
+                };
+              }
+              return prev;
+            });
+          }
+          
+          timeout = null;
+        }, 100); // 100ms debounce time
+      };
+    })(),
+    [updateChatRooms, setMessages, selectedRoom]
+  );
+
   // Set up socket event listeners
   useEffect(() => {
     if (!socket || !userId) return;
@@ -50,50 +118,7 @@ export function useSocketEvents({
 
     // Listen for last message updates - this is the critical part
     const handleLastMessageUpdated = ({ roomId, message }: { roomId: string, message: Message }) => {
-      console.log('🔄 Last message updated event received:', { roomId, message });
-      
-      // IMPORTANT: Always update the chat rooms list regardless of which room is selected
-      // This needs to happen even if we're not viewing the room
-      updateChatRooms((prev: ChatRoom[]) => {
-        // Find the room that needs updating
-        const roomIndex = prev.findIndex(room => room._id === roomId);
-        
-        if (roomIndex === -1) {
-          console.warn('Could not find room with ID:', roomId);
-          return prev;
-        }
-        
-        // Create a copy of the rooms array
-        const updatedRooms = [...prev];
-        
-        // Update the last message of the specific room
-        updatedRooms[roomIndex] = {
-          ...updatedRooms[roomIndex],
-          lastMessage: message
-        };
-        
-        // Move the updated room to the top of the list
-        const [updatedRoom] = updatedRooms.splice(roomIndex, 1);
-        return [updatedRoom, ...updatedRooms];
-      });
-      
-      // Then update the messages for the room if we're viewing it
-      if (selectedRoom?._id === roomId) {
-        setMessages((prev: Record<string, Message[]>) => {
-          const roomMessages = prev[roomId] || [];
-          
-          // Check if the message already exists in the list
-          const messageExists = roomMessages.some((msg: Message) => msg._id === message._id);
-          
-          if (!messageExists) {
-            return {
-              ...prev,
-              [roomId]: [...roomMessages, message]
-            };
-          }
-          return prev;
-        });
-      }
+      debouncedUpdateChatRooms(roomId, message);
     };
 
     // Listen for messages being read
@@ -211,7 +236,7 @@ export function useSocketEvents({
       socket.off('chat_room_deleted', handleChatRoomDeleted);
       socket.off('last_message_updated', handleLastMessageUpdated);
     };
-  }, [socket, userId, selectedRoom, router, setMessages, setChatRooms, fetchUserData]);
+  }, [socket, userId, selectedRoom, router, setMessages, setChatRooms, fetchUserData, debouncedUpdateChatRooms]);
 
   // Join the selected chat room's socket channel
   useEffect(() => {

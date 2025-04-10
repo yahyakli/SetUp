@@ -58,16 +58,11 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     socketInitializedRef.current = true;
     
     globalSocket.on('connect', () => {
-      console.log('Socket connected successfully');
       setIsConnected(true);
       
       if (globalSocket) {
         globalSocket.emit('authenticate', user.id);
       }
-    });
-
-    globalSocket.on('last_message_updated', (data) => {
-      console.log('🔄 Received last_message_updated event:', data);
     });
 
     globalSocket.on('disconnect', () => {
@@ -121,7 +116,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (!socket) return;
     
     const handleReconnect = () => {
-      console.log('Socket reconnected');
+      // Remove console.log for performance
       // Emit an event to request latest data
       socket.emit('request_latest_data');
     };
@@ -172,7 +167,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       
       return true;
     }
-    console.log('Could not join room - socket not connected');
+    // Remove console.log for performance
     return false;
   };
   

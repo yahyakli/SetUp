@@ -38,7 +38,7 @@ export default function ChatPage() {
   const [isMobile, setIsMobile] = useState(false);
 
   // Use the custom hook to get chat rooms and users
-  const { chatRooms, users, loading, updateChatRooms, fetchUserData } = useChatRooms();
+  const { chatRooms, users, loading, updateChatRooms, fetchUserData, fetchChatRooms } = useChatRooms();
   const apiCallsInProgressRef = useRef<Record<string, boolean>>({});
 
   // Use the custom hook for socket events
@@ -306,6 +306,14 @@ export default function ChatPage() {
       socket.off('connect', handleReconnect);
     };
   }, [socket, chatRooms]);
+
+  // This effect runs when the component mounts
+  useEffect(() => {
+    // Force refresh chat rooms when the component mounts
+    if (fetchChatRooms) {
+      fetchChatRooms(true); // Pass true to force a refresh
+    }
+  }, []); // Empty dependency array means this runs once when mounted
 
   return (
     <div className="h-full flex flex-col md:flex-row">
