@@ -3,12 +3,12 @@
 import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Paperclip, Send, Smile, Image as ImageIcon, X } from 'lucide-react';
+import { Paperclip, Send, Smile, Image as ImageIcon, X, CornerUpLeft } from 'lucide-react';
 import EmojiPicker, { Theme } from 'emoji-picker-react';
 import { useTheme } from 'next-themes';
 import { CHAT_SERVICE_URL } from '@/constants/API_URLS';
 import axios, { AxiosError } from 'axios';
-import { ChatRoom } from '@/types';
+import { ChatRoom, Message, User } from '@/types/index';
 import { RootState } from '@/lib/store';
 import { useSelector } from 'react-redux';
 import Image from 'next/image';
@@ -22,6 +22,21 @@ interface FileAttachment {
   file: File;
   type: AttachmentType;
   preview?: string;
+}
+
+interface MessageInput {
+  chatRoomId: string;
+  content: string;
+  contentType: string;
+  user_id: string;
+  parentMessageId?: string;
+}
+
+interface ChatInputProps {
+  selectedRoom: ChatRoom;
+  replyingTo: Message | null;
+  onCancelReply: () => void;
+  users: Record<string, User>;
 }
 
 // Memoize the emoji picker component to prevent re-renders
@@ -102,9 +117,12 @@ const AttachmentPreview = memo(({
 AttachmentPreview.displayName = 'AttachmentPreview';
 
 // Wrap the main component with React.memo
-const ChatInput = memo(({ selectedRoom }: {
-  selectedRoom: ChatRoom;
-}) => {
+const ChatInput = memo(({ 
+  selectedRoom, 
+  replyingTo, 
+  onCancelReply,
+  users
+}: ChatInputProps) => {
   const { user, token } = useSelector((state: RootState) => state.user);
   const [newMessage, setNewMessage] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -244,6 +262,19 @@ const ChatInput = memo(({ selectedRoom }: {
     try {
       let response;
       
+      // Create message data with parent message ID if replying
+      const messageData: MessageInput = {
+        chatRoomId: selectedRoom._id,
+        content: newMessage,
+        contentType: 'text',
+        user_id: user?.id
+      };
+      
+      // Add parent message ID if replying to a message
+      if (replyingTo) {
+        messageData.parentMessageId = replyingTo._id;
+      }
+      
       if (attachment) {
         // Send message with attachment
         const formData = new FormData();
@@ -255,6 +286,11 @@ const ChatInput = memo(({ selectedRoom }: {
         // If there's also text content, include it
         if (newMessage.trim()) {
           formData.append('content', newMessage);
+        }
+        
+        // Add parent message ID if replying to a message
+        if (replyingTo) {
+          formData.append('parentMessageId', replyingTo._id);
         }
         
         try {
@@ -276,12 +312,7 @@ const ChatInput = memo(({ selectedRoom }: {
         // Send text-only message
         response = await axios.post(
           `${CHAT_SERVICE_URL}/api/messages`,
-          {
-            chatRoomId: selectedRoom._id,
-            content: newMessage,
-            contentType: 'text',
-            user_id: user?.id
-          },
+          messageData,
           {
             headers: {
               'Authorization': `Bearer ${token}`
@@ -293,6 +324,11 @@ const ChatInput = memo(({ selectedRoom }: {
       // Reset state
       setNewMessage('');
       setAttachment(null);
+      
+      // Clear reply if we were replying
+      if (replyingTo) {
+        onCancelReply();
+      }
       
       // Only emit update_last_message, let the server handle broadcasting
       if (socket && response?.data) {
@@ -403,6 +439,35 @@ const ChatInput = memo(({ selectedRoom }: {
 
   return (
     <div className="p-4 border-t dark:border-gray-800 shrink-0 bg-white dark:bg-gray-800">
+      {/* Reply preview if we're replying to a message */}
+      {replyingTo && (
+        <div className="mb-3 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg relative">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="absolute top-1 right-1 h-6 w-6 rounded-full bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500"
+            onClick={onCancelReply}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+          
+          <div className="flex items-center">
+            <CornerUpLeft className="h-4 w-4 mr-2 text-blue-500" />
+            <div className="flex-1">
+              <p className="text-sm font-medium">
+                Replying to {replyingTo.senderId === user?.id ? 'yourself' : 
+                  (users[replyingTo.senderId] ? 
+                    `${users[replyingTo.senderId].firstName} ${users[replyingTo.senderId].lastName}` : 
+                    'Unknown User')}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                {replyingTo.content}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <AttachmentPreview 
         attachment={attachment} 
         onRemove={handleRemoveAttachment}

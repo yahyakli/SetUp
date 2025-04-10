@@ -30,6 +30,7 @@ export const validateMessage = (data) => {
       then: Joi.string().required().min(1),
       otherwise: Joi.optional()
     }),
+    parentMessageId: Joi.string().allow(null),
     contentType: Joi.string().valid('text', 'file').required(),
     user_id: Joi.string().required(),
     attachment: Joi.object({

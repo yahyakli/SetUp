@@ -126,6 +126,7 @@ export interface Message {
   chatRoomId: string;
   senderId: string;
   content: string;
+  parentMessageId?: string
   contentType: 'text' | 'file';
   readBy: ReadBy[];
   attachments?: MessageAttachment[];

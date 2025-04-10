@@ -39,6 +39,7 @@ const createMessage = asyncHandler(async (req, res) => {
     chatRoomId: req.body.chatRoomId,
     senderId: req.body.user_id,
     content: req.body.content,
+    parentMessageId: req.body.parentMessageId,
     contentType: req.body.contentType,
     readBy: [{ userId: req.body.user_id, readAt: new Date() }]
   });

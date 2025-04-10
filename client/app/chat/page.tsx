@@ -36,6 +36,7 @@ export default function ChatPage() {
     return 320;
   });
   const [isMobile, setIsMobile] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
 
   // Use the custom hook to get chat rooms and users
   const { chatRooms, users, loading, updateChatRooms, fetchUserData, fetchChatRooms } = useChatRooms();
@@ -315,6 +316,16 @@ export default function ChatPage() {
     }
   }, []); // Empty dependency array means this runs once when mounted
 
+  // Handler for selecting a message to reply to
+  const handleReplyMessage = (message: Message) => {
+    setReplyingTo(message);
+  };
+  
+  // Handler for canceling a reply
+  const handleCancelReply = () => {
+    setReplyingTo(null);
+  };
+
   return (
     <div className="h-full flex flex-col md:flex-row">
       {/* Chat Rooms List - Hidden on mobile when a chat is selected */}
@@ -361,10 +372,16 @@ export default function ChatPage() {
                 }
                 hasMoreMessages={currentRoomHasMoreMessages}
                 roomType={selectedRoom.type}
+                onReplyMessage={handleReplyMessage}
               />
             </div>
 
-            <ChatInput selectedRoom={selectedRoom} />
+            <ChatInput 
+              selectedRoom={selectedRoom} 
+              replyingTo={replyingTo}
+              onCancelReply={handleCancelReply}
+              users={users}
+            />
           </>
         ) : (
           <EmptyState />

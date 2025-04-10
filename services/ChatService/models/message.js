@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { isNull } from 'util';
 
 const readBySchema = new mongoose.Schema({
   userId: {
@@ -20,6 +21,10 @@ const messageSchema = new mongoose.Schema({
   senderId: {
     type: String, // User ID from auth service
     required: true
+  },
+  parentMessageId: {
+    type: String,
+    default: null
   },
   content: {
     type: String,

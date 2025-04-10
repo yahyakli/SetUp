@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect, useMemo, useCallback, useState } from 'react';
-import { Message, User } from '@/types';
+import { Message, User } from '@/types/index';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
 import { CHAT_SERVICE_URL, USERS_SERVICE_URL } from '@/constants/API_URLS';
@@ -12,6 +12,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '@/lib/store';
 import { debounce } from 'lodash';
 import { useAppContext } from '@/context/AppContext';
+import { CornerUpLeft } from 'lucide-react';
 
 interface ChatMessageListProps {
   messages: Message[];
@@ -22,8 +23,8 @@ interface ChatMessageListProps {
   onLoadMoreMessages?: (lastMessageId: string) => void;
   hasMoreMessages?: boolean;
   roomType: 'direct' | 'group' | 'project';
+  onReplyMessage?: (message: Message) => void;
 }
-
 
 export default function ChatMessageList({ 
   messages, 
@@ -33,7 +34,8 @@ export default function ChatMessageList({
   roomId,
   onLoadMoreMessages,
   hasMoreMessages = false,
-  roomType
+  roomType,
+  onReplyMessage
 }: ChatMessageListProps) {
   const { token } = useSelector((state: RootState) => state.user);
   const { markLastMessageAsRead, updateLastMessage, lastMessages } = useAppContext();
@@ -46,6 +48,7 @@ export default function ChatMessageList({
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   
   // Single useEffect for scroll position management and auto-scroll
   useEffect(() => {
@@ -355,6 +358,38 @@ export default function ChatMessageList({
     }
   }, [roomId, currentUserId, token, messages, markLastMessageAsRead]);
 
+  // Function to handle double click on a message
+  const handleMessageDoubleClick = (message: Message) => {
+    if (onReplyMessage) {
+      onReplyMessage(message);
+    }
+  };
+
+  // Helper function to find a message by ID
+  const findMessageById = useCallback((messageId: string | undefined) => {
+    if (!messageId) return null;
+    return messages.find(message => message._id === messageId);
+  }, [messages]);
+
+  // Function to handle clicking on a parent message reference
+  const handleParentMessageClick = useCallback((parentMessageId: string) => {
+    // Find the parent message element
+    const parentElement = messageRefs.current[parentMessageId];
+    
+    if (parentElement) {
+      // Scroll to the parent message
+      parentElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      
+      // Highlight the message
+      setHighlightedMessageId(parentMessageId);
+      
+      // Remove highlight after 3 seconds
+      setTimeout(() => {
+        setHighlightedMessageId(null);
+      }, 3000);
+    }
+  }, []);
+
   // Check if there are no messages
   if (!Array.isArray(messages) || messages.length === 0) {
     return (
@@ -393,16 +428,26 @@ export default function ChatMessageList({
     // Determine if read receipts should be shown
     const shouldShowReadReceipts = isCurrentUser && readByUsers.length > 0 && roomType !== 'project';
     
+    // Check if this message is a reply to another message
+    const isReply = !!message.parentMessageId;
+    const parentMessage = isReply ? findMessageById(message.parentMessageId) : null;
+    
+    // Check if this message is currently highlighted
+    const isHighlighted = message._id === highlightedMessageId;
+    
     return (
       <div 
         key={message._id} 
-        className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
+        className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} ${
+          isHighlighted ? 'animate-pulse' : ''
+        }`}
         data-message-id={message._id}
         ref={el => {
           messageRefs.current[message._id] = el;
         }}
+        onDoubleClick={() => handleMessageDoubleClick(message)}
       >
-        <div className={`flex items-center gap-2 max-w-[80%]`}>
+        <div className="flex items-center gap-2 max-w-[80%]">
           {!isCurrentUser && showUserInfo ? (
             showAvatar ? (
               <Avatar className="h-10 w-10 border-2 border-white dark:border-gray-800 shadow-sm">
@@ -423,10 +468,34 @@ export default function ChatMessageList({
               </p>
             )}
             
+            {/* Render parent message reference if this is a reply */}
+            {isReply && parentMessage && (
+              <div 
+                className={`flex items-center mb-1 px-3 py-2 rounded-lg text-xs ${
+                  isCurrentUser 
+                    ? 'bg-blue-400 text-white' 
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                } cursor-pointer hover:opacity-80 transition-opacity`}
+                onClick={() => handleParentMessageClick(parentMessage._id)}
+              >
+                <CornerUpLeft className="w-3 h-3 mr-2 shrink-0" />
+                <div className="overflow-hidden">
+                  <p className="font-medium">
+                    {parentMessage.senderId === currentUserId 
+                      ? 'You:' 
+                      : getUserName(parentMessage.senderId)}
+                  </p>
+                  <p className="truncate">{parentMessage.content}</p>
+                </div>
+              </div>
+            )}
+            
             <div className={`rounded-2xl p-3 ${
               isCurrentUser 
                 ? 'bg-blue-500 text-white rounded-tr-none' 
                 : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-tl-none shadow-sm'
+            } ${
+              isHighlighted ? 'ring-2 ring-blue-400 dark:ring-blue-600' : ''
             }`}>
               <p>{message.content}</p>
               
