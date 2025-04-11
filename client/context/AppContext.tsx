@@ -8,7 +8,7 @@ import { initTasks } from "@/lib/features/TasksSlice";
 import { initTeams, setTeamsLoading } from "@/lib/features/TeamsSlice";
 import { fetchUser } from "@/lib/features/userSlice";
 import { AppDispatch, RootState } from "@/lib/store";
-import { Message, Team } from "@/types";
+import { Message, Team } from "@/types/index";
 import axios from "axios";
 import { createContext, useContext, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -143,7 +143,7 @@ export const AppContextProvider = ({ children }: { children: React.ReactNode }) 
   // Get user invitations
   const getUserInvitations = async () => {
     try {
-      const res = await axios.get(PROJECT_SERVICE_URL + "/api/invitations/user/" + user?.id, {
+      const res = await axios.get(NOTIFICATION_SERVICE_URL + "/api/invitations/user/" + user?.id, {
         headers: {
           Authorization: "Bearer " + token
         }
@@ -202,7 +202,7 @@ export const AppContextProvider = ({ children }: { children: React.ReactNode }) 
 
   return (
     <AppContext.Provider value={contextValue}>
-      {children}
+        {children}
     </AppContext.Provider>
   );
 };

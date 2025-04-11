@@ -12,7 +12,8 @@ import { deleteInvi } from "@/lib/features/InvitationsSlice";
 import { addTeam } from "@/lib/features/TeamsSlice";
 import { toast } from "sonner";
 import axios from "axios";
-import { PROJECT_SERVICE_URL } from "@/constants/API_URLS";
+import { NOTIFICATION_SERVICE_URL } from "@/constants/API_URLS";
+import { Invitation } from "@/types/index";
 
 
 
@@ -33,20 +34,20 @@ export default function NotificationsPage() {
     });
   }
 
-  const handleAcceptInvitation = async (Invitoken: string) => {
-    setAcceptLoading(prev => ({ ...prev, [Invitoken]: true }));
+  const handleAcceptInvitation = async (Invitation: Invitation) => {
+    setAcceptLoading(prev => ({ ...prev, [Invitation._id]: true }));
 
     try {
-      const res = await axios.post(PROJECT_SERVICE_URL + '/api/invitations/accept', { token: Invitoken }, {
+      const res = await axios.put(NOTIFICATION_SERVICE_URL + '/api/invitations/' + Invitation._id, { status: 'accepted' }, {
         headers: {
           Authorization: "Bearer " + token
         }
       });
 
       // Update Redux store
-      dispatch(deleteInvi(Invitoken));
-      if (res.data.team) {
-        dispatch(addTeam(res.data.team));
+      dispatch(deleteInvi(Invitation._id));
+      if (res.data) {
+        dispatch(addTeam(res.data));
       }
 
       toast.success('Invitation accepted successfully');
@@ -57,22 +58,22 @@ export default function NotificationsPage() {
         toast.error('Failed to accept invitation');
       }
     } finally {
-      setAcceptLoading(prev => ({ ...prev, [Invitoken]: false }));
+      setAcceptLoading(prev => ({ ...prev, [Invitation._id]: false }));
     }
   };
 
-  const handleDeclineInvitation = async (Invitoken: string) => {
-    setDeclineLoading(prev => ({ ...prev, [Invitoken]: true }));
+  const handleDeclineInvitation = async (invitation: Invitation) => {
+    setDeclineLoading(prev => ({ ...prev, [invitation._id]: true }));
 
     try {
-      const res = await axios.post(PROJECT_SERVICE_URL + '/api/invitations/decline', { token: Invitoken }, {
+      const res = await axios.put(NOTIFICATION_SERVICE_URL + '/api/invitations/' + invitation._id, { status: 'declined' }, {
         headers: {
           Authorization: "Bearer " + token
         }
       });
 
       if (res.status === 200) {
-        dispatch(deleteInvi(Invitoken));
+        dispatch(deleteInvi(invitation._id));
         toast.success('Invitation declined successfully');
       }
     } catch (error) {
@@ -82,7 +83,7 @@ export default function NotificationsPage() {
         toast.error('Failed to decline invitation');
       }
     } finally {
-      setDeclineLoading(prev => ({ ...prev, [Invitoken]: false }));
+      setDeclineLoading(prev => ({ ...prev, [invitation._id]: false }));
     }
   };
 
@@ -160,12 +161,12 @@ export default function NotificationsPage() {
             <TabsContent value="invitations">
               <div className="space-y-4">
                 {invitations.length > 0 ? invitations.map((invitation) => (
-                  <Card key={invitation.id}>
+                  <Card key={invitation._id}>
                     <CardHeader className="flex flex-row items-center gap-4">
                       <UserPlus className="h-5 w-5 text-blue-500" />
                       <div className="space-y-1">
                         <CardTitle className="text-base">
-                          Invitation to join {invitation.team.name}
+                          Invitation to join {invitation.teamName}
                         </CardTitle>
                         <CardDescription>
                           as {invitation.role}
@@ -187,18 +188,18 @@ export default function NotificationsPage() {
                           <Button
                             variant="default"
                             size="sm"
-                            onClick={() => handleAcceptInvitation(invitation.token)}
-                            disabled={acceptLoading[invitation.token] || declineLoading[invitation.token]}
+                            onClick={() => handleAcceptInvitation(invitation)}
+                            disabled={acceptLoading[invitation._id] || declineLoading[invitation._id]}
                           >
-                            {acceptLoading[invitation.token] ? 'Accepting...' : 'Accept'}
+                            {acceptLoading[invitation._id] ? 'Accepting...' : 'Accept'}
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDeclineInvitation(invitation.token)}
-                            disabled={acceptLoading[invitation.token] || declineLoading[invitation.token]}
+                            onClick={() => handleDeclineInvitation(invitation)}
+                            disabled={acceptLoading[invitation._id] || declineLoading[invitation._id]}
                           >
-                            {declineLoading[invitation.token] ? 'Declining...' : 'Decline'}
+                            {declineLoading[invitation._id] ? 'Declining...' : 'Decline'}
                           </Button>
                         </div>
                       </div>

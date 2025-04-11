@@ -49,7 +49,10 @@ class TeamMemberController extends Controller
         $teamMember->joined_at = now();
         $teamMember->save();
 
-        return response()->json(['team_member' => $teamMember, 'message' => 'Team member added successfully'], 201);
+        $team = Team::findOrFail($request->team_id);
+        
+
+        return response()->json($team, 201);
     }
 
     /**

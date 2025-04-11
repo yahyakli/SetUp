@@ -18,7 +18,11 @@ const notificationSchema = new mongoose.Schema({
   },
   content: {
     type: String,
-    required: true
+    required: true,
+  },
+  isInvitation: {
+    type: Boolean,
+    default: false,
   },
   read: {
     type: Boolean,

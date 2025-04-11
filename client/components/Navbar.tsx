@@ -24,7 +24,7 @@ import UserAvatar from './UserAvatar';
 import { logout } from '@/lib/features/userSlice';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import CreateTeamDialog from './CreateTeamDialog';
-import { Project, Team, Task } from '@/types';
+import { Project, Team, Task } from '@/types/index';
 
 export const Navbar = () => {
   const { teams } = useSelector((state: RootState) => state.teams);
@@ -57,10 +57,10 @@ export const Navbar = () => {
   useEffect(() => {
     if (tasks.length > 0) {
       // Sort tasks by updated_at in descending order and take the first 6
-      const sortedTasks = [...tasks].sort((a, b) => 
+      const sortedTasks = [...tasks].sort((a, b) =>
         new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
       ).slice(0, 6);
-      
+
       setRecentTasks(sortedTasks);
     }
   }, [tasks]);
@@ -254,7 +254,7 @@ export const Navbar = () => {
               </DropdownMenuItem>
 
               {/* Collapsible Subscription Menu */}
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={(e) => {
                   e.preventDefault();
                   setSubscriptionExpanded(!subscriptionExpanded);
@@ -269,7 +269,7 @@ export const Navbar = () => {
                   <ChevronRight className={`h-4 w-4 transition-transform ${subscriptionExpanded ? 'rotate-90' : ''}`} />
                 </div>
               </DropdownMenuItem>
-              
+
               {subscriptionExpanded && (
                 <>
                   <DropdownMenuItem asChild className="pl-8">
@@ -289,7 +289,7 @@ export const Navbar = () => {
                   </DropdownMenuItem>
                 </>
               )}
-              
+
               <DropdownMenuSeparator />
 
               <DropdownMenuItem onClick={handleLogout} className="focus:text-destructive duration-300">
@@ -322,31 +322,12 @@ export const Navbar = () => {
 
             <div className="h-full overflow-y-auto">
               <Accordion type="single" collapsible className="w-full pt-14">
+
                 {/* Dashboard Accordion */}
-                <AccordionItem value="dashboard" className="border-b">
-                  <AccordionTrigger className={`px-4 ${isActive('/dashboard') ? 'text-foreground' : 'text-muted-foreground'}`}>
+                <AccordionItem value="Dashboard" className="border-b">
+                  <Link href="/dashboard" className={`flex items-center justify-between px-4 py-4 ${isActive('/dashboard') ? 'text-foreground' : 'text-muted-foreground'}`}>
                     Dashboard
-                  </AccordionTrigger>
-                  <AccordionContent className="px-4 pb-4 space-y-2">
-                    <Link
-                      href="/projects/create"
-                      className="block text-sm text-muted-foreground hover:text-foreground"
-                    >
-                      Create New Project
-                    </Link>
-                    <Link
-                      href="/tasks/create"
-                      className="block text-sm text-muted-foreground hover:text-foreground"
-                    >
-                      Create New Task
-                    </Link>
-                    <Link
-                      href="/dashboard"
-                      className="block text-sm font-semibold text-muted-foreground hover:text-foreground"
-                    >
-                      Dashboard Home
-                    </Link>
-                  </AccordionContent>
+                  </Link>
                 </AccordionItem>
 
                 {/* Projects Accordion */}
@@ -379,6 +360,36 @@ export const Navbar = () => {
                   </AccordionContent>
                 </AccordionItem>
 
+                {/* Teams Accordion - Added for mobile */}
+                <AccordionItem value="teams" className="border-b">
+                  <AccordionTrigger className={`px-4 ${isActive('/teams') ? 'text-foreground' : 'text-muted-foreground'}`}>
+                    Teams
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 pb-4 space-y-2">
+                    {recentTeams.map((team) => (
+                      <Link
+                        key={team.id}
+                        href={`/teams/${team.id}`}
+                        className="block text-sm text-muted-foreground hover:text-foreground"
+                      >
+                        {team.name}
+                      </Link>
+                    ))}
+                    <Link
+                      href="/teams"
+                      className="block text-sm font-semibold text-muted-foreground hover:text-foreground"
+                    >
+                      Show All Your Teams
+                    </Link>
+                    <button
+                      onClick={() => setCreateTeamDialogOpen(true)}
+                      className="block text-sm text-muted-foreground hover:text-foreground text-left w-full"
+                    >
+                      Create New Team
+                    </button>
+                  </AccordionContent>
+                </AccordionItem>
+
                 {/* Tasks Accordion */}
                 <AccordionItem value="tasks" className="border-b">
                   <AccordionTrigger className={`px-4 ${isActive('/tasks') ? 'text-foreground' : 'text-muted-foreground'}`}>
@@ -407,7 +418,7 @@ export const Navbar = () => {
                   </AccordionContent>
                 </AccordionItem>
 
-                {/* Chat Link - Replacing Plans Accordion */}
+                {/* Chat Link */}
                 <AccordionItem value="chat" className="border-b">
                   <Link href="/chat" className={`flex items-center justify-between px-4 py-4 ${isActive('/chat') ? 'text-foreground' : 'text-muted-foreground'}`}>
                     Chat
@@ -451,10 +462,10 @@ export const Navbar = () => {
                       <UserCircle className="mr-2 h-4 w-4" />
                       Profile
                     </Link>
-                    
+
                     {/* Collapsible Plans options in mobile menu */}
                     <div className="pt-2 mt-2 border-t">
-                      <button 
+                      <button
                         onClick={() => setSubscriptionExpanded(!subscriptionExpanded)}
                         className="flex items-center justify-between w-full text-sm text-muted-foreground hover:text-foreground mb-2"
                       >
@@ -464,7 +475,7 @@ export const Navbar = () => {
                         </div>
                         <ChevronRight className={`h-4 w-4 transition-transform ${subscriptionExpanded ? 'rotate-90' : ''}`} />
                       </button>
-                      
+
                       {subscriptionExpanded && (
                         <div className="pl-6 space-y-2 mt-2">
                           <Link

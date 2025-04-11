@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { Notification } from "@/types";
+import { Notification } from "@/types/index";
 
 // Define the initial state
 interface NotificationsState {
@@ -22,8 +22,8 @@ const notificationSlice = createSlice({
     setNotificationsLoading: (state, action: PayloadAction<boolean>) => {
       state.notificationLoading = action.payload;
     },
-    addNotification : (state, action: PayloadAction<Notification>) => {
-      state.notifications.push(action.payload);
+    addNotification: (state, action: PayloadAction<Notification>) => {
+      state.notifications.unshift(action.payload);
     },
     initNotifications: (state, action: PayloadAction<Notification[]>) => {
       state.notifications = action.payload;

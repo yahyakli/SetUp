@@ -15,8 +15,8 @@ import { Label } from '@/components/ui/label'
 import { Search, X, Plus, CheckCircle, Loader2 } from 'lucide-react'
 import axios from 'axios'
 import { toast } from 'sonner'
-import { USERS_SERVICE_URL, PROJECT_SERVICE_URL } from '@/constants/API_URLS'
-import { Invitation, User } from '@/types'
+import { USERS_SERVICE_URL, NOTIFICATION_SERVICE_URL } from '@/constants/API_URLS'
+import { Invitation, Team, User } from '@/types/index'
 import UserAvatar from '@/components/UserAvatar'
 import {
   Select,
@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/select"
 
 interface InviteMembersModalProps {
-  teamId: string;
+  team: Team;
   isOpen: boolean;
   onClose: () => void;
   token: string | null;
@@ -47,7 +47,7 @@ const roleOptions = [
 ];
 
 const InviteMembersModal: React.FC<InviteMembersModalProps> = ({
-  teamId,
+  team,
   isOpen,
   onClose,
   token,
@@ -120,7 +120,7 @@ const InviteMembersModal: React.FC<InviteMembersModalProps> = ({
     const fetchPendingInvites = async () => {
       try {
         const response = await axios.get(
-          `${PROJECT_SERVICE_URL}/api/invitations/team/${teamId}`,
+          `${NOTIFICATION_SERVICE_URL}/api/invitations/team/${team.id}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -128,7 +128,7 @@ const InviteMembersModal: React.FC<InviteMembersModalProps> = ({
           }
         );
         // Extract user IDs from pending invitations
-        const pendingUserIds = response.data.map((invite: Invitation) => invite.user_id);
+        const pendingUserIds = response.data.map((invite: Invitation) => invite.userId);
         setPendingInvites(pendingUserIds);
       } catch (error) {
         console.error("Error fetching pending invites:", error);
@@ -138,7 +138,7 @@ const InviteMembersModal: React.FC<InviteMembersModalProps> = ({
     if (isOpen && token) {
       fetchPendingInvites();
     }
-  }, [isOpen, teamId, token]);
+  }, [isOpen, team.id, token]);
 
   const handleSelectUser = (user: User) => {
     if (selectedUsers.some(selected => selected.id === user.id)) {
@@ -162,10 +162,11 @@ const InviteMembersModal: React.FC<InviteMembersModalProps> = ({
     try {
       const promises = selectedUsers.map(user =>
         axios.post(
-          `${PROJECT_SERVICE_URL}/api/teams/add-member`,
+          `${NOTIFICATION_SERVICE_URL}/api/invitations`,
           {
-            team_id: teamId,
-            user_id: user.id,
+            teamId: team.id,
+            teamName: team.name,
+            userId: user.id,
             role: user.role
           },
           {

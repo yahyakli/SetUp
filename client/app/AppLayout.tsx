@@ -5,9 +5,11 @@ import Loader from "@/components/Loader";
 import { Navbar } from "@/components/Navbar";
 import { useAppContext } from "@/context/AppContext";
 import { redirect } from "next/navigation";
+import { useNotificationEvents } from '@/hooks/useNotificationEvents';
 
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const { isLoading, authCheckComplete, isAuthenticated } = useAppContext();
+  useNotificationEvents();
 
   // If we're on server-side or still loading user data, show loader
   if (typeof window === 'undefined' || isLoading || !authCheckComplete) {

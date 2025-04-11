@@ -5,6 +5,7 @@ import cors from 'cors';
 import http from 'http';
 import { Server } from 'socket.io';
 import notificationRoutes from './routes/notificationRoutes.js';
+import invitationRoutes from './routes/invitationRoutes.js';
 import jwt from 'jsonwebtoken';
 
 dotenv.config();
@@ -13,46 +14,56 @@ dotenv.config();
 const app = express();
 const server = http.createServer(app);
 
-// Initialize Socket.io
+// Initialize Socket.io with CORS configuration
 const io = new Server(server, {
   cors: {
     origin: process.env.CORS_ORIGIN || '*',
-    methods: ['GET', 'POST']
-  }
-});
-
-// Socket.io middleware for authentication
-io.use((socket, next) => {
-  const token = socket.handshake.auth.token;
-  
-  if (!token) {
-    return next(new Error('Authentication error: Token missing'));
-  }
-  
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    socket.user = decoded;
-    next();
-  } catch (error) {
-    return next(new Error('Authentication error: Invalid token'));
-  }
+    methods: ['GET', 'POST'],
+    credentials: true
+  },
+  transports: ['websocket', 'polling']
 });
 
 // Socket connection handling
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.user.id);
+  console.log('Client connected:', socket.id);
   
-  // Join a room with userId for targeted notifications
-  socket.join(socket.user.id);
+  // Handle joining notification room
+  socket.on('join', (userId) => {
+    if (userId) {
+      socket.join(userId);
+      console.log(`User ${userId} joined their notification room`);
+      
+      // Send confirmation
+      socket.emit('joined', { status: 'success', room: userId });
+    }
+  });
+  
+  // Handle explicit authentication if needed
+  socket.on('authenticate', (token) => {
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, Buffer.from(process.env.JWT_SECRET, 'base64'));
+        socket.user = decoded;
+        socket.join(decoded.id);
+        console.log('User authenticated:', decoded.id);
+        socket.emit('authenticated', { status: 'success', userId: decoded.id });
+      } catch (error) {
+        console.log('Authentication failed:', error.message);
+        socket.emit('authenticated', { status: 'error', message: 'Invalid token' });
+      }
+    }
+  });
   
   socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.user.id);
+    console.log('Client disconnected:', socket.id);
   });
 });
 
 // Middleware
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*'
+  origin: process.env.CORS_ORIGIN || '*',
+  credentials: true
 }));
 app.use(express.json());
 
@@ -64,6 +75,7 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/invitations', invitationRoutes);
 
 // Error handler
 app.use((err, req, res, next) => {

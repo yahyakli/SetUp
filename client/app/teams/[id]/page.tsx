@@ -36,7 +36,7 @@ import { RootState } from '@/lib/store'
 import axios, { AxiosError } from 'axios'
 import { toast } from 'sonner'
 import { PROJECT_SERVICE_URL, USERS_SERVICE_URL, TASK_SERVICE_URL } from '@/constants/API_URLS'
-import { Team, TeamMember, User } from '@/types'
+import { Team, TeamMember, User } from '@/types/index'
 import UserAvatar from '@/components/UserAvatar'
 import DeleteTeamModal from '@/components/DeleteTeamModal'
 import InviteMembersModal from '@/components/InviteMembersModal'
@@ -470,7 +470,7 @@ export default function Page() {
                   {/* Invite Members Modal */}
                   {team && (
                     <InviteMembersModal
-                      teamId={id as string}
+                      team={team}
                       isOpen={showInviteModal}
                       onClose={() => setShowInviteModal(false)}
                       token={token}

@@ -303,14 +303,11 @@ export class TaskController {
   }
 
   /**
- * Remove assignee from all tasks for a specific user in a project
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
+   * Remove assignee from all tasks for a specific user in a project
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
   static async removeUserTaskAssignments(req, res) {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
     try {
       const { userId, teamId } = req.params;
 
@@ -318,29 +315,24 @@ export class TaskController {
       const tasks = await Task.find({
         assignee_id: userId,
         team_id: teamId
-      }).session(session);
+      });
 
       if (tasks.length === 0) {
-        await session.abortTransaction();
-        session.endSession();
-        return ResponseHandler.error(res, 'No tasks found for this user in the specified project', 200);
+        return ResponseHandler.success(res, 'No tasks found for this user in the specified project', {
+          tasksUpdated: 0
+        });
       }
 
       // Update all tasks to remove the assignee_id
       const updateResult = await Task.updateMany(
         { assignee_id: userId, team_id: teamId },
-        { $unset: { assignee_id: "", team_id: "" } }
-      ).session(session);
-
-      await session.commitTransaction();
-      session.endSession();
+        { $unset: { assignee_id: "" } }
+      );
 
       return ResponseHandler.success(res, `Removed assignee from ${tasks.length} tasks for user in project`, {
         tasksUpdated: tasks.length
       });
     } catch (error) {
-      await session.abortTransaction();
-      session.endSession();
       console.error('Error removing task assignments:', error);
       return ResponseHandler.error(res, 'Failed to remove task assignments', 500);
     }
