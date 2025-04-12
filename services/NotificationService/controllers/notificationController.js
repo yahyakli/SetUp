@@ -58,28 +58,38 @@ class NotificationController {
     }
   }
 
-  // Mark notification as read
+  // Mark notifications as read
   async markAsRead(req, res) {
     try {
-      const notificationId = req.params.id;
-
-      const notification = await Notification.findById(notificationId);
-
-      if (!notification) {
-        return res.status(404).json({ message: 'Notification not found' });
+      const { notificationsIds } = req.body;
+      const userId = req.params.userId;
+      
+      if (!Array.isArray(notificationsIds) || notificationsIds.length === 0) {
+        return res.status(400).json({ message: 'Please provide an array of notification IDs' });
       }
 
-      // Check permissions
-      if (req.params.userId !== notification.userId) {
-        return res.status(403).json({ message: 'Forbidden: Cannot modify other users\' notifications' });
+      // Find all notifications and verify they belong to the user
+      const notifications = await Notification.find({
+        _id: { $in: notificationsIds },
+        userId: userId
+      });
+
+      if (notifications.length === 0) {
+        return res.status(404).json({ message: 'No valid notifications found' });
       }
 
-      notification.read = true;
-      await notification.save();
+      // Update all found notifications to read
+      await Notification.updateMany(
+        { _id: { $in: notificationsIds }, userId: userId },
+        { $set: { read: true } }
+      );
 
-      return res.status(200).json(notification);
+      return res.status(200).json({ 
+        message: `${notifications.length} notifications marked as read`,
+        updatedCount: notifications.length
+      });
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      console.error('Error marking notifications as read:', error);
       return res.status(500).json({ message: 'Server error' });
     }
   }

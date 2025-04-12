@@ -7,6 +7,7 @@ import { Server } from 'socket.io';
 import notificationRoutes from './routes/notificationRoutes.js';
 import invitationRoutes from './routes/invitationRoutes.js';
 import jwt from 'jsonwebtoken';
+import { corsConfig } from './config/index.js';
 
 dotenv.config();
 
@@ -61,10 +62,7 @@ io.on('connection', (socket) => {
 });
 
 // Middleware
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
-  credentials: true
-}));
+app.use(cors(corsConfig));
 app.use(express.json());
 
 // Make io accessible to the routes

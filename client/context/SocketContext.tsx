@@ -5,8 +5,6 @@ import { io, Socket } from 'socket.io-client';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '@/lib/store';
 import { CHAT_SERVICE_URL, NOTIFICATION_SERVICE_URL } from '@/constants/API_URLS';
-import { addNotification } from '@/lib/features/NotificationsSlice';
-import { addInvitation, updateInvitation } from '@/lib/features/InvitationsSlice';
 
 // Create a global socket instance outside of the component
 let globalSocket: Socket | null = null;
@@ -164,29 +162,28 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setIsNotificationConnected(false);
     });
 
-    // Listen for new notifications
-    newNotificationSocket.on('new_notification', (notification) => {
-      dispatch(addNotification(notification));
-    });
-
-    // Listen for new invitations
-    newNotificationSocket.on('new_invitation', (invitation) => {
-      dispatch(addInvitation(invitation));
-    });
-
-    // Listen for invitation updates
-    newNotificationSocket.on('invitation_updated', (invitation) => {
-      dispatch(updateInvitation(invitation));
-    });
+    // Remove these event listeners since they're handled in useNotificationEvents hook
+    // newNotificationSocket.on('new_notification', (notification) => {
+    //   dispatch(addNotification(notification));
+    // });
+    // 
+    // newNotificationSocket.on('new_invitation', (invitation) => {
+    //   dispatch(addInvitation(invitation));
+    // });
+    // 
+    // newNotificationSocket.on('invitation_updated', (invitation) => {
+    //   dispatch(updateInvitation(invitation));
+    // });
     
     return () => {
       if (newNotificationSocket) {
         newNotificationSocket.off('connect');
         newNotificationSocket.off('disconnect');
         newNotificationSocket.off('authenticated');
-        newNotificationSocket.off('new_notification');
-        newNotificationSocket.off('new_invitation');
-        newNotificationSocket.off('invitation_updated');
+        // Also remove these from cleanup
+        // newNotificationSocket.off('new_notification');
+        // newNotificationSocket.off('new_invitation');
+        // newNotificationSocket.off('invitation_updated');
       }
     };
   }, [token, user?.id, dispatch]);

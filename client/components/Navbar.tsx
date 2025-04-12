@@ -31,6 +31,7 @@ export const Navbar = () => {
   const { projects } = useSelector((state: RootState) => state.projects)
   const { user } = useSelector((state: RootState) => state.user);
   const { invitations } = useSelector((state: RootState) => state.Invitations);
+  const { notifications } = useSelector((state: RootState) => state.notification)
   const { tasks } = useSelector((state: RootState) => state.tasks);
   const dispatch = useDispatch();
   const pathname = usePathname();
@@ -84,8 +85,8 @@ export const Navbar = () => {
     return pathname.startsWith(path);
   };
 
-  const getPendingInvitationsCount = () => {
-    return invitations.filter(inv => inv.status === 'pending').length;
+  const getPendingNotificationsAndInvitationsCount = () => {
+    return notifications.filter(not => !not.read ).length + invitations.filter(inv => inv.status === 'pending').length;
   };
 
   return (
@@ -206,9 +207,9 @@ export const Navbar = () => {
             <DropdownMenuTrigger className='cursor-pointer relative' asChild>
               <Button variant="ghost" size="icon" className="rounded-full h-10 w-10">
                 <UserAvatar user={user} />
-                {getPendingInvitationsCount() > 0 && (
+                {getPendingNotificationsAndInvitationsCount() > 0 && (
                   <span className="absolute -top-1 -right-1 bg-black text-white dark:bg-white dark:text-black text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                    {getPendingInvitationsCount()}
+                    {getPendingNotificationsAndInvitationsCount()}
                   </span>
                 )}
               </Button>
@@ -245,9 +246,9 @@ export const Navbar = () => {
                     <Bell className="mr-2 h-4 w-4" />
                     <span>Notifications</span>
                   </div>
-                  {getPendingInvitationsCount() > 0 && (
+                  {getPendingNotificationsAndInvitationsCount() > 0 && (
                     <span className="bg-black text-white dark:bg-white dark:text-black text-xs rounded-full h-5 w-5 flex items-center justify-center ml-2">
-                      {getPendingInvitationsCount()}
+                      {getPendingNotificationsAndInvitationsCount()}
                     </span>
                   )}
                 </Link>
@@ -305,9 +306,9 @@ export const Navbar = () => {
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="md:hidden rounded-full h-10 w-10 relative">
               <Menu className="h-5 w-5" />
-              {getPendingInvitationsCount() > 0 && (
+              {getPendingNotificationsAndInvitationsCount() > 0 && (
                 <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  {getPendingInvitationsCount()}
+                  {getPendingNotificationsAndInvitationsCount()}
                 </span>
               )}
             </Button>
@@ -448,9 +449,9 @@ export const Navbar = () => {
                         <Bell className="mr-2 h-4 w-4" />
                         Notifications
                       </div>
-                      {getPendingInvitationsCount() > 0 && (
+                      {getPendingNotificationsAndInvitationsCount() > 0 && (
                         <span className="bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                          {getPendingInvitationsCount()}
+                          {getPendingNotificationsAndInvitationsCount()}
                         </span>
                       )}
                     </Link>

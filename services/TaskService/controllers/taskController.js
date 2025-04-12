@@ -4,6 +4,7 @@ import Comment from '../models/comment.js';
 import Attachment from '../models/attachment.js';
 import { ResponseHandler } from '../utils/responseHandler.js';
 import { createTaskSchema, updateTaskSchema } from '../utils/validationSchemas.js';
+import axios from 'axios';
 
 /**
  * Task Controller containing CRUD operations and additional utility functions
@@ -24,6 +25,32 @@ export class TaskController {
 
       // Create task
       const task = await Task.create(value);
+      
+      // Send notification to the user - only once
+      const notificationServiceUrl = process.env.NOTIFICATION_SERVICE_URL;
+      if (notificationServiceUrl && task.assignee_id) {
+        try {
+          const authToken = req.headers.authorization;
+          // Add idempotency key to ensure notification is sent only once
+          const idempotencyKey = `task_creation_${task._id}`;
+          
+          await axios.post(`${notificationServiceUrl}/api/notifications`, {
+            title: task.title,
+            userId: task.assignee_id,
+            type: 'task_assigned',
+            content: `New task assigned to you: ${task.title}`,
+            read: false
+          }, {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: authToken,
+              'X-Idempotency-Key': idempotencyKey
+            }
+          });
+        } catch (error) {
+          console.error('Error sending notification:', error);
+        }
+      }
 
       return ResponseHandler.success(res, 'Task created successfully', task, 201);
     } catch (error) {

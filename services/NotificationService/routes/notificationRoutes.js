@@ -15,8 +15,8 @@ router.get('/user/:userId', notificationController.getUserNotifications);
 // Get unread count
 router.get('/user/:userId/unread', notificationController.getUnreadCount);
 
-// Mark notification as read
-router.patch('/:id/read/:userId', notificationController.markAsRead);
+// Mark notifications as read
+router.post('/read/:userId', notificationController.markAsRead);
 
 // Mark all notifications as read
 router.patch('/user/:userId/read-all', notificationController.markAllAsRead);

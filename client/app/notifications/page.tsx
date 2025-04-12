@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bell, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AppLayout from "../AppLayout";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/lib/store";
@@ -14,17 +14,19 @@ import { toast } from "sonner";
 import axios from "axios";
 import { NOTIFICATION_SERVICE_URL } from "@/constants/API_URLS";
 import { Invitation } from "@/types/index";
+import { markAllNotificationsAsRead as markAllAsRead } from "@/lib/features/NotificationsSlice";
 
 
 
 export default function NotificationsPage() {
   const dispatch = useDispatch();
   const { invitations } = useSelector((state: RootState) => state.Invitations);
-  const { notifications } = useSelector((state: RootState) => state.notification)
-  const { token } = useSelector((state: RootState) => state.user);
+  const { notifications } = useSelector((state: RootState) => state.notification);
+  const { token, user } = useSelector((state: RootState) => state.user);
   const [activeTab, setActiveTab] = useState("notifications");
   const [acceptLoading, setAcceptLoading] = useState<{ [key: string]: boolean }>({});
   const [declineLoading, setDeclineLoading] = useState<{ [key: string]: boolean }>({});
+  const [markingAsRead, setMarkingAsRead] = useState(false);
 
   const formatDate = (dateString: Date) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -91,7 +93,47 @@ export default function NotificationsPage() {
     return invitations.filter(inv => inv.status === 'pending').length;
   };
 
-  console.log(activeTab);
+  const getPendingNotificationsCount = () => {
+    return notifications.filter(not => !not.read).length;
+  };
+
+  // Effect to mark all notifications as read when entering the notifications tab
+  useEffect(() => {
+    if (activeTab === "notifications" && notifications.some(n => !n.read)) {
+      markAllNotificationsAsRead();
+    }
+  }, [activeTab]);
+
+  const markAllNotificationsAsRead = async () => {
+    const unreadNotifications = notifications.filter(n => !n.read);
+    if (unreadNotifications.length === 0) return;
+
+    const notificationIds = unreadNotifications.map(n => n._id);
+    setMarkingAsRead(true);
+
+    try {
+      await axios.post(
+        `${NOTIFICATION_SERVICE_URL}/api/notifications/read/${user?.id}`, 
+        { notificationsIds: notificationIds },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      // Update Redux store
+      dispatch(markAllAsRead(notificationIds));
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        toast.error(error.response?.data?.message || 'Failed to mark notifications as read');
+      } else {
+        toast.error('Failed to mark notifications as read');
+      }
+    } finally {
+      setMarkingAsRead(false);
+    }
+  };
 
   return (
     <AppLayout>
@@ -104,10 +146,15 @@ export default function NotificationsPage() {
               <TabsTrigger
                 value="notifications"
                 onClick={() => setActiveTab("notifications")}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 relative"
               >
                 <Bell className="h-4 w-4" />
                 Notifications
+                {getPendingNotificationsCount() > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-black text-white dark:bg-white dark:text-black text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {getPendingNotificationsCount()}
+                  </span>
+                )}
               </TabsTrigger>
               <TabsTrigger
                 value="invitations"
@@ -126,6 +173,9 @@ export default function NotificationsPage() {
 
             <TabsContent value="notifications">
               <div className="space-y-4">
+                {markingAsRead && (
+                  <div className="text-sm text-muted-foreground mb-2">Marking notifications as read...</div>
+                )}
                 {notifications.length > 0 ? notifications.map((notification) => (
                   <Card key={notification._id} className={notification.read ? 'opacity-80' : ''}>
                     <CardHeader className="flex flex-row items-center gap-4">
@@ -138,11 +188,6 @@ export default function NotificationsPage() {
                     <CardContent>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-muted-foreground">{formatDate(notification.createdAt)}</span>
-                        {!notification.read && (
-                          <Button variant="ghost" size="sm">
-                            Mark as read
-                          </Button>
-                        )}
                       </div>
                     </CardContent>
                   </Card>
