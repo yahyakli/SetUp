@@ -14,6 +14,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class JwtService {
@@ -43,12 +44,23 @@ public class JwtService {
     public String generateToken(
             Map<String, Object> extraClaims,
             UserDetails userDetails,
-            boolean rememberMe
-    ) {
+            boolean rememberMe) {
         long expiration = rememberMe ? weekExpiration : dayExpiration;
+
+        // Create a new map that includes all existing extraClaims
+        Map<String, Object> claims = new HashMap<>(extraClaims);
+
+        // Add roles to claims if not already present
+        if (!claims.containsKey("roles")) {
+            String roles = userDetails.getAuthorities().stream()
+                    .map(authority -> authority.getAuthority())
+                    .collect(Collectors.joining(","));
+            claims.put("roles", roles);
+        }
+
         return Jwts
                 .builder()
-                .setClaims(extraClaims)
+                .setClaims(claims)
                 .setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + expiration))
