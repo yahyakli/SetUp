@@ -45,7 +45,7 @@ public class InvoiceService {
 
     public void createInvoiceForSubscription(Subscription subscription) {
         Invoice invoice = new Invoice();
-        invoice.setUserId(subscription.getUserId().toString());
+        invoice.setUserId(subscription.getUserId());
         invoice.setSubscription(subscription);
         invoice.setAmount(subscription.getPlan().getPrice());
         invoice.setStatus(InvoiceStatus.UNPAID);
@@ -85,5 +85,9 @@ public class InvoiceService {
                 invoiceRepository.save(invoice);
             }
         }
+    }
+
+    public void generateRecurringInvoices(){
+
     }
 }
