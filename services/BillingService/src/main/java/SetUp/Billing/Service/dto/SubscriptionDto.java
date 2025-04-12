@@ -1,32 +1,38 @@
 package SetUp.Billing.Service.dto;
 
-import SetUp.Billing.Service.model.SubscriptionStatus;
+import SetUp.Billing.Service.model.Subscription;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.Date;
+import java.time.LocalDate;
 
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class SubscriptionDto {
-    private String id;
-
-    @NotNull(message = "User ID is required")
+    
+    private Integer id;
+    
     private String userId;
-
+    
     @NotNull(message = "Plan ID is required")
-    private String planId;
-
+    private Integer planId;
+    
     private PlanDto plan;
-
-    private SubscriptionStatus status;
-
-    @NotNull(message = "Start date is required")
-    private Date startDate;
-
-    @NotNull(message = "End date is required")
-    private Date endDate;
-}
+    
+    private Subscription.SubscriptionStatus status;
+    
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate startDate;
+    
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate endDate;
+    
+    @NotNull(message = "Auto-renew setting is required")
+    private Boolean autoRenew;
+} 

@@ -1,41 +1,39 @@
 package SetUp.Billing.Service.service;
 
+import SetUp.Billing.Service.dto.PlanDto;
 import SetUp.Billing.Service.dto.SubscriptionDto;
 import SetUp.Billing.Service.exception.ResourceNotFoundException;
-import SetUp.Billing.Service.model.BillingCycle;
 import SetUp.Billing.Service.model.Plan;
 import SetUp.Billing.Service.model.Subscription;
-import SetUp.Billing.Service.model.SubscriptionStatus;
 import SetUp.Billing.Service.repository.PlanRepository;
 import SetUp.Billing.Service.repository.SubscriptionRepository;
-import org.modelmapper.ModelMapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Calendar;
-import java.util.Date;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class SubscriptionService {
 
     private final SubscriptionRepository subscriptionRepository;
     private final PlanRepository planRepository;
-    private final ModelMapper modelMapper;
+    private final PlanService planService;
     private final InvoiceService invoiceService;
-
-    public SubscriptionService(SubscriptionRepository subscriptionRepository, PlanRepository planRepository,
-                               ModelMapper modelMapper, InvoiceService invoiceService) {
-        this.subscriptionRepository = subscriptionRepository;
-        this.planRepository = planRepository;
-        this.modelMapper = modelMapper;
-        this.invoiceService = invoiceService;
-    }
 
     public List<SubscriptionDto> getAllSubscriptions() {
         return subscriptionRepository.findAll().stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
+    }
+
+    public SubscriptionDto getSubscriptionById(Integer id) {
+        Subscription subscription = subscriptionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Subscription not found with id: " + id));
+        return convertToDto(subscription);
     }
 
     public List<SubscriptionDto> getSubscriptionsByUserId(String userId) {
@@ -44,83 +42,131 @@ public class SubscriptionService {
                 .collect(Collectors.toList());
     }
 
-    public SubscriptionDto getSubscriptionById(String id) {
-        Subscription subscription = subscriptionRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Subscription not found with id: " + id));
+    public SubscriptionDto getActiveSubscriptionByUserId(String userId) {
+        Subscription subscription = subscriptionRepository.findByUserIdAndStatus(userId, Subscription.SubscriptionStatus.ACTIVE)
+                .orElseThrow(() -> new ResourceNotFoundException("No active subscription found for user: " + userId));
         return convertToDto(subscription);
     }
 
-    public SubscriptionDto createSubscription(SubscriptionDto subscriptionDto) {
+    @Transactional
+    public SubscriptionDto createSubscription(SubscriptionDto subscriptionDto, String userId) {
         Plan plan = planRepository.findById(subscriptionDto.getPlanId())
                 .orElseThrow(() -> new ResourceNotFoundException("Plan not found with id: " + subscriptionDto.getPlanId()));
-
-        Subscription subscription = new Subscription();
-        subscription.setUserId(subscriptionDto.getUserId());
-        subscription.setPlan(plan);
-        subscription.setStatus(SubscriptionStatus.ACTIVE);
-        subscription.setStartDate(subscriptionDto.getStartDate() != null ? subscriptionDto.getStartDate() : new Date());
-
-        // Calculate end date based on billing cycle
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTime(subscription.getStartDate());
-        if (plan.getBillingCycle() == BillingCycle.MONTHLY) {
-            calendar.add(Calendar.MONTH, 1);
-        } else if (plan.getBillingCycle() == BillingCycle.ANNUALLY) {
-            calendar.add(Calendar.YEAR, 1);
+        
+        LocalDate startDate = subscriptionDto.getStartDate() != null ? 
+                subscriptionDto.getStartDate() : LocalDate.now();
+        
+        LocalDate endDate;
+        if (plan.getBillingCycle() == Plan.BillingCycle.MONTHLY) {
+            endDate = startDate.plusMonths(1);
+        } else {
+            endDate = startDate.plusYears(1);
         }
-        subscription.setEndDate(calendar.getTime());
-
+        
+        Subscription subscription = Subscription.builder()
+                .userId(userId)
+                .plan(plan)
+                .status(Subscription.SubscriptionStatus.ACTIVE)
+                .startDate(startDate)
+                .endDate(endDate)
+                .autoRenew(subscriptionDto.getAutoRenew())
+                .build();
+        
         Subscription savedSubscription = subscriptionRepository.save(subscription);
-
-        // Create initial invoice for the subscription
+        
+        // Create initial invoice
         invoiceService.createInvoiceForSubscription(savedSubscription);
-
+        
         return convertToDto(savedSubscription);
     }
 
-    public SubscriptionDto updateSubscription(String id, SubscriptionDto subscriptionDto) {
-        Subscription subscription = subscriptionRepository.findById(id)
+    @Transactional
+    public SubscriptionDto updateSubscription(Integer id, SubscriptionDto subscriptionDto) {
+        Subscription existingSubscription = subscriptionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Subscription not found with id: " + id));
-
-        if (subscriptionDto.getPlanId() != null &&
-                !subscription.getPlan().getId().equals(subscriptionDto.getPlanId())) {
-            Plan plan = planRepository.findById(subscriptionDto.getPlanId())
+        
+        if (subscriptionDto.getPlanId() != null && 
+                !existingSubscription.getPlan().getId().equals(subscriptionDto.getPlanId())) {
+            Plan newPlan = planRepository.findById(subscriptionDto.getPlanId())
                     .orElseThrow(() -> new ResourceNotFoundException("Plan not found with id: " + subscriptionDto.getPlanId()));
-            subscription.setPlan(plan);
+            existingSubscription.setPlan(newPlan);
         }
-
+        
         if (subscriptionDto.getStatus() != null) {
-            subscription.setStatus(subscriptionDto.getStatus());
+            existingSubscription.setStatus(subscriptionDto.getStatus());
         }
-
+        
         if (subscriptionDto.getStartDate() != null) {
-            subscription.setStartDate(subscriptionDto.getStartDate());
+            existingSubscription.setStartDate(subscriptionDto.getStartDate());
         }
-
+        
         if (subscriptionDto.getEndDate() != null) {
-            subscription.setEndDate(subscriptionDto.getEndDate());
+            existingSubscription.setEndDate(subscriptionDto.getEndDate());
         }
-
-        Subscription updatedSubscription = subscriptionRepository.save(subscription);
+        
+        if (subscriptionDto.getAutoRenew() != null) {
+            existingSubscription.setAutoRenew(subscriptionDto.getAutoRenew());
+        }
+        
+        Subscription updatedSubscription = subscriptionRepository.save(existingSubscription);
         return convertToDto(updatedSubscription);
     }
 
-    public SubscriptionDto cancelSubscription(String id) {
+    @Transactional
+    public SubscriptionDto cancelSubscription(Integer id) {
         Subscription subscription = subscriptionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Subscription not found with id: " + id));
+        
+        subscription.setStatus(Subscription.SubscriptionStatus.CANCELED);
+        subscription.setAutoRenew(false);
+        
+        Subscription canceledSubscription = subscriptionRepository.save(subscription);
+        return convertToDto(canceledSubscription);
+    }
 
-        subscription.setStatus(SubscriptionStatus.CANCELED);
-        Subscription updatedSubscription = subscriptionRepository.save(subscription);
-
-        // Cancel any unpaid invoices
-        invoiceService.cancelUnpaidInvoicesForSubscription(id);
-
-        return convertToDto(updatedSubscription);
+    @Transactional
+    public void processRenewals() {
+        LocalDate today = LocalDate.now();
+        List<Subscription> expiringSubscriptions = subscriptionRepository.findByEndDateBefore(today.plusDays(1));
+        
+        for (Subscription subscription : expiringSubscriptions) {
+            if (subscription.getStatus() == Subscription.SubscriptionStatus.ACTIVE && 
+                    subscription.getAutoRenew()) {
+                
+                LocalDate newEndDate;
+                if (subscription.getPlan().getBillingCycle() == Plan.BillingCycle.MONTHLY) {
+                    newEndDate = subscription.getEndDate().plusMonths(1);
+                } else {
+                    newEndDate = subscription.getEndDate().plusYears(1);
+                }
+                
+                subscription.setEndDate(newEndDate);
+                subscriptionRepository.save(subscription);
+                
+                // Create new invoice for the renewal
+                invoiceService.createInvoiceForSubscription(subscription);
+            } else if (subscription.getStatus() == Subscription.SubscriptionStatus.ACTIVE && 
+                    !subscription.getAutoRenew() && 
+                    subscription.getEndDate().isBefore(today)) {
+                
+                subscription.setStatus(Subscription.SubscriptionStatus.PAST_DUE);
+                subscriptionRepository.save(subscription);
+            }
+        }
     }
 
     private SubscriptionDto convertToDto(Subscription subscription) {
-        SubscriptionDto dto = modelMapper.map(subscription, SubscriptionDto.class);
-        dto.setPlanId(subscription.getPlan().getId());
-        return dto;
+        PlanDto planDto = planService.getPlanById(subscription.getPlan().getId());
+        
+        return SubscriptionDto.builder()
+                .id(subscription.getId())
+                .userId(subscription.getUserId())
+                .planId(subscription.getPlan().getId())
+                .plan(planDto)
+                .status(subscription.getStatus())
+                .startDate(subscription.getStartDate())
+                .endDate(subscription.getEndDate())
+                .autoRenew(subscription.getAutoRenew())
+                .build();
     }
-}
+} 

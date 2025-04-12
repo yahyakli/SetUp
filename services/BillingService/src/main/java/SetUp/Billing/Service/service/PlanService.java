@@ -4,56 +4,86 @@ import SetUp.Billing.Service.dto.PlanDto;
 import SetUp.Billing.Service.exception.ResourceNotFoundException;
 import SetUp.Billing.Service.model.Plan;
 import SetUp.Billing.Service.repository.PlanRepository;
-import org.modelmapper.ModelMapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class PlanService {
 
     private final PlanRepository planRepository;
-    private final ModelMapper modelMapper;
-
-    public PlanService(PlanRepository planRepository, ModelMapper modelMapper) {
-        this.planRepository = planRepository;
-        this.modelMapper = modelMapper;
-    }
 
     public List<PlanDto> getAllPlans() {
         return planRepository.findAll().stream()
-                .map(plan -> modelMapper.map(plan, PlanDto.class))
+                .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
 
-    public PlanDto getPlanById(String id) {
+    public PlanDto getPlanById(Integer id) {
         Plan plan = planRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Plan not found with id: " + id));
-        return modelMapper.map(plan, PlanDto.class);
+        return convertToDto(plan);
     }
 
+    public List<PlanDto> getPlansByBillingCycle(Plan.BillingCycle billingCycle) {
+        return planRepository.findByBillingCycle(billingCycle).stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
     public PlanDto createPlan(PlanDto planDto) {
-        Plan plan = modelMapper.map(planDto, Plan.class);
+        Plan plan = convertToEntity(planDto);
         Plan savedPlan = planRepository.save(plan);
-        return modelMapper.map(savedPlan, PlanDto.class);
+        return convertToDto(savedPlan);
     }
 
-    public PlanDto updatePlan(String id, PlanDto planDto) {
-        if (!planRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Plan not found with id: " + id);
-        }
-
-        Plan plan = modelMapper.map(planDto, Plan.class);
-        plan.setId(id);
-        Plan updatedPlan = planRepository.save(plan);
-        return modelMapper.map(updatedPlan, PlanDto.class);
+    @Transactional
+    public PlanDto updatePlan(Integer id, PlanDto planDto) {
+        Plan existingPlan = planRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Plan not found with id: " + id));
+        
+        existingPlan.setName(planDto.getName());
+        existingPlan.setDescription(planDto.getDescription());
+        existingPlan.setPrice(planDto.getPrice());
+        existingPlan.setBillingCycle(planDto.getBillingCycle());
+        existingPlan.setFeatures(planDto.getFeatures());
+        
+        Plan updatedPlan = planRepository.save(existingPlan);
+        return convertToDto(updatedPlan);
     }
 
-    public void deletePlan(String id) {
+    @Transactional
+    public void deletePlan(Integer id) {
         if (!planRepository.existsById(id)) {
             throw new ResourceNotFoundException("Plan not found with id: " + id);
         }
         planRepository.deleteById(id);
     }
-}
+
+    private PlanDto convertToDto(Plan plan) {
+        return PlanDto.builder()
+                .id(plan.getId())
+                .name(plan.getName())
+                .description(plan.getDescription())
+                .price(plan.getPrice())
+                .billingCycle(plan.getBillingCycle())
+                .features(plan.getFeatures())
+                .build();
+    }
+
+    private Plan convertToEntity(PlanDto planDto) {
+        return Plan.builder()
+                .id(planDto.getId())
+                .name(planDto.getName())
+                .description(planDto.getDescription())
+                .price(planDto.getPrice())
+                .billingCycle(planDto.getBillingCycle())
+                .features(planDto.getFeatures())
+                .build();
+    }
+} 

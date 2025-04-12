@@ -1,97 +1,103 @@
 package SetUp.Billing.Service.controller;
 
-import SetUp.Billing.Service.dto.ApiResponse;
 import SetUp.Billing.Service.dto.SubscriptionDto;
-import SetUp.Billing.Service.model.UserDetails;
-import SetUp.Billing.Service.security.CurrentUser;
+import SetUp.Billing.Service.security.JwtTokenProvider;
 import SetUp.Billing.Service.service.SubscriptionService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/subscriptions")
+@RequiredArgsConstructor
 public class SubscriptionController {
 
     private final SubscriptionService subscriptionService;
-    private final CurrentUser currentUser;
-
-    public SubscriptionController(SubscriptionService subscriptionService, CurrentUser currentUser) {
-        this.subscriptionService = subscriptionService;
-        this.currentUser = currentUser;
-    }
+    private final JwtTokenProvider jwtTokenProvider;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<SubscriptionDto>>> getAllSubscriptions() {
-        if (currentUser.hasRole("ADMIN")) {
-            List<SubscriptionDto> subscriptions = subscriptionService.getAllSubscriptions();
-            return ResponseEntity.ok(ApiResponse.success("Subscriptions retrieved successfully", subscriptions));
-        } else {
-            UserDetails user = currentUser.getCurrentUser();
-            List<SubscriptionDto> subscriptions = subscriptionService.getSubscriptionsByUserId(user.getUserId());
-            return ResponseEntity.ok(ApiResponse.success("Subscriptions retrieved successfully", subscriptions));
-        }
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<SubscriptionDto>> getAllSubscriptions() {
+        return ResponseEntity.ok(subscriptionService.getAllSubscriptions());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<SubscriptionDto>> getSubscriptionById(@PathVariable String id) {
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    public ResponseEntity<SubscriptionDto> getSubscriptionById(@PathVariable Integer id) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userId = authentication.getName();
+        
         SubscriptionDto subscription = subscriptionService.getSubscriptionById(id);
-
-        // Check if the user has permission to view this subscription
-        if (!currentUser.hasRole("ADMIN") &&
-                !subscription.getUserId().equals(currentUser.getCurrentUserId())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(ApiResponse.error("You do not have permission to view this subscription"));
+        
+        // Check if the user is requesting their own subscription or is an admin
+        if (!subscription.getUserId().equals(userId) && !authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
+        
+        return ResponseEntity.ok(subscription);
+    }
 
-        return ResponseEntity.ok(ApiResponse.success("Subscription retrieved successfully", subscription));
+    @GetMapping("/user")
+    public ResponseEntity<List<SubscriptionDto>> getCurrentUserSubscriptions() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userId = authentication.getName();
+        return ResponseEntity.ok(subscriptionService.getSubscriptionsByUserId(userId));
+    }
+
+    @GetMapping("/user/active")
+    public ResponseEntity<SubscriptionDto> getCurrentUserActiveSubscription() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userId = authentication.getName();
+        return ResponseEntity.ok(subscriptionService.getActiveSubscriptionByUserId(userId));
+    }
+
+    @GetMapping("/user/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<SubscriptionDto>> getUserSubscriptions(@PathVariable String userId) {
+        return ResponseEntity.ok(subscriptionService.getSubscriptionsByUserId(userId));
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<SubscriptionDto>> createSubscription(@Valid @RequestBody SubscriptionDto subscriptionDto) {
-        // Ensure regular users can only create subscriptions for themselves
-        if (!currentUser.hasRole("ADMIN") &&
-                !subscriptionDto.getUserId().equals(currentUser.getCurrentUserId())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(ApiResponse.error("You can only create subscriptions for yourself"));
-        }
-
-        SubscriptionDto createdSubscription = subscriptionService.createSubscription(subscriptionDto);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Subscription created successfully", createdSubscription));
+    public ResponseEntity<SubscriptionDto> createSubscription(@Valid @RequestBody SubscriptionDto subscriptionDto) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userId = authentication.getName();
+        return new ResponseEntity<>(subscriptionService.createSubscription(subscriptionDto, userId), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<SubscriptionDto>> updateSubscription(@PathVariable String id,
-                                                                           @Valid @RequestBody SubscriptionDto subscriptionDto) {
-        SubscriptionDto existingSubscription = subscriptionService.getSubscriptionById(id);
-
-        // Check if the user has permission to update this subscription
-        if (!currentUser.hasRole("ADMIN") &&
-                !existingSubscription.getUserId().equals(currentUser.getCurrentUserId())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(ApiResponse.error("You do not have permission to update this subscription"));
-        }
-
-        SubscriptionDto updatedSubscription = subscriptionService.updateSubscription(id, subscriptionDto);
-        return ResponseEntity.ok(ApiResponse.success("Subscription updated successfully", updatedSubscription));
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<SubscriptionDto> updateSubscription(@PathVariable Integer id, @Valid @RequestBody SubscriptionDto subscriptionDto) {
+        return ResponseEntity.ok(subscriptionService.updateSubscription(id, subscriptionDto));
     }
 
-    @PostMapping("/{id}/cancel")
-    public ResponseEntity<ApiResponse<SubscriptionDto>> cancelSubscription(@PathVariable String id) {
-        SubscriptionDto existingSubscription = subscriptionService.getSubscriptionById(id);
-
-        // Check if the user has permission to cancel this subscription
-        if (!currentUser.hasRole("ADMIN") &&
-                !existingSubscription.getUserId().equals(currentUser.getCurrentUserId())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(ApiResponse.error("You do not have permission to cancel this subscription"));
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<SubscriptionDto> cancelSubscription(@PathVariable Integer id) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userId = authentication.getName();
+        
+        SubscriptionDto subscription = subscriptionService.getSubscriptionById(id);
+        
+        // Check if the user is canceling their own subscription or is an admin
+        if (!subscription.getUserId().equals(userId) && !authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
-
-        SubscriptionDto canceledSubscription = subscriptionService.cancelSubscription(id);
-        return ResponseEntity.ok(ApiResponse.success("Subscription canceled successfully", canceledSubscription));
+        
+        return ResponseEntity.ok(subscriptionService.cancelSubscription(id));
     }
-}
+
+    @PostMapping("/process-renewals")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> processRenewals() {
+        subscriptionService.processRenewals();
+        return ResponseEntity.ok().build();
+    }
+} 
