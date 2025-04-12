@@ -7,6 +7,5 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface PlanRepository extends JpaRepository<Plan, Integer> {
-    List<Plan> findByBillingCycle(Plan.BillingCycle billingCycle);
-} 
+public interface PlanRepository extends JpaRepository<Plan, String> {
+}

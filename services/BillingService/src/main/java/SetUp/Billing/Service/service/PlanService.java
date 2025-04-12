@@ -23,17 +23,12 @@ public class PlanService {
                 .collect(Collectors.toList());
     }
 
-    public PlanDto getPlanById(Integer id) {
+    public PlanDto getPlanById(String id) {
         Plan plan = planRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Plan not found with id: " + id));
         return convertToDto(plan);
     }
 
-    public List<PlanDto> getPlansByBillingCycle(Plan.BillingCycle billingCycle) {
-        return planRepository.findByBillingCycle(billingCycle).stream()
-                .map(this::convertToDto)
-                .collect(Collectors.toList());
-    }
 
     @Transactional
     public PlanDto createPlan(PlanDto planDto) {
@@ -43,14 +38,13 @@ public class PlanService {
     }
 
     @Transactional
-    public PlanDto updatePlan(Integer id, PlanDto planDto) {
+    public PlanDto updatePlan(String id, PlanDto planDto) {
         Plan existingPlan = planRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Plan not found with id: " + id));
         
         existingPlan.setName(planDto.getName());
         existingPlan.setDescription(planDto.getDescription());
         existingPlan.setPrice(planDto.getPrice());
-        existingPlan.setBillingCycle(planDto.getBillingCycle());
         existingPlan.setFeatures(planDto.getFeatures());
         
         Plan updatedPlan = planRepository.save(existingPlan);
@@ -58,7 +52,7 @@ public class PlanService {
     }
 
     @Transactional
-    public void deletePlan(Integer id) {
+    public void deletePlan(String id) {
         if (!planRepository.existsById(id)) {
             throw new ResourceNotFoundException("Plan not found with id: " + id);
         }
@@ -71,7 +65,6 @@ public class PlanService {
                 .name(plan.getName())
                 .description(plan.getDescription())
                 .price(plan.getPrice())
-                .billingCycle(plan.getBillingCycle())
                 .features(plan.getFeatures())
                 .build();
     }
@@ -82,7 +75,6 @@ public class PlanService {
                 .name(planDto.getName())
                 .description(planDto.getDescription())
                 .price(planDto.getPrice())
-                .billingCycle(planDto.getBillingCycle())
                 .features(planDto.getFeatures())
                 .build();
     }

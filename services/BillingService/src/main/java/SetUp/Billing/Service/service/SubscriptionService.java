@@ -30,7 +30,7 @@ public class SubscriptionService {
                 .collect(Collectors.toList());
     }
 
-    public SubscriptionDto getSubscriptionById(Integer id) {
+    public SubscriptionDto getSubscriptionById(String id) {
         Subscription subscription = subscriptionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Subscription not found with id: " + id));
         return convertToDto(subscription);
@@ -57,7 +57,7 @@ public class SubscriptionService {
                 subscriptionDto.getStartDate() : LocalDate.now();
         
         LocalDate endDate;
-        if (plan.getBillingCycle() == Plan.BillingCycle.MONTHLY) {
+        if (subscriptionDto.getBillingCycle() == Subscription.BillingCycle.MONTHLY) {
             endDate = startDate.plusMonths(1);
         } else {
             endDate = startDate.plusYears(1);
@@ -81,7 +81,7 @@ public class SubscriptionService {
     }
 
     @Transactional
-    public SubscriptionDto updateSubscription(Integer id, SubscriptionDto subscriptionDto) {
+    public SubscriptionDto updateSubscription(String id, SubscriptionDto subscriptionDto) {
         Subscription existingSubscription = subscriptionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Subscription not found with id: " + id));
         
@@ -113,7 +113,7 @@ public class SubscriptionService {
     }
 
     @Transactional
-    public SubscriptionDto cancelSubscription(Integer id) {
+    public SubscriptionDto cancelSubscription(String id) {
         Subscription subscription = subscriptionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Subscription not found with id: " + id));
         
@@ -134,7 +134,7 @@ public class SubscriptionService {
                     subscription.getAutoRenew()) {
                 
                 LocalDate newEndDate;
-                if (subscription.getPlan().getBillingCycle() == Plan.BillingCycle.MONTHLY) {
+                if (subscription.getBillingCycle() == Subscription.BillingCycle.MONTHLY) {
                     newEndDate = subscription.getEndDate().plusMonths(1);
                 } else {
                     newEndDate = subscription.getEndDate().plusYears(1);
@@ -146,7 +146,6 @@ public class SubscriptionService {
                 // Create new invoice for the renewal
                 invoiceService.createInvoiceForSubscription(subscription);
             } else if (subscription.getStatus() == Subscription.SubscriptionStatus.ACTIVE && 
-                    !subscription.getAutoRenew() && 
                     subscription.getEndDate().isBefore(today)) {
                 
                 subscription.setStatus(Subscription.SubscriptionStatus.PAST_DUE);

@@ -28,7 +28,7 @@ public class InvoiceController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<InvoiceDto> getInvoiceById(@PathVariable Integer id) {
+    public ResponseEntity<InvoiceDto> getInvoiceById(@PathVariable String id) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userId = authentication.getName();
         
@@ -57,7 +57,7 @@ public class InvoiceController {
     }
 
     @GetMapping("/subscription/{subscriptionId}")
-    public ResponseEntity<List<InvoiceDto>> getInvoicesBySubscriptionId(@PathVariable Integer subscriptionId) {
+    public ResponseEntity<List<InvoiceDto>> getInvoicesBySubscriptionId(@PathVariable String subscriptionId) {
         return ResponseEntity.ok(invoiceService.getInvoicesBySubscriptionId(subscriptionId));
     }
 
@@ -68,7 +68,7 @@ public class InvoiceController {
     }
 
     @PutMapping("/{id}/pay")
-    public ResponseEntity<InvoiceDto> markInvoiceAsPaid(@PathVariable Integer id) {
+    public ResponseEntity<InvoiceDto> markInvoiceAsPaid(@PathVariable String id) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userId = authentication.getName();
         
@@ -85,7 +85,7 @@ public class InvoiceController {
 
     @PutMapping("/{id}/cancel")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<InvoiceDto> cancelInvoice(@PathVariable Integer id) {
+    public ResponseEntity<InvoiceDto> cancelInvoice(@PathVariable String id) {
         return ResponseEntity.ok(invoiceService.cancelInvoice(id));
     }
 

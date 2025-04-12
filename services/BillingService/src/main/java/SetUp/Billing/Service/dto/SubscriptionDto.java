@@ -1,5 +1,6 @@
 package SetUp.Billing.Service.dto;
 
+import SetUp.Billing.Service.model.Plan;
 import SetUp.Billing.Service.model.Subscription;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.NotNull;
@@ -16,12 +17,12 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class SubscriptionDto {
     
-    private Integer id;
+    private String id;
     
     private String userId;
     
     @NotNull(message = "Plan ID is required")
-    private Integer planId;
+    private String planId;
     
     private PlanDto plan;
     
@@ -32,6 +33,9 @@ public class SubscriptionDto {
     
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate endDate;
+
+    @NotNull(message = "Billing cycle is required")
+    private Subscription.BillingCycle billingCycle;
     
     @NotNull(message = "Auto-renew setting is required")
     private Boolean autoRenew;

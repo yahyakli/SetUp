@@ -30,7 +30,7 @@ public class SubscriptionController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    public ResponseEntity<SubscriptionDto> getSubscriptionById(@PathVariable Integer id) {
+    public ResponseEntity<SubscriptionDto> getSubscriptionById(@PathVariable String id) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userId = authentication.getName();
         
@@ -74,12 +74,12 @@ public class SubscriptionController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<SubscriptionDto> updateSubscription(@PathVariable Integer id, @Valid @RequestBody SubscriptionDto subscriptionDto) {
+    public ResponseEntity<SubscriptionDto> updateSubscription(@PathVariable String id, @Valid @RequestBody SubscriptionDto subscriptionDto) {
         return ResponseEntity.ok(subscriptionService.updateSubscription(id, subscriptionDto));
     }
 
     @PutMapping("/{id}/cancel")
-    public ResponseEntity<SubscriptionDto> cancelSubscription(@PathVariable Integer id) {
+    public ResponseEntity<SubscriptionDto> cancelSubscription(@PathVariable String id) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userId = authentication.getName();
         

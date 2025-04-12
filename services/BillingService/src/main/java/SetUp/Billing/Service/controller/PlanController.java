@@ -25,14 +25,8 @@ public class PlanController {
     }
 
     @GetMapping("/public/{id}")
-    public ResponseEntity<PlanDto> getPublicPlanById(@PathVariable Integer id) {
+    public ResponseEntity<PlanDto> getPublicPlanById(@PathVariable String id) {
         return ResponseEntity.ok(planService.getPlanById(id));
-    }
-
-    @GetMapping("/public/billing-cycle/{cycle}")
-    public ResponseEntity<List<PlanDto>> getPublicPlansByBillingCycle(@PathVariable String cycle) {
-        Plan.BillingCycle billingCycle = Plan.BillingCycle.valueOf(cycle.toUpperCase());
-        return ResponseEntity.ok(planService.getPlansByBillingCycle(billingCycle));
     }
 
     @GetMapping
@@ -43,7 +37,7 @@ public class PlanController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<PlanDto> getPlanById(@PathVariable Integer id) {
+    public ResponseEntity<PlanDto> getPlanById(@PathVariable String id) {
         return ResponseEntity.ok(planService.getPlanById(id));
     }
 
@@ -55,13 +49,13 @@ public class PlanController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<PlanDto> updatePlan(@PathVariable Integer id, @Valid @RequestBody PlanDto planDto) {
+    public ResponseEntity<PlanDto> updatePlan(@PathVariable String id, @Valid @RequestBody PlanDto planDto) {
         return ResponseEntity.ok(planService.updatePlan(id, planDto));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deletePlan(@PathVariable Integer id) {
+    public ResponseEntity<Void> deletePlan(@PathVariable String id) {
         planService.deletePlan(id);
         return ResponseEntity.noContent().build();
     }

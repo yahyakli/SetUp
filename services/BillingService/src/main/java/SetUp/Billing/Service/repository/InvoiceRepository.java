@@ -9,7 +9,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Repository
-public interface InvoiceRepository extends JpaRepository<Invoice, Integer> {
+public interface InvoiceRepository extends JpaRepository<Invoice, String> {
     List<Invoice> findByUserId(String userId);
     List<Invoice> findBySubscription(Subscription subscription);
     List<Invoice> findByStatus(Invoice.InvoiceStatus status);

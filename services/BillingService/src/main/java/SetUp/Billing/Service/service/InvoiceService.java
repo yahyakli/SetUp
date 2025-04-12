@@ -28,7 +28,7 @@ public class InvoiceService {
                 .collect(Collectors.toList());
     }
 
-    public InvoiceDto getInvoiceById(Integer id) {
+    public InvoiceDto getInvoiceById(String id) {
         Invoice invoice = invoiceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Invoice not found with id: " + id));
         return convertToDto(invoice);
@@ -40,7 +40,7 @@ public class InvoiceService {
                 .collect(Collectors.toList());
     }
 
-    public List<InvoiceDto> getInvoicesBySubscriptionId(Integer subscriptionId) {
+    public List<InvoiceDto> getInvoicesBySubscriptionId(String subscriptionId) {
         Subscription subscription = subscriptionRepository.findById(subscriptionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Subscription not found with id: " + subscriptionId));
         
@@ -84,7 +84,7 @@ public class InvoiceService {
     }
 
     @Transactional
-    public InvoiceDto updateInvoiceStatus(Integer id, Invoice.InvoiceStatus status) {
+    public InvoiceDto updateInvoiceStatus(String id, Invoice.InvoiceStatus status) {
         Invoice invoice = invoiceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Invoice not found with id: " + id));
         
@@ -99,12 +99,12 @@ public class InvoiceService {
     }
 
     @Transactional
-    public InvoiceDto markAsPaid(Integer id) {
+    public InvoiceDto markAsPaid(String id) {
         return updateInvoiceStatus(id, Invoice.InvoiceStatus.PAID);
     }
 
     @Transactional
-    public InvoiceDto cancelInvoice(Integer id) {
+    public InvoiceDto cancelInvoice(String id) {
         return updateInvoiceStatus(id, Invoice.InvoiceStatus.CANCELED);
     }
 

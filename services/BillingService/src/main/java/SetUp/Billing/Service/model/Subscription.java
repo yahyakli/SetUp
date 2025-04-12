@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.UuidGenerator;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -19,8 +20,8 @@ import java.util.List;
 public class Subscription {
     
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    @UuidGenerator
+    private String id;
     
     @Column(nullable = false)
     private String userId;
@@ -38,6 +39,10 @@ public class Subscription {
     
     @Column(nullable = false)
     private LocalDate endDate;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private BillingCycle billingCycle;
     
     @Column(nullable = false)
     private Boolean autoRenew;
@@ -47,5 +52,9 @@ public class Subscription {
     
     public enum SubscriptionStatus {
         ACTIVE, CANCELED, PAST_DUE
+    }
+
+    public enum BillingCycle {
+        MONTHLY, ANNUALLY
     }
 } 

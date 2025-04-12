@@ -17,7 +17,7 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class PlanDto {
     
-    private Integer id;
+    private String id;
     
     @NotBlank(message = "Plan name is required")
     private String name;
@@ -27,9 +27,6 @@ public class PlanDto {
     @NotNull(message = "Price is required")
     @DecimalMin(value = "0.0", inclusive = false, message = "Price must be greater than 0")
     private BigDecimal price;
-    
-    @NotNull(message = "Billing cycle is required")
-    private Plan.BillingCycle billingCycle;
     
     private String features;
 } 

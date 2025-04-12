@@ -19,11 +19,11 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class InvoiceDto {
     
-    private Integer id;
+    private String id;
     
     private String userId;
     
-    private Integer subscriptionId;
+    private String subscriptionId;
     
     @NotNull(message = "Amount is required")
     @DecimalMin(value = "0.0", inclusive = false, message = "Amount must be greater than 0")
