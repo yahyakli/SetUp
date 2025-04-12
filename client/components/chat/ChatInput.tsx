@@ -330,7 +330,6 @@ const ChatInput = memo(({
         onCancelReply();
       }
       
-      // Only emit update_last_message, let the server handle broadcasting
       if (socket && response?.data) {
         console.log('🔄 Emitting update_last_message with:', {
           roomId: selectedRoom._id,
@@ -523,7 +522,7 @@ const ChatInput = memo(({
         <div className="relative flex-1">
           <Textarea
             ref={textareaRef}
-            placeholder={"Type a message..."}
+            placeholder="Type a message..."
             value={newMessage}
             onChange={handleTextChange}
             onBlur={handleBlur}

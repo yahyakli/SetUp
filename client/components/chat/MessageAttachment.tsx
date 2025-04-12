@@ -1,6 +1,6 @@
 import React from 'react';
 import Image from 'next/image';
-import { MessageAttachment as MessageAttachmentType } from '@/types';
+import { MessageAttachment as MessageAttachmentType } from '@/types/index';
 import { File, FileText, Download } from 'lucide-react';
 import { formatFileSize } from '@/utils/formatters';
 import { CHAT_SERVICE_URL } from '@/constants/API_URLS';
@@ -32,8 +32,8 @@ const MessageAttachment: React.FC<MessageAttachmentProps> = ({ attachment }) => 
             style={{ maxHeight: '200px', width: 'auto' }}
           />
         </div>
-        <div className="text-xs text-gray-500 mt-1 flex items-center">
-          <span className="truncate">{attachment.originalName}</span>
+        <div className="text-xs text-gray-800 dark:text-gray-200 mt-1 flex items-center">
+          <span>{attachment.originalName}</span>
           <span className="ml-2">({formatFileSize(attachment.size)})</span>
         </div>
       </div>
