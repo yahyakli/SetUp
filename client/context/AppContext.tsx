@@ -1,6 +1,6 @@
 "use client";
 
-import { NOTIFICATION_SERVICE_URL, PROJECT_SERVICE_URL, TASK_SERVICE_URL } from "@/constants/API_URLS";
+import { BILLING_SERVICE_URL, NOTIFICATION_SERVICE_URL, PROJECT_SERVICE_URL, TASK_SERVICE_URL } from "@/constants/API_URLS";
 import { initInvitations } from "@/lib/features/InvitationsSlice";
 import { initNotifications } from "@/lib/features/NotificationsSlice";
 import { initProjects, setProjectLoading } from "@/lib/features/ProjectsSlice";
@@ -8,7 +8,7 @@ import { initTasks } from "@/lib/features/TasksSlice";
 import { initTeams, setTeamsLoading } from "@/lib/features/TeamsSlice";
 import { fetchUser } from "@/lib/features/userSlice";
 import { AppDispatch, RootState } from "@/lib/store";
-import { Message, Team } from "@/types/index";
+import { Message, Plan, Team } from "@/types/index";
 import axios from "axios";
 import { createContext, useContext, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -21,6 +21,8 @@ type AppContextType = {
   lastMessages: Record<string, Message>;
   updateLastMessage: (roomId: string, message: Message) => void;
   markLastMessageAsRead: (roomId: string, messageId: string) => void;
+  plans: Plan[] | null;
+  plansLoading: boolean;
 };
 
 // Create the context with default values
@@ -31,6 +33,8 @@ const AppContext = createContext<AppContextType>({
   lastMessages: {},
   updateLastMessage: () => {},
   markLastMessageAsRead: () => {},
+  plans: null,
+  plansLoading: false
 });
 
 // Custom hook to use the AppContext
@@ -41,6 +45,8 @@ export const AppContextProvider = ({ children }: { children: React.ReactNode }) 
   const { token, isLoading, user } = useSelector((state: RootState) => state.user);
   const [authCheckComplete, setAuthCheckComplete] = useState(false);
   const [lastMessages, setLastMessages] = useState<Record<string, Message>>({});
+  const [plans, setPlans] = useState<Plan[] | null>(null);
+  const [plansLoading, setPlansLoading] = useState<boolean>(false);
 
   // Function to update the last message for a chat room
   const updateLastMessage = (roomId: string, message: Message) => {
@@ -90,6 +96,7 @@ export const AppContextProvider = ({ children }: { children: React.ReactNode }) 
 
   // Initialize data when user is authenticated
   useEffect(() => {
+    getPlans();
     if (user?.id && token) {
       initTeamsFunc();
       initProjectFunc();
@@ -190,6 +197,21 @@ export const AppContextProvider = ({ children }: { children: React.ReactNode }) 
     }
   }
 
+  const getPlans = async () => {
+    setPlansLoading(true);
+    try {
+      const res = await axios.get(BILLING_SERVICE_URL + "/api/plans/public");
+
+      if (res.status === 200) {
+        setPlans(res.data);
+      }
+    } catch (err) {
+      console.log(err);
+    } finally {
+      setPlansLoading(false);
+    }
+  }
+
   // Context value
   const contextValue: AppContextType = {
     isLoading,
@@ -197,7 +219,9 @@ export const AppContextProvider = ({ children }: { children: React.ReactNode }) 
     isAuthenticated: !!token,
     lastMessages,
     updateLastMessage,
-    markLastMessageAsRead
+    markLastMessageAsRead,
+    plans,
+    plansLoading
   };
 
   return (

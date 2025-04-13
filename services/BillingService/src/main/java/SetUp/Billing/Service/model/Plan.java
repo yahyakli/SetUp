@@ -32,12 +32,19 @@ public class Plan {
     
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
-    
-    @Column(columnDefinition = "JSON")
-    private String features;
+
+    @Column(nullable = true)
+    private String specialTitle;
 
     private Boolean isPublic;
-    
+
+    private int projects;
+    private int teamOwned;
+    private Boolean chat;
+    private Boolean priority;
+    private Boolean analytics;
+    private Boolean security;
+
     @OneToMany(mappedBy = "plan", cascade = CascadeType.ALL)
     private List<Subscription> subscriptions = new ArrayList<>();
 } 

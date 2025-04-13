@@ -65,13 +65,14 @@ public class PlanService {
         existingPlan.setName(planDto.getName());
         existingPlan.setDescription(planDto.getDescription());
         existingPlan.setPrice(planDto.getPrice());
+        existingPlan.setSpecialTitle(planDto.getSpecialTitle());
+        existingPlan.setProjects(planDto.getProjects());
+        existingPlan.setTeamOwned(planDto.getTeamOwned());
+        existingPlan.setChat(planDto.getChat());
+        existingPlan.setPriority(planDto.getPriority());
+        existingPlan.setAnalytics(planDto.getAnalytics());
+        existingPlan.setSecurity(planDto.getSecurity());
         existingPlan.setIsPublic(planDto.getIsPublic());
-
-        try {
-            existingPlan.setFeatures(objectMapper.writeValueAsString(planDto.getFeatures()));
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to serialize features", e);
-        }
 
         Plan updatedPlan = planRepository.save(existingPlan);
         return convertToDto(updatedPlan);
@@ -86,40 +87,36 @@ public class PlanService {
     }
 
     private PlanDto convertToDto(Plan plan) {
-        List<String> featuresList;
-        try {
-            featuresList = objectMapper.readValue(
-                    plan.getFeatures() != null ? plan.getFeatures() : "[]",
-                    new TypeReference<List<String>>() {});
-        } catch (Exception e) {
-            featuresList = Collections.emptyList(); // fallback
-        }
-
         return PlanDto.builder()
                 .id(plan.getId())
                 .name(plan.getName())
                 .description(plan.getDescription())
                 .price(plan.getPrice())
-                .features(featuresList)
+                .specialTitle(plan.getSpecialTitle())
                 .isPublic(plan.getIsPublic())
+                .projects(plan.getProjects())
+                .teamOwned(plan.getTeamOwned())
+                .chat(plan.getChat())
+                .priority(plan.getPriority())
+                .analytics(plan.getAnalytics())
+                .security(plan.getSecurity())
                 .build();
     }
 
     private Plan convertToEntity(PlanDto planDto) {
-        String featuresJson = "[]";
-        try {
-            featuresJson = objectMapper.writeValueAsString(planDto.getFeatures());
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to serialize features", e);
-        }
-
         return Plan.builder()
                 .id(planDto.getId())
                 .name(planDto.getName())
                 .description(planDto.getDescription())
                 .price(planDto.getPrice())
-                .features(featuresJson)
+                .specialTitle(planDto.getSpecialTitle())
                 .isPublic(planDto.getIsPublic())
+                .projects(planDto.getProjects())
+                .teamOwned(planDto.getTeamOwned())
+                .chat(planDto.getChat())
+                .priority(planDto.getPriority())
+                .analytics(planDto.getAnalytics())
+                .security(planDto.getSecurity())
                 .build();
     }
 }

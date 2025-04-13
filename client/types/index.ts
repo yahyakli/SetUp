@@ -163,3 +163,18 @@ export interface Notification {
   read: boolean;
   createdAt: Date;
 }
+
+export interface Plan {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  specialTitle?: string;
+  isPublic: boolean;
+  projects: number;
+  teamOwned: number;
+  chat: boolean;
+  priority: boolean;
+  analytics: boolean;
+  security: boolean;
+}

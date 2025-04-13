@@ -26,6 +26,7 @@ import { Footer } from '@/components/Footer';
 import Link from 'next/link';
 import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { useRouter } from 'next/navigation';
+import { useAppContext } from '@/context/AppContext';
 
 interface ChartData {
   name: string;
@@ -39,6 +40,8 @@ interface Testimonial {
 }
 
 const Page: React.FC = () => {
+  const { plans, plansLoading } = useAppContext();
+  console.log(plans);
   const getLastSixMonths = (): ChartData[] => {
     const months = [
       "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -297,116 +300,76 @@ const Page: React.FC = () => {
             Choose the perfect plan for your team&#39;s needs. All plans include our core features with different limits.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {/* Free Plan */}
-            <Card className="flex flex-col">
-              <CardHeader>
-                <CardTitle>Free Plan</CardTitle>
-                <CardDescription>For individuals and small teams</CardDescription>
-                <div className="text-3xl font-bold mt-4">
-                  $0<span className="text-sm font-normal text-gray-500 dark:text-gray-400">/month</span>
-                </div>
-              </CardHeader>
-              <CardContent className="flex-grow">
-                <ul className="space-y-2">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <span>3 projects</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <span>5 team members per project</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <span>Basic task management</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <span>1 GB storage</span>
-                  </li>
-                </ul>
-              </CardContent>
-              <CardFooter>
-                <Link href="/dashboard" className='w-full'>
-                  <Button className="w-full">Get Started</Button>
-                </Link>
-              </CardFooter>
-            </Card>
+            {/* Dynamic Plans */}
+            {plans && plans.map((plan) => (
+              <Card 
+                key={plan.id} 
+                className={`flex flex-col ${plan.specialTitle ? 'border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-gray-800' : ''}`}
+              >
+                {plan.specialTitle && (
+                  <div className="bg-blue-600 text-white text-center py-2 text-sm font-medium">{plan.specialTitle}</div>
+                )}
+                <CardHeader>
+                  <CardTitle>{plan.name}</CardTitle>
+                  <CardDescription>{plan.description}</CardDescription>
+                  <div className="text-3xl font-bold mt-4">
+                    ${plan.price}
+                    <span className="text-sm font-normal text-gray-500 dark:text-gray-400">/month</span>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-grow">
+                  <ul className="space-y-2">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                      <span>{plan.projects === -1 ? 'Unlimited' : plan.projects} projects</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                      <span>{plan.teamOwned === -1 ? 'Unlimited' : plan.teamOwned} team members per project</span>
+                    </li>
+                    {plan.chat && (
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                        <span>Advanced task management</span>
+                      </li>
+                    )}
+                    {plan.analytics && (
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                        <span>Advanced analytics</span>
+                      </li>
+                    )}
+                    {plan.priority && (
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                        <span>Priority support</span>
+                      </li>
+                    )}
+                    {plan.security && (
+                      <li className="flex items-center gap-2">
+                        <Shield className="h-5 w-5 text-green-500" />
+                        <span>Premium security features</span>
+                      </li>
+                    )}
+                  </ul>
+                </CardContent>
+                <CardFooter>
+                  {plan.price === 0 ? (
+                    <Link href="/dashboard" className='w-full'>
+                      <Button className="w-full">Get Started</Button>
+                    </Link>
+                  ) : (
+                    <Button 
+                      className={`w-full ${plan.specialTitle ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
+                    >
+                      Subscribe Now
+                    </Button>
+                  )}
+                </CardFooter>
+              </Card>
+            ))}
 
-            {/* Basic Plan */}
-            <Card className="flex flex-col">
-              <CardHeader>
-                <CardTitle>Basic Plan</CardTitle>
-                <CardDescription>For growing teams</CardDescription>
-                <div className="text-3xl font-bold mt-4">
-                  $9<span className="text-sm font-normal text-gray-500 dark:text-gray-400">/month</span>
-                </div>
-              </CardHeader>
-              <CardContent className="flex-grow">
-                <ul className="space-y-2">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <span>10 projects</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <span>10 team members per project</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <span>Advanced task management</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <span>10 GB storage</span>
-                  </li>
-                </ul>
-              </CardContent>
-              <CardFooter>
-                <Button className="w-full">Subscribe Now</Button>
-              </CardFooter>
-            </Card>
-
-            {/* Pro Plan */}
-            <Card className="flex flex-col border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-gray-800">
-              <div className="bg-blue-600 text-white text-center py-2 text-sm font-medium">Most Popular</div>
-              <CardHeader>
-                <CardTitle>Pro Plan</CardTitle>
-                <CardDescription>For professional teams</CardDescription>
-                <div className="text-3xl font-bold mt-4">
-                  $29<span className="text-sm font-normal text-gray-500 dark:text-gray-400">/month</span>
-                </div>
-              </CardHeader>
-              <CardContent className="flex-grow">
-                <ul className="space-y-2">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <span>Unlimited projects</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <span>Unlimited team members</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <span>Advanced task management</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <span>50 GB storage</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <span>Priority support</span>
-                  </li>
-                </ul>
-              </CardContent>
-              <CardFooter>
-                <Button className="w-full bg-blue-600 hover:bg-blue-700">Subscribe Now</Button>
-              </CardFooter>
-            </Card>
-
-            {/* Enterprise Plan */}
+            {/* Enterprise Plan (static) */}
             <Card className="flex flex-col">
               <CardHeader>
                 <CardTitle>Enterprise Plan</CardTitle>

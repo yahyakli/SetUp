@@ -26,10 +26,30 @@ public class PlanDto {
     private String description;
     
     @NotNull(message = "Price is required")
-    @DecimalMin(value = "0.0", inclusive = false, message = "Price must be greater than 0")
+    @DecimalMin(value = "0.0", inclusive = true, message = "Price must be greater or equal 0")
     private BigDecimal price;
 
+    private String specialTitle;
+
+    @NotNull(message = "Project Number is required")
+    private int projects;
+
+    @NotNull(message = "Teams Number is required")
+    private int teamOwned;
+
+    @NotNull(message = "Has Chat is required")
+    private Boolean chat;
+
+    @NotNull(message = "priority is required")
+    private Boolean priority;
+
+    @NotNull(message = "analytics is required")
+    private Boolean analytics;
+
+    @NotNull(message = "security is required")
+    private Boolean security;
+
+    @NotNull(message = "isPublic is required")
     private Boolean isPublic;
     
-    private List<String> features;
-} 
+}
