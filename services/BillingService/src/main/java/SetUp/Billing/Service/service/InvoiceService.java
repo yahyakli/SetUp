@@ -92,6 +92,22 @@ public class InvoiceService {
         
         if (status == Invoice.InvoiceStatus.PAID) {
             invoice.setPaidAt(LocalDateTime.now());
+            
+            if (invoice.getSubscription() != null) {
+                Subscription subscription = invoice.getSubscription();
+                if (subscription.getStatus() == Subscription.SubscriptionStatus.PENDING) {
+                    subscription.setStatus(Subscription.SubscriptionStatus.ACTIVE);
+                    subscriptionRepository.save(subscription);
+                }
+            }
+        } else if (status == Invoice.InvoiceStatus.CANCELED) {
+            if (invoice.getSubscription() != null) {
+                Subscription subscription = invoice.getSubscription();
+                if (subscription.getStatus() == Subscription.SubscriptionStatus.PENDING) {
+                    subscription.setStatus(Subscription.SubscriptionStatus.CANCELED);
+                    subscriptionRepository.save(subscription);
+                }
+            }
         }
         
         Invoice updatedInvoice = invoiceRepository.save(invoice);

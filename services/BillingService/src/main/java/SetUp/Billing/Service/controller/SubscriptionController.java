@@ -45,17 +45,13 @@ public class SubscriptionController {
         return ResponseEntity.ok(subscription);
     }
 
-    @GetMapping("/user")
-    public ResponseEntity<List<SubscriptionDto>> getCurrentUserSubscriptions() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String userId = authentication.getName();
+    @GetMapping("/user/current/{userId}")
+    public ResponseEntity<List<SubscriptionDto>> getCurrentUserSubscriptions(@PathVariable String userId) {
         return ResponseEntity.ok(subscriptionService.getSubscriptionsByUserId(userId));
     }
 
-    @GetMapping("/user/active")
-    public ResponseEntity<SubscriptionDto> getCurrentUserActiveSubscription() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String userId = authentication.getName();
+    @GetMapping("/user/{userId}/active")
+    public ResponseEntity<SubscriptionDto> getCurrentUserActiveSubscription(@PathVariable String userId) {
         return ResponseEntity.ok(subscriptionService.getActiveSubscriptionByUserId(userId));
     }
 
@@ -77,16 +73,15 @@ public class SubscriptionController {
         return ResponseEntity.ok(subscriptionService.updateSubscription(id, subscriptionDto));
     }
 
-    @PutMapping("/{id}/cancel")
-    public ResponseEntity<SubscriptionDto> cancelSubscription(@PathVariable String id) {
+    @PutMapping("/{id}/{userId}/cancel")
+    public ResponseEntity<SubscriptionDto> cancelSubscription(@PathVariable String id, @PathVariable String userId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String userId = authentication.getName();
-        
+
         SubscriptionDto subscription = subscriptionService.getSubscriptionById(id);
         
         // Check if the user is canceling their own subscription or is an admin
         if (!subscription.getUserId().equals(userId) && !authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
+                .anyMatch(a -> a.getAuthority().equals("ADMIN"))) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         

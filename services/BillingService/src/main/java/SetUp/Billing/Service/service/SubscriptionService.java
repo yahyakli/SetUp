@@ -66,7 +66,7 @@ public class SubscriptionService {
         Subscription subscription = Subscription.builder()
                 .userId(subscriptionDto.getUserId())
                 .plan(plan)
-                .status(Subscription.SubscriptionStatus.ACTIVE)
+                .status(Subscription.SubscriptionStatus.PENDING)
                 .startDate(startDate)
                 .endDate(endDate)
                 .billingCycle(subscriptionDto.getBillingCycle())

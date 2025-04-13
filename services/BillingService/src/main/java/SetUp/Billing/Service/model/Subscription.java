@@ -51,7 +51,7 @@ public class Subscription {
     private List<Invoice> invoices = new ArrayList<>();
     
     public enum SubscriptionStatus {
-        ACTIVE, CANCELED, PAST_DUE
+        ACTIVE, CANCELED, PAST_DUE, PENDING
     }
 
     public enum BillingCycle {

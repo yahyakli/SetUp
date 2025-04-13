@@ -36,17 +36,15 @@ public class InvoiceController {
         
         // Check if the user is requesting their own invoice or is an admin
         if (!invoice.getUserId().equals(userId) && !authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
+                .anyMatch(a -> a.getAuthority().equals("ADMIN"))) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         
         return ResponseEntity.ok(invoice);
     }
 
-    @GetMapping("/user")
-    public ResponseEntity<List<InvoiceDto>> getCurrentUserInvoices() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String userId = authentication.getName();
+    @GetMapping("/user/current/{userId}")
+    public ResponseEntity<List<InvoiceDto>> getCurrentUserInvoices(@PathVariable String userId) {
         return ResponseEntity.ok(invoiceService.getInvoicesByUserId(userId));
     }
 
@@ -67,16 +65,15 @@ public class InvoiceController {
         return new ResponseEntity<>(invoiceService.createInvoice(invoiceDto), HttpStatus.CREATED);
     }
 
-    @PutMapping("/{id}/pay")
-    public ResponseEntity<InvoiceDto> markInvoiceAsPaid(@PathVariable String id) {
+    @PutMapping("/{id}/pay/{userId}")
+    public ResponseEntity<InvoiceDto> markInvoiceAsPaid(@PathVariable String id, @PathVariable String userId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String userId = authentication.getName();
-        
+
         InvoiceDto invoice = invoiceService.getInvoiceById(id);
         
         // Check if the user is paying their own invoice or is an admin
         if (!invoice.getUserId().equals(userId) && !authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
+                .anyMatch(a -> a.getAuthority().equals("ADMIN"))) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         
