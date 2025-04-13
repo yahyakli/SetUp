@@ -23,13 +23,13 @@ public class SubscriptionController {
     private final JwtTokenProvider jwtTokenProvider;
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<List<SubscriptionDto>> getAllSubscriptions() {
         return ResponseEntity.ok(subscriptionService.getAllSubscriptions());
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'USER')")
     public ResponseEntity<SubscriptionDto> getSubscriptionById(@PathVariable String id) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userId = authentication.getName();
@@ -60,7 +60,7 @@ public class SubscriptionController {
     }
 
     @GetMapping("/user/{userId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<List<SubscriptionDto>> getUserSubscriptions(@PathVariable String userId) {
         return ResponseEntity.ok(subscriptionService.getSubscriptionsByUserId(userId));
     }
@@ -68,12 +68,11 @@ public class SubscriptionController {
     @PostMapping
     public ResponseEntity<SubscriptionDto> createSubscription(@Valid @RequestBody SubscriptionDto subscriptionDto) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String userId = authentication.getName();
-        return new ResponseEntity<>(subscriptionService.createSubscription(subscriptionDto, userId), HttpStatus.CREATED);
+        return new ResponseEntity<>(subscriptionService.createSubscription(subscriptionDto), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<SubscriptionDto> updateSubscription(@PathVariable String id, @Valid @RequestBody SubscriptionDto subscriptionDto) {
         return ResponseEntity.ok(subscriptionService.updateSubscription(id, subscriptionDto));
     }
@@ -95,7 +94,7 @@ public class SubscriptionController {
     }
 
     @PostMapping("/process-renewals")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<Void> processRenewals() {
         subscriptionService.processRenewals();
         return ResponseEntity.ok().build();

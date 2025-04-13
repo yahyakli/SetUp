@@ -35,6 +35,8 @@ public class Plan {
     
     @Column(columnDefinition = "JSON")
     private String features;
+
+    private Boolean isPublic;
     
     @OneToMany(mappedBy = "plan", cascade = CascadeType.ALL)
     private List<Subscription> subscriptions = new ArrayList<>();

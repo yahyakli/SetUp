@@ -49,7 +49,7 @@ public class SubscriptionService {
     }
 
     @Transactional
-    public SubscriptionDto createSubscription(SubscriptionDto subscriptionDto, String userId) {
+    public SubscriptionDto createSubscription(SubscriptionDto subscriptionDto) {
         Plan plan = planRepository.findById(subscriptionDto.getPlanId())
                 .orElseThrow(() -> new ResourceNotFoundException("Plan not found with id: " + subscriptionDto.getPlanId()));
         
@@ -64,11 +64,12 @@ public class SubscriptionService {
         }
         
         Subscription subscription = Subscription.builder()
-                .userId(userId)
+                .userId(subscriptionDto.getUserId())
                 .plan(plan)
                 .status(Subscription.SubscriptionStatus.ACTIVE)
                 .startDate(startDate)
                 .endDate(endDate)
+                .billingCycle(subscriptionDto.getBillingCycle())
                 .autoRenew(subscriptionDto.getAutoRenew())
                 .build();
         

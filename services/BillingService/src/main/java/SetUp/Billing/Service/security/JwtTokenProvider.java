@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.io.Decoders;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,7 +33,8 @@ public class JwtTokenProvider {
 
     @PostConstruct
     public void init() {
-        this.key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
+        byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
+        this.key = Keys.hmacShaKeyFor(keyBytes);
     }
 
     public String getUserIdFromToken(String token) {
@@ -60,13 +62,22 @@ public class JwtTokenProvider {
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
-
+            
+        String rolesString = claims.get("roles", String.class);
+        System.out.println("Roles from token: " + rolesString);
+        
         Collection<? extends GrantedAuthority> authorities =
-                Arrays.stream(claims.get("roles", String.class).split(","))
-                        .map(SimpleGrantedAuthority::new)
+                Arrays.stream(rolesString.split(","))
+                        .map(role -> {
+                            String authorityName = role.trim();
+                            System.out.println("Created authority: " + authorityName);
+                            return new SimpleGrantedAuthority(authorityName);
+                        })
                         .collect(Collectors.toList());
 
         UserDetails principal = new User(claims.getSubject(), "", authorities);
-        return new UsernamePasswordAuthenticationToken(principal, token, authorities);
+        Authentication auth = new UsernamePasswordAuthenticationToken(principal, token, authorities);
+        
+        return auth;
     }
 } 

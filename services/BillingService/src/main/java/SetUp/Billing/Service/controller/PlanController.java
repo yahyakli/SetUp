@@ -1,7 +1,6 @@
 package SetUp.Billing.Service.controller;
 
 import SetUp.Billing.Service.dto.PlanDto;
-import SetUp.Billing.Service.model.Plan;
 import SetUp.Billing.Service.service.PlanService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,42 +20,42 @@ public class PlanController {
 
     @GetMapping("/public")
     public ResponseEntity<List<PlanDto>> getAllPublicPlans() {
-        return ResponseEntity.ok(planService.getAllPlans());
+        return ResponseEntity.ok(planService.getAllPublicPlans());
     }
 
     @GetMapping("/public/{id}")
     public ResponseEntity<PlanDto> getPublicPlanById(@PathVariable String id) {
-        return ResponseEntity.ok(planService.getPlanById(id));
+        return ResponseEntity.ok(planService.getPublicPlanById(id));
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<List<PlanDto>> getAllPlans() {
         return ResponseEntity.ok(planService.getAllPlans());
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<PlanDto> getPlanById(@PathVariable String id) {
         return ResponseEntity.ok(planService.getPlanById(id));
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<PlanDto> createPlan(@Valid @RequestBody PlanDto planDto) {
         return new ResponseEntity<>(planService.createPlan(planDto), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<PlanDto> updatePlan(@PathVariable String id, @Valid @RequestBody PlanDto planDto) {
         return ResponseEntity.ok(planService.updatePlan(id, planDto));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<Void> deletePlan(@PathVariable String id) {
         planService.deletePlan(id);
         return ResponseEntity.noContent().build();
     }
-} 
+}

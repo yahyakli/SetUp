@@ -8,4 +8,5 @@ import java.util.List;
 
 @Repository
 public interface PlanRepository extends JpaRepository<Plan, String> {
+    List<Plan> findByIsPublicTrue();
 }
