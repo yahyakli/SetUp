@@ -15,7 +15,7 @@ import {
   NavigationMenuItem,
   NavigationMenuList,
 } from '@/components/ui/navigation-menu';
-import { BarChart, Clock, Users, CheckCircle, Shield, Menu } from 'lucide-react';
+import { BarChart, Clock, Users, CheckCircle, Shield, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NavigationMenu } from '@radix-ui/react-navigation-menu';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -53,7 +53,7 @@ const Page: React.FC = () => {
     const growingValues = [1520, 1270, 1460, 1530, 1800, 1900];
     for (let i = 5; i >= 0; i--) {
       const date = new Date(today);
-      date.setMonth(today.getMonth() - i -1);
+      date.setMonth(today.getMonth() - i - 1);
       const monthName = months[date.getMonth()];
       const value = growingValues[5 - i];
       chartData.push({ name: monthName, value });
@@ -326,7 +326,7 @@ const Page: React.FC = () => {
                     </CardFooter>
                   </Card>
                 ))}
-                
+
                 {/* Skeleton for Enterprise plan */}
                 <Card className="flex flex-col animate-pulse">
                   <CardHeader>
@@ -352,73 +352,115 @@ const Page: React.FC = () => {
             ) : (
               <>
                 {/* Dynamic Plans */}
-                {plans && plans.map((plan) => (
-                  <Card 
-                    key={plan.id} 
-                    className={`flex flex-col ${plan.specialTitle ? 'border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-gray-800' : ''}`}
-                  >
-                    {plan.specialTitle && (
-                      <div className="bg-blue-600 text-white text-center py-2 text-sm font-medium">{plan.specialTitle}</div>
-                    )}
-                    <CardHeader>
-                      <CardTitle>{plan.name}</CardTitle>
-                      <CardDescription>{plan.description}</CardDescription>
-                      <div className="text-3xl font-bold mt-4">
-                        ${plan.price}
-                        <span className="text-sm font-normal text-gray-500 dark:text-gray-400">/month</span>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="flex-grow">
-                      <ul className="space-y-2">
-                        <li className="flex items-center gap-2">
-                          <CheckCircle className="h-5 w-5 text-green-500" />
-                          <span>{plan.projects === -1 ? 'Unlimited' : plan.projects} projects</span>
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <CheckCircle className="h-5 w-5 text-green-500" />
-                          <span>{plan.teamOwned === -1 ? 'Unlimited' : plan.teamOwned} team members per project</span>
-                        </li>
-                        {plan.chat && (
-                          <li className="flex items-center gap-2">
-                            <CheckCircle className="h-5 w-5 text-green-500" />
-                            <span>Advanced task management</span>
-                          </li>
-                        )}
-                        {plan.analytics && (
-                          <li className="flex items-center gap-2">
-                            <CheckCircle className="h-5 w-5 text-green-500" />
-                            <span>Advanced analytics</span>
-                          </li>
-                        )}
-                        {plan.priority && (
-                          <li className="flex items-center gap-2">
-                            <CheckCircle className="h-5 w-5 text-green-500" />
-                            <span>Priority support</span>
-                          </li>
-                        )}
-                        {plan.security && (
-                          <li className="flex items-center gap-2">
-                            <Shield className="h-5 w-5 text-green-500" />
-                            <span>Premium security features</span>
-                          </li>
-                        )}
-                      </ul>
-                    </CardContent>
-                    <CardFooter>
-                      {plan.price === 0 ? (
-                        <Link href="/dashboard" className='w-full'>
-                          <Button className="w-full">Get Started</Button>
-                        </Link>
-                      ) : (
-                        <Button 
-                          className={`w-full ${plan.specialTitle ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
-                        >
-                          Subscribe Now
-                        </Button>
+                {plans && [...plans]
+                  .sort((a, b) => a.price - b.price)
+                  .map((plan) => (
+                    <Card 
+                      key={plan.id} 
+                      className={`flex flex-col ${
+                        plan.specialTitle 
+                          ? 'border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-gray-800 shadow-lg relative z-10 transform scale-105' 
+                          : 'border-gray-200 dark:border-gray-700'
+                      }`}
+                    >
+                      {plan.specialTitle && (
+                        <div className="bg-blue-600 text-white text-center py-2 text-sm font-bold">
+                          {plan.specialTitle}
+                        </div>
                       )}
-                    </CardFooter>
-                  </Card>
-                ))}
+                      <CardHeader className={plan.specialTitle ? 'pb-6' : ''}>
+                        <CardTitle className={plan.specialTitle ? 'text-blue-600 dark:text-blue-400' : ''}>
+                          {plan.name}
+                        </CardTitle>
+                        <CardDescription>{plan.description}</CardDescription>
+                        <div className={`text-3xl font-bold mt-4 ${plan.specialTitle ? 'text-blue-600 dark:text-blue-400' : ''}`}>
+                          ${plan.price}
+                          <span className="text-sm font-normal text-gray-500 dark:text-gray-400">/month</span>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="flex-grow">
+                        <ul className="space-y-2">
+                          <li className="flex items-center gap-2">
+                            <div className="w-5 h-5 flex-shrink-0">
+                              <CheckCircle className="h-5 w-5 text-green-500" />
+                            </div>
+                            <span>{plan.projects === -1 ? 'Unlimited' : plan.projects} projects</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <div className="w-5 h-5 flex-shrink-0">
+                              <CheckCircle className="h-5 w-5 text-green-500" />
+                            </div>
+                            <span>{plan.teamOwned === -1 ? 'Unlimited' : plan.teamOwned} team members per project</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <div className="w-5 h-5 flex-shrink-0">
+                              {plan.chat ? (
+                                <CheckCircle className="h-5 w-5 text-green-500" />
+                              ) : (
+                                <X className="h-5 w-5 text-red-500" />
+                              )}
+                            </div>
+                            <span className={!plan.chat ? "text-gray-500 dark:text-gray-400" : ""}>
+                              Advanced task management
+                            </span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <div className="w-5 h-5 flex-shrink-0">
+                              {plan.priority ? (
+                                <CheckCircle className="h-5 w-5 text-green-500" />
+                              ) : (
+                                <X className="h-5 w-5 text-red-500" />
+                              )}
+                            </div>
+                            <span className={!plan.priority ? "text-gray-500 dark:text-gray-400" : ""}>
+                              Priority support
+                            </span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <div className="w-5 h-5 flex-shrink-0">
+                              {plan.analytics ? (
+                                <CheckCircle className="h-5 w-5 text-green-500" />
+                              ) : (
+                                <X className="h-5 w-5 text-red-500" />
+                              )}
+                            </div>
+                            <span className={!plan.analytics ? "text-gray-500 dark:text-gray-400" : ""}>
+                              Advanced analytics
+                            </span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <div className="w-5 h-5 flex-shrink-0">
+                              {plan.security ? (
+                                <Shield className="h-5 w-5 text-green-500" />
+                              ) : (
+                                <X className="h-5 w-5 text-red-500" />
+                              )}
+                            </div>
+                            <span className={!plan.security ? "text-gray-500 dark:text-gray-400" : ""}>
+                              Premium security features
+                            </span>
+                          </li>
+                        </ul>
+                      </CardContent>
+                      <CardFooter>
+                        {plan.price === 0 ? (
+                          <Link href="/dashboard" className='w-full'>
+                            <Button className="w-full">Get Started</Button>
+                          </Link>
+                        ) : (
+                          <Button 
+                            className={`w-full ${
+                              plan.specialTitle 
+                                ? 'bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md' 
+                                : ''
+                            }`}
+                          >
+                            Subscribe Now
+                          </Button>
+                        )}
+                      </CardFooter>
+                    </Card>
+                  ))}
 
                 {/* Enterprise Plan (static) */}
                 <Card className="flex flex-col">
@@ -432,27 +474,39 @@ const Page: React.FC = () => {
                   <CardContent className="flex-grow">
                     <ul className="space-y-2">
                       <li className="flex items-center gap-2">
-                        <CheckCircle className="h-5 w-5 text-green-500" />
+                        <div className="w-5 h-5 flex-shrink-0">
+                          <CheckCircle className="h-5 w-5 text-green-500" />
+                        </div>
                         <span>Everything in Pro Plan</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <CheckCircle className="h-5 w-5 text-green-500" />
+                        <div className="w-5 h-5 flex-shrink-0">
+                          <CheckCircle className="h-5 w-5 text-green-500" />
+                        </div>
                         <span>Customizable workflows</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <CheckCircle className="h-5 w-5 text-green-500" />
+                        <div className="w-5 h-5 flex-shrink-0">
+                          <CheckCircle className="h-5 w-5 text-green-500" />
+                        </div>
                         <span>Dedicated account manager</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <CheckCircle className="h-5 w-5 text-green-500" />
+                        <div className="w-5 h-5 flex-shrink-0">
+                          <CheckCircle className="h-5 w-5 text-green-500" />
+                        </div>
                         <span>1 TB storage</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <CheckCircle className="h-5 w-5 text-green-500" />
+                        <div className="w-5 h-5 flex-shrink-0">
+                          <CheckCircle className="h-5 w-5 text-green-500" />
+                        </div>
                         <span>Advanced analytics</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Shield className="h-5 w-5 text-green-500" />
+                        <div className="w-5 h-5 flex-shrink-0">
+                          <Shield className="h-5 w-5 text-green-500" />
+                        </div>
                         <span>Premium security features</span>
                       </li>
                     </ul>

@@ -46,7 +46,7 @@ export const AppContextProvider = ({ children }: { children: React.ReactNode }) 
   const [authCheckComplete, setAuthCheckComplete] = useState(false);
   const [lastMessages, setLastMessages] = useState<Record<string, Message>>({});
   const [plans, setPlans] = useState<Plan[] | null>(null);
-  const [plansLoading, setPlansLoading] = useState<boolean>(false);
+  const [plansLoading, setPlansLoading] = useState<boolean>(true);
 
   // Function to update the last message for a chat room
   const updateLastMessage = (roomId: string, message: Message) => {
