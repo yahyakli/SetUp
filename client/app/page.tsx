@@ -390,7 +390,7 @@ const Page: React.FC = () => {
                             <div className="w-5 h-5 flex-shrink-0">
                               <CheckCircle className="h-5 w-5 text-green-500" />
                             </div>
-                            <span>{plan.teamOwned === -1 ? 'Unlimited' : plan.teamOwned} team members per project</span>
+                            <span>{plan.teamOwned === -1 ? 'Unlimited' : plan.teamOwned} teams owned</span>
                           </li>
                           <li className="flex items-center gap-2">
                             <div className="w-5 h-5 flex-shrink-0">
@@ -454,6 +454,7 @@ const Page: React.FC = () => {
                                 ? 'bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md' 
                                 : ''
                             }`}
+                            onClick={() => router.push(`/subscribe/${plan.id}`)}
                           >
                             Subscribe Now
                           </Button>

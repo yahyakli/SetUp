@@ -1,8 +1,10 @@
 package SetUp.Billing.Service.service;
 
+import SetUp.Billing.Service.dto.InvoiceDto;
 import SetUp.Billing.Service.dto.PlanDto;
 import SetUp.Billing.Service.dto.SubscriptionDto;
 import SetUp.Billing.Service.exception.ResourceNotFoundException;
+import SetUp.Billing.Service.model.Invoice;
 import SetUp.Billing.Service.model.Plan;
 import SetUp.Billing.Service.model.Subscription;
 import SetUp.Billing.Service.repository.PlanRepository;
@@ -49,7 +51,7 @@ public class SubscriptionService {
     }
 
     @Transactional
-    public SubscriptionDto createSubscription(SubscriptionDto subscriptionDto) {
+    public InvoiceDto createSubscription(SubscriptionDto subscriptionDto) {
         Plan plan = planRepository.findById(subscriptionDto.getPlanId())
                 .orElseThrow(() -> new ResourceNotFoundException("Plan not found with id: " + subscriptionDto.getPlanId()));
         
@@ -69,6 +71,7 @@ public class SubscriptionService {
                 .status(Subscription.SubscriptionStatus.PENDING)
                 .startDate(startDate)
                 .endDate(endDate)
+                .amount(subscriptionDto.getAmount())
                 .billingCycle(subscriptionDto.getBillingCycle())
                 .autoRenew(subscriptionDto.getAutoRenew())
                 .build();
@@ -76,9 +79,7 @@ public class SubscriptionService {
         Subscription savedSubscription = subscriptionRepository.save(subscription);
         
         // Create initial invoice
-        invoiceService.createInvoiceForSubscription(savedSubscription);
-        
-        return convertToDto(savedSubscription);
+        return invoiceService.createInvoiceForSubscription(savedSubscription);
     }
 
     @Transactional
@@ -108,7 +109,12 @@ public class SubscriptionService {
         if (subscriptionDto.getAutoRenew() != null) {
             existingSubscription.setAutoRenew(subscriptionDto.getAutoRenew());
         }
-        
+
+        if (subscriptionDto.getAmount() != null) {
+            existingSubscription.setAmount(subscriptionDto.getAmount());
+        }
+
+
         Subscription updatedSubscription = subscriptionRepository.save(existingSubscription);
         return convertToDto(updatedSubscription);
     }
@@ -157,7 +163,6 @@ public class SubscriptionService {
 
     private SubscriptionDto convertToDto(Subscription subscription) {
         PlanDto planDto = planService.getPlanById(subscription.getPlan().getId());
-        
         return SubscriptionDto.builder()
                 .id(subscription.getId())
                 .userId(subscription.getUserId())
@@ -166,7 +171,25 @@ public class SubscriptionService {
                 .status(subscription.getStatus())
                 .startDate(subscription.getStartDate())
                 .endDate(subscription.getEndDate())
+                .billingCycle(subscription.getBillingCycle())
                 .autoRenew(subscription.getAutoRenew())
+                .amount(subscription.getAmount())
+                .invoices(subscription.getInvoices().stream()
+                        .map(this::convertInvoiceToDto)
+                        .collect(Collectors.toList()))
+                .build();
+    }
+
+    private InvoiceDto convertInvoiceToDto(Invoice invoice) {
+        return InvoiceDto.builder()
+                .id(invoice.getId())
+                .userId(invoice.getUserId())
+                .subscriptionId(invoice.getSubscription().getId())
+                .amount(invoice.getAmount())
+                .status(invoice.getStatus())
+                .dueDate(invoice.getDueDate())
+                .paidAt(invoice.getPaidAt())
+                .createdAt(invoice.getCreatedAt())
                 .build();
     }
 } 

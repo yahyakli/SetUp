@@ -21,6 +21,7 @@ export default function NavigationProgress() {
   const [isChanging, setIsChanging] = useState(false);
   const [loadingKey, setLoadingKey] = useState('');
 
+  // Monitor route changes
   useEffect(() => {
     // Track navigation with a key based on the current path and search params
     const currentKey = pathname + searchParams.toString();
@@ -30,11 +31,16 @@ export default function NavigationProgress() {
       NProgress.done();
       setIsChanging(false);
       setLoadingKey('');
-    } else if (!loadingKey && isChanging) {
-      // First time we're setting a new loading key
-      setLoadingKey(currentKey);
     }
-  }, [pathname, searchParams, loadingKey, isChanging]);
+  }, [pathname, searchParams, loadingKey]);
+
+  // Handle isChanging state separately to avoid render-phase setState
+  useEffect(() => {
+    if (!loadingKey && isChanging) {
+      // First time we're setting a new loading key
+      setLoadingKey(pathname + searchParams.toString());
+    }
+  }, [isChanging, loadingKey, pathname, searchParams]);
 
   // Set up event listeners for navigation events
   useEffect(() => {

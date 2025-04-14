@@ -108,7 +108,13 @@ export default function RegisterPage() {
         const { token, user } = response.data;
         toast.success("You have successfully registered");
         dispatch(register({ token, user }));
-        redirect("/dashboard");
+        
+        // Get the redirectTo parameter from the URL
+        const searchParams = new URLSearchParams(window.location.search);
+        const redirectTo = searchParams.get('redirectTo');
+        
+        // Redirect to the intended destination or dashboard
+        window.location.href = redirectTo || "/dashboard";
       }
     } catch (error) {
       console.log(error)

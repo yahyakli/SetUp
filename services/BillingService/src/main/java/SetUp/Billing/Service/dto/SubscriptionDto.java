@@ -9,7 +9,10 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @Builder
@@ -39,4 +42,8 @@ public class SubscriptionDto {
     
     @NotNull(message = "Auto-renew setting is required")
     private Boolean autoRenew;
+
+    private BigDecimal amount;
+
+    private List<InvoiceDto> invoices = new ArrayList<>();
 } 

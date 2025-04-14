@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -74,7 +75,7 @@ public class InvoiceService {
         Invoice invoice = Invoice.builder()
                 .userId(subscription.getUserId())
                 .subscription(subscription)
-                .amount(subscription.getPlan().getPrice())
+                .amount(subscription.getAmount())
                 .status(Invoice.InvoiceStatus.UNPAID)
                 .dueDate(LocalDate.now().plusDays(7))
                 .build();
@@ -96,6 +97,16 @@ public class InvoiceService {
             if (invoice.getSubscription() != null) {
                 Subscription subscription = invoice.getSubscription();
                 if (subscription.getStatus() == Subscription.SubscriptionStatus.PENDING) {
+                    LocalDate startDate = LocalDate.now();
+
+                    LocalDate endDate;
+                    if (subscription.getBillingCycle() == Subscription.BillingCycle.MONTHLY) {
+                        endDate = startDate.plusMonths(1);
+                    } else {
+                        endDate = startDate.plusYears(1);
+                    }
+                    subscription.setStartDate(startDate);
+                    subscription.setEndDate(endDate);
                     subscription.setStatus(Subscription.SubscriptionStatus.ACTIVE);
                     subscriptionRepository.save(subscription);
                 }

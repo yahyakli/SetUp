@@ -178,3 +178,26 @@ export interface Plan {
   analytics: boolean;
   security: boolean;
 }
+
+export interface Invoice {
+  id: string;
+  userId: string;
+  subscriptionId: string;
+  amount: number;
+  status: string;
+  dueDate: Date;
+  paidAt: Date;
+  createdAt: Date;
+}
+
+export interface Subscription {
+  id: string;
+  userId: string;
+  planId: string;
+  status: string;
+  amount: number;
+  invoices: Invoice[];
+  dueDate: Date;
+  paidAt: Date;
+  createdAt: Date;
+}

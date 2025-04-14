@@ -25,6 +25,7 @@ import { logout } from '@/lib/features/userSlice';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import CreateTeamDialog from './CreateTeamDialog';
 import { Project, Team, Task } from '@/types/index';
+import { useAppContext } from '@/context/AppContext';
 
 export const Navbar = () => {
   const { teams } = useSelector((state: RootState) => state.teams);
@@ -39,6 +40,8 @@ export const Navbar = () => {
   const [recentTeams, setRecentTeams] = useState<Team[]>([]);
   const [recentProjects, setRecentProjects] = useState<Project[]>([]);
   const [recentTasks, setRecentTasks] = useState<Task[]>([]);
+
+  const { authCheckComplete } = useAppContext();
 
   const [createTeamDialogOpen, setCreateTeamDialogOpen] = useState(false);
   const [subscriptionExpanded, setSubscriptionExpanded] = useState(false);
@@ -72,7 +75,11 @@ export const Navbar = () => {
 
   const scrollToTop = () => {
     if (pathname !== '/dashboard') {
-      router.push('/dashboard');
+      if (authCheckComplete) {
+        router.push('/dashboard');
+      } else {
+        router.push('/');
+      }
     } else {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }

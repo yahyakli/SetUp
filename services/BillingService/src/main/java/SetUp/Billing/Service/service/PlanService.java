@@ -86,7 +86,7 @@ public class PlanService {
         planRepository.deleteById(id);
     }
 
-    private PlanDto convertToDto(Plan plan) {
+    public PlanDto convertToDto(Plan plan) {
         return PlanDto.builder()
                 .id(plan.getId())
                 .name(plan.getName())

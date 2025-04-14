@@ -1,5 +1,6 @@
 package SetUp.Billing.Service.controller;
 
+import SetUp.Billing.Service.dto.InvoiceDto;
 import SetUp.Billing.Service.dto.SubscriptionDto;
 import SetUp.Billing.Service.security.JwtTokenProvider;
 import SetUp.Billing.Service.service.SubscriptionService;
@@ -62,7 +63,7 @@ public class SubscriptionController {
     }
 
     @PostMapping
-    public ResponseEntity<SubscriptionDto> createSubscription(@Valid @RequestBody SubscriptionDto subscriptionDto) {
+    public ResponseEntity<InvoiceDto> createSubscription(@Valid @RequestBody SubscriptionDto subscriptionDto) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return new ResponseEntity<>(subscriptionService.createSubscription(subscriptionDto), HttpStatus.CREATED);
     }

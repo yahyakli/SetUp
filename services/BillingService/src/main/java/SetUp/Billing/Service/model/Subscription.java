@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.UuidGenerator;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,7 +47,9 @@ public class Subscription {
     
     @Column(nullable = false)
     private Boolean autoRenew;
-    
+
+    private BigDecimal amount;
+
     @OneToMany(mappedBy = "subscription", cascade = CascadeType.ALL)
     private List<Invoice> invoices = new ArrayList<>();
     
