@@ -79,12 +79,7 @@ public class SubscriptionController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         SubscriptionDto subscription = subscriptionService.getSubscriptionById(id);
-        
-        // Check if the user is canceling their own subscription or is an admin
-        if (!subscription.getUserId().equals(userId) && !authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ADMIN"))) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
+
         
         return ResponseEntity.ok(subscriptionService.cancelSubscription(id));
     }

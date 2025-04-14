@@ -9,7 +9,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { CheckCircle, Shield, X, AlertCircle } from 'lucide-react';
-import Loader from '@/components/Loader';
 import { Invoice, Plan, Subscription } from '@/types';
 import axios, { AxiosError } from 'axios';
 import { BILLING_SERVICE_URL } from '@/constants/API_URLS';
@@ -31,6 +30,7 @@ const SubscribePage = () => {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [subscriptionsLoading, setSubscriptionsLoading] = useState(true);
   const [subscriptionChecking, setSubscriptionChecking] = useState(true);
+  const [activeSubscription, setActiveSubscription] = useState<Subscription | null>();
 
   // Fetch user subscriptions
   useEffect(() => {
@@ -42,16 +42,21 @@ const SubscribePage = () => {
             'Authorization': `Bearer ${token}`
           }
         });
-        
-        setSubscriptions(response.data);
-        
-        // Check for active subscription for this plan
-        const activeSubscription = response.data.find(
-          (sub: Subscription) => sub.status === 'ACTIVE' && sub.planId === planId
-        );
-        
-        if (activeSubscription) {
-          setError("You already have an active subscription to this plan.");
+        if (response.status === 200) {
+          setSubscriptions(response.data);
+          
+          // Check for active subscription for this plan
+          const activeSubscription = response.data.find(
+            (sub: Subscription) => (sub.status === 'ACTIVE' && sub.planId === planId) || sub.invoices.find(
+              (invoice: Invoice) => invoice.status === 'UNPAID'
+            )
+          );
+  
+          setActiveSubscription(activeSubscription);
+          
+          if (activeSubscription) {
+            setError("You already have an active subscription to this plan.");
+          }
         }
       } catch (err) {
         console.error("Failed to fetch subscriptions:", err);
@@ -88,6 +93,34 @@ const SubscribePage = () => {
     return basePrice;
   };
 
+  const handleCancelSubscription = async () => {
+    try {
+      const response = await axios.put(
+        `${BILLING_SERVICE_URL}/api/subscriptions/${activeSubscription?.id}/${user?.id}/cancel`, 
+        {}, // Empty body object
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      if (response.status === 200) {
+        setError(null);
+        router.push('/plans');
+      } else {
+        setError("Failed to cancel subscription. Please try again.");
+      }
+    } catch (err) {
+      console.error("Failed to cancel subscription:", err);
+      if (err instanceof AxiosError) {
+        setError(err.response?.data?.message || "Failed to cancel subscription. Please try again.");
+      } else {
+        setError("Failed to cancel subscription. Please try again.");
+      }
+    }
+  };
+
   const handleCreateInvoice = async () => {
     setIsLoading(true);
     setError(null);
@@ -122,7 +155,22 @@ const SubscribePage = () => {
     return (
       <AppLayout>
         <div className="container mx-auto py-10 flex justify-center items-center min-h-[70vh]">
-          <Loader />
+          <Card className="w-full max-w-md shadow-sm border-border dark:border-gray-700">
+            <CardHeader className="text-center border-b bg-muted/40 dark:bg-gray-800/50 pb-6">
+              <CardTitle className="text-xl mb-2 dark:text-white">Loading Subscription Details</CardTitle>
+              <CardDescription className="dark:text-gray-300">
+                Please wait while we retrieve your subscription information...
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center py-8 space-y-4 dark:bg-gray-900">
+              <div className="flex space-x-2">
+                <div className="w-3 h-3 rounded-full bg-primary dark:bg-blue-400 animate-pulse" style={{ animationDelay: '0ms' }}></div>
+                <div className="w-3 h-3 rounded-full bg-primary dark:bg-blue-400 animate-pulse" style={{ animationDelay: '300ms' }}></div>
+                <div className="w-3 h-3 rounded-full bg-primary dark:bg-blue-400 animate-pulse" style={{ animationDelay: '600ms' }}></div>
+              </div>
+              <p className="text-sm text-muted-foreground dark:text-gray-400">Checking subscription status...</p>
+            </CardContent>
+          </Card>
         </div>
       </AppLayout>
     );
@@ -132,15 +180,21 @@ const SubscribePage = () => {
     return (
       <AppLayout>
         <div className="container max-w-6xl mx-auto px-4 sm:px-6 py-10">
-          <Card className="shadow-sm">
-            <CardHeader className="border-b bg-muted/40 pb-4">
-              <CardTitle>Error</CardTitle>
+          <Card className="shadow-sm border-border dark:border-gray-700">
+            <CardHeader className="border-b bg-muted/40 dark:bg-gray-800/50 pb-4">
+              <CardTitle className="dark:text-white">Error</CardTitle>
             </CardHeader>
-            <CardContent className="pt-6">
-              <p className="text-red-500">{error}</p>
+            <CardContent className="pt-6 dark:bg-gray-900">
+              <p className="text-red-500 dark:text-red-400">{error}</p>
             </CardContent>
-            <CardFooter className="border-t bg-muted/20 pt-4 mt-2">
-              <Button onClick={() => router.push('/')} size="lg">Return to Plans</Button>
+            <CardFooter className="border-t bg-muted/20 dark:bg-gray-800/30 pt-4 mt-2 dark:border-gray-700">
+              <Button 
+                onClick={() => router.push('/')} 
+                size="lg"
+                className="dark:hover:bg-blue-600"
+              >
+                Return to Plans
+              </Button>
             </CardFooter>
           </Card>
         </div>
@@ -167,27 +221,27 @@ const SubscribePage = () => {
     return (
       <AppLayout>
         <div className="container max-w-6xl mx-auto px-4 sm:px-6 py-10">
-          <Card className="shadow-sm">
-            <CardHeader className="border-b bg-muted/40 pb-4">
-              <CardTitle className="flex items-center gap-2">
+          <Card className="shadow-sm border-border dark:border-gray-700">
+            <CardHeader className="border-b bg-muted/40 dark:bg-gray-800/50 pb-4">
+              <CardTitle className="flex items-center gap-2 dark:text-white">
                 <AlertCircle className="h-5 w-5 text-amber-500" />
                 Pending Subscription
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 dark:bg-gray-900 dark:text-gray-200">
               <p>You already have a pending subscription to this plan. Would you like to continue to payment or cancel this subscription?</p>
             </CardContent>
-            <CardFooter className="border-t bg-muted/20 pt-4 mt-2 flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4">
+            <CardFooter className="border-t bg-muted/20 dark:bg-gray-800/30 pt-4 mt-2 flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4 dark:border-gray-700">
               <Button 
                 onClick={() => router.push(`/payment/${unpaidInvoice.id}`)}
-                className="w-full sm:w-auto"
+                className="w-full sm:w-auto dark:hover:bg-blue-600"
               >
                 Continue to Payment
               </Button>
               <Button 
                 variant="outline" 
-                onClick={() => router.push('/')}
-                className="w-full sm:w-auto"
+                onClick={handleCancelSubscription}
+                className="w-full sm:w-auto dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700 dark:border-gray-600"
               >
                 Cancel
               </Button>
