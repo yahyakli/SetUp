@@ -2,7 +2,7 @@
 
 import { usePathname, useSearchParams } from 'next/navigation';
 import NProgress from 'nprogress';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 // Custom styles for NProgress
 import 'nprogress/nprogress.css';
@@ -18,41 +18,36 @@ NProgress.configure({
 export default function NavigationProgress() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [isChanging, setIsChanging] = useState(false);
-  const [loadingKey, setLoadingKey] = useState('');
-
-  // Monitor route changes
+  const isChangingRef = useRef(false);
+  const loadingKeyRef = useRef('');
+  
+  // Monitor route changes with refs instead of state
   useEffect(() => {
     // Track navigation with a key based on the current path and search params
     const currentKey = pathname + searchParams.toString();
     
-    if (loadingKey && loadingKey !== currentKey) {
+    if (loadingKeyRef.current && loadingKeyRef.current !== currentKey) {
       // Route change completed
       NProgress.done();
-      setIsChanging(false);
-      setLoadingKey('');
+      isChangingRef.current = false;
+      loadingKeyRef.current = '';
     }
-  }, [pathname, searchParams, loadingKey]);
-
-  // Handle isChanging state separately to avoid render-phase setState
-  useEffect(() => {
-    if (!loadingKey && isChanging) {
-      // First time we're setting a new loading key
-      setLoadingKey(pathname + searchParams.toString());
-    }
-  }, [isChanging, loadingKey, pathname, searchParams]);
+  }, [pathname, searchParams]);
 
   // Set up event listeners for navigation events
   useEffect(() => {
     const handleRouteChangeStart = () => {
-      setIsChanging(true);
-      NProgress.start();
+      if (!isChangingRef.current) {
+        isChangingRef.current = true;
+        loadingKeyRef.current = pathname + searchParams.toString();
+        NProgress.start();
+      }
     };
 
     const handleRouteChangeComplete = () => {
       NProgress.done();
-      setIsChanging(false);
-      setLoadingKey('');
+      isChangingRef.current = false;
+      loadingKeyRef.current = '';
     };
 
     // Add event listeners to document for detecting clicks on links
@@ -81,7 +76,7 @@ export default function NavigationProgress() {
           url.endsWith('.js') ||
           !url.includes('/api/') // Exclude pure API calls that aren't page data
       )) {
-        if (!isChanging) {
+        if (!isChangingRef.current) {
           handleRouteChangeStart();
         }
         
@@ -110,7 +105,7 @@ export default function NavigationProgress() {
       window.fetch = originalFetch;
       NProgress.done();
     };
-  }, []);
+  }, [pathname, searchParams]);
 
   // Also monitor for initial page load
   useEffect(() => {

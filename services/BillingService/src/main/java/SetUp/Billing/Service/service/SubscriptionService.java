@@ -52,6 +52,14 @@ public class SubscriptionService {
 
     @Transactional
     public InvoiceDto createSubscription(SubscriptionDto subscriptionDto) {
+        boolean hasActiveSubscription = subscriptionRepository
+                .findByUserIdAndStatus(subscriptionDto.getUserId(), Subscription.SubscriptionStatus.ACTIVE)
+                .isPresent();
+
+        if (hasActiveSubscription) {
+            throw new IllegalStateException("User already has an active subscription");
+        }
+
         Plan plan = planRepository.findById(subscriptionDto.getPlanId())
                 .orElseThrow(() -> new ResourceNotFoundException("Plan not found with id: " + subscriptionDto.getPlanId()));
         

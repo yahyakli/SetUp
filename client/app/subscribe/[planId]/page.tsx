@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useAppContext } from '@/context/AppContext';
 import AppLayout from '@/app/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -20,10 +20,14 @@ const SubscribePage = () => {
   const { user, token } = useSelector((state: RootState) => state.user);
   const { planId } = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const cycleParam = searchParams.get('cycle');
   const { plans, plansLoading } = useAppContext();
 
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
-  const [billingCycle, setBillingCycle] = useState<'MONTHLY' | 'ANNUALLY'>('MONTHLY');
+  const [billingCycle, setBillingCycle] = useState<'MONTHLY' | 'ANNUALLY'>(
+    cycleParam === 'yearly' ? 'ANNUALLY' : 'MONTHLY'
+  );
   const [autoRenew, setAutoRenew] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,6 +35,15 @@ const SubscribePage = () => {
   const [subscriptionsLoading, setSubscriptionsLoading] = useState(true);
   const [subscriptionChecking, setSubscriptionChecking] = useState(true);
   const [activeSubscription, setActiveSubscription] = useState<Subscription | null>();
+
+  // Use effect to set billing cycle from URL parameter
+  useEffect(() => {
+    if (cycleParam === 'yearly') {
+      setBillingCycle('ANNUALLY');
+    } else if (cycleParam === 'monthly') {
+      setBillingCycle('MONTHLY');
+    }
+  }, [cycleParam]);
 
   // Fetch user subscriptions
   useEffect(() => {
@@ -43,7 +56,8 @@ const SubscribePage = () => {
           }
         });
         if (response.status === 200) {
-          setSubscriptions(response.data);
+          setSubscriptions(response.data.filter((sub: Subscription) => sub.status !== 'CANCELED'));
+          console.log(response.data);
           
           // Check for active subscription for this plan
           const activeSubscription = response.data.find(
@@ -53,10 +67,6 @@ const SubscribePage = () => {
           );
   
           setActiveSubscription(activeSubscription);
-          
-          if (activeSubscription) {
-            setError("You already have an active subscription to this plan.");
-          }
         }
       } catch (err) {
         console.error("Failed to fetch subscriptions:", err);

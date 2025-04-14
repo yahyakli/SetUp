@@ -11,7 +11,7 @@ import { AppDispatch, RootState } from "@/lib/store";
 import { Message, Plan, Team } from "@/types/index";
 import axios from "axios";
 import { createContext, useContext, useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { Subscription, useDispatch, useSelector } from "react-redux";
 
 // Define the context type
 type AppContextType = {
@@ -23,6 +23,7 @@ type AppContextType = {
   markLastMessageAsRead: (roomId: string, messageId: string) => void;
   plans: Plan[] | null;
   plansLoading: boolean;
+  userSubscription: Subscription | null;
 };
 
 // Create the context with default values
@@ -34,7 +35,8 @@ const AppContext = createContext<AppContextType>({
   updateLastMessage: () => {},
   markLastMessageAsRead: () => {},
   plans: null,
-  plansLoading: false
+  plansLoading: false,
+  userSubscription: null
 });
 
 // Custom hook to use the AppContext
@@ -47,6 +49,7 @@ export const AppContextProvider = ({ children }: { children: React.ReactNode }) 
   const [lastMessages, setLastMessages] = useState<Record<string, Message>>({});
   const [plans, setPlans] = useState<Plan[] | null>(null);
   const [plansLoading, setPlansLoading] = useState<boolean>(true);
+  const [userSubscription, setUserSubscription] = useState<Subscription | null>(null);
 
   // Function to update the last message for a chat room
   const updateLastMessage = (roomId: string, message: Message) => {
@@ -205,6 +208,14 @@ export const AppContextProvider = ({ children }: { children: React.ReactNode }) 
       if (res.status === 200) {
         setPlans(res.data);
       }
+
+      const usrRes = await axios.get(BILLING_SERVICE_URL + "/api/subscriptions/user/" + user?.id + "/active", {
+        headers: { Authorization: "Bearer " + token }
+      });
+
+      if (usrRes.status === 200) {
+        setUserSubscription(usrRes.data);
+      }
     } catch (err) {
       console.log(err);
     } finally {
@@ -221,7 +232,8 @@ export const AppContextProvider = ({ children }: { children: React.ReactNode }) 
     updateLastMessage,
     markLastMessageAsRead,
     plans,
-    plansLoading
+    plansLoading,
+    userSubscription
   };
 
   return (
