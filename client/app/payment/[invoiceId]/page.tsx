@@ -25,80 +25,132 @@ interface Invoice {
 
 const PaymentPage = () => {
   const { invoiceId } = useParams();
-  const { token } = useSelector((state: RootState) => state.user);
+  const { token, user } = useSelector((state: RootState) => state.user);
   const router = useRouter();
-  
+
   const [invoice, setInvoice] = useState<Invoice | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal'>('stripe');
+  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal' | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  
+  const [paymentInfo, setPaymentInfo] = useState<any>(null);
+  const [isLoadingPaymentInfo, setIsLoadingPaymentInfo] = useState(false);
+
   useEffect(() => {
-    const fetchInvoice = async () => {
-      try {
-        // Here you would fetch the invoice details from your API
-        const response = await axios.get(`${BILLING_SERVICE_URL}/api/invoices/${invoiceId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
+    if (token && user?.id) {
+      const fetchInvoice = async () => {
+        try {
+          // Here you would fetch the invoice details from your API
+          const response = await axios.get(`${BILLING_SERVICE_URL}/api/invoices/${invoiceId}/${user.id}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          setInvoice(response.data);
+        } catch (err) {
+          if (err instanceof AxiosError) {
+            setError(err.response?.data?.message || "Failed to fetch invoice details.");
+          } else {
+            setError("An unexpected error occurred. Please try again.");
           }
-        });
-        setInvoice(response.data);
-      } catch (err) {
-        if (err instanceof AxiosError) {
-          setError(err.response?.data?.message || "Failed to fetch invoice details.");
-        } else {
-          setError("An unexpected error occurred. Please try again.");
+        } finally {
+          setIsLoading(false);
         }
-      } finally {
-        setIsLoading(false);
+      };
+
+      if (invoiceId) {
+        fetchInvoice();
       }
-    };
-    
-    if (invoiceId) {
-      fetchInvoice();
     }
-  }, [invoiceId]);
+  }, [invoiceId, token, user]);
 
   useEffect(() => {
     if (success) {
       const timer = setTimeout(() => {
         router.push('/dashboard');
       }, 3000);
-      
+
       return () => clearTimeout(timer);
     }
   }, [success, router]);
 
+  useEffect(() => {
+    if (paymentMethod && invoice && !isProcessing) {
+      const getPaymentInfo = async () => {
+        setIsLoadingPaymentInfo(true);
+        setError(null);
+        
+        try {
+          const response = await axios.post(`${BILLING_SERVICE_URL}/api/payments/create`, {
+            paymentMethod,
+            planId: invoice.planId,
+            userId: user?.id,
+            amount: invoice.amount,
+            currency: 'USD',
+            invoiceId: invoice.id
+          }, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          setPaymentInfo(response.data);
+        } catch (err) {
+          if (err instanceof AxiosError) {
+            setError(err.response?.data?.message || "Failed to initialize payment. Please try again.");
+          } else {
+            setError("An unexpected error occurred. Please try again.");
+          }
+          // Reset payment method if there's an error
+          setPaymentMethod(null);
+        } finally {
+          setIsLoadingPaymentInfo(false);
+        }
+      };
+      
+      getPaymentInfo();
+    }
+  }, [paymentMethod, invoice, user, token, isProcessing]);
+
   const handlePayment = async () => {
     setIsProcessing(true);
     setError(null);
-    
+
     try {
-      // Here you would make an API call to process the payment
-      // const response = await axios.post('/api/payments', {
-      //   invoiceId,
-      //   paymentMethod,
-      //   userId: user.id
-      // });
-      
-      // After successful payment, create subscription
-      // await axios.post('/api/subscriptions', {
-      //   userId: user.id,
-      //   planId: invoice?.planId,
-      //   billingCycle: invoice?.billingCycle
-      // });
-      
-      // Mock successful payment for now
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      setSuccess(true);
-      
-      // Remove the direct navigation from here
-      // setTimeout(() => {
-      //   router.push('/dashboard');
-      // }, 3000);
+      if (paymentMethod === 'stripe') {
+        // Process Stripe payment using the client secret
+        // This would typically involve Stripe.js and Elements
+        // For now, we'll just simulate a successful payment
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Complete the payment
+        const response = await axios.get(`${BILLING_SERVICE_URL}/api/payments/complete`, {
+          params: {
+            paymentMethod: 'stripe',
+            paymentId: paymentInfo.paymentId,
+            userId: user?.id,
+            planId: invoice?.planId
+          },
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.data) {
+          setSuccess(true);
+        } else {
+          setError("Payment verification failed. Please try again.");
+        }
+      } else if (paymentMethod === 'paypal') {
+        // For PayPal, redirect to the PayPal URL
+        if (paymentInfo && paymentInfo.redirectUrl) {
+          window.location.href = paymentInfo.redirectUrl;
+          return; // Don't set success here as we're redirecting
+        } else {
+          setError("PayPal redirect URL not found. Please try again.");
+        }
+      }
     } catch (err) {
       if (err instanceof AxiosError) {
         setError(err.response?.data?.message || "Payment failed. Please try again.");
@@ -150,9 +202,9 @@ const PaymentPage = () => {
               </CardDescription>
             </CardHeader>
             <CardFooter className="p-6 flex justify-center dark:bg-gray-900">
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => router.push('/dashboard')}
                 className="dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700 dark:border-gray-600"
               >
@@ -177,8 +229,8 @@ const PaymentPage = () => {
               <p className="text-red-500 dark:text-red-400">{error}</p>
             </CardContent>
             <CardFooter className="border-t bg-muted/20 dark:bg-gray-800/30 pt-4 mt-2 dark:border-gray-700">
-              <Button 
-                onClick={() => router.push('/')} 
+              <Button
+                onClick={() => router.push('/')}
                 size="lg"
                 className="dark:hover:bg-blue-600"
               >
@@ -195,7 +247,7 @@ const PaymentPage = () => {
     <AppLayout>
       <div className="container max-w-6xl mx-auto px-4 sm:px-6 py-10">
         <h1 className="text-3xl font-bold mb-8 dark:text-white">Complete Your Payment</h1>
-        
+
         {invoice && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="md:col-span-2">
@@ -205,8 +257,8 @@ const PaymentPage = () => {
                   <CardDescription className="mt-1.5 dark:text-gray-300">Choose your preferred payment method</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-6 px-6 dark:bg-gray-900">
-                  <RadioGroup 
-                    value={paymentMethod} 
+                  <RadioGroup
+                    value={paymentMethod || ''}
                     onValueChange={(value) => setPaymentMethod(value as 'stripe' | 'paypal')}
                     className="space-y-4"
                   >
@@ -216,27 +268,27 @@ const PaymentPage = () => {
                         <div className="font-medium">Credit Card</div>
                         <div className="ml-auto flex items-center gap-2">
                           <span className="text-sm text-gray-600 dark:text-gray-400">Stripe</span>
-                          <Image 
-                            src="/stripe-logo.png" 
-                            alt="Stripe" 
-                            width={60} 
+                          <Image
+                            src="/stripe-logo.png"
+                            alt="Stripe"
+                            width={60}
                             height={25}
                             className="h-6 w-auto object-contain"
                           />
                         </div>
                       </Label>
                     </div>
-                    
+
                     <div className="flex items-center space-x-3 border dark:border-gray-700 p-4 rounded-md hover:border-primary/50 dark:hover:border-blue-500/70 transition-colors">
                       <RadioGroupItem value="paypal" id="paypal" className="dark:border-gray-600" />
                       <Label htmlFor="paypal" className="flex-1 cursor-pointer flex items-center dark:text-white">
                         <div className="font-medium">PayPal</div>
                         <div className="ml-auto flex items-center gap-2">
                           <span className="text-sm text-gray-600 dark:text-gray-400">PayPal</span>
-                          <Image 
-                            src="/paypal-logo.png" 
-                            alt="PayPal" 
-                            width={80} 
+                          <Image
+                            src="/paypal-logo.png"
+                            alt="PayPal"
+                            width={80}
                             height={20}
                             className="h-6 w-auto object-contain"
                           />
@@ -244,9 +296,21 @@ const PaymentPage = () => {
                       </Label>
                     </div>
                   </RadioGroup>
-                  
-                  {/* Payment form would go here - simplified for this example */}
-                  {paymentMethod === 'stripe' && (
+
+                  {/* Show loading indicator when fetching payment info */}
+                  {isLoadingPaymentInfo && (
+                    <div className="mt-6 p-6 bg-gray-50 dark:bg-gray-800 rounded-md text-center">
+                      <div className="flex justify-center space-x-2 mb-2">
+                        <div className="w-3 h-3 rounded-full bg-primary dark:bg-blue-400 animate-pulse" style={{ animationDelay: '0ms' }}></div>
+                        <div className="w-3 h-3 rounded-full bg-primary dark:bg-blue-400 animate-pulse" style={{ animationDelay: '300ms' }}></div>
+                        <div className="w-3 h-3 rounded-full bg-primary dark:bg-blue-400 animate-pulse" style={{ animationDelay: '600ms' }}></div>
+                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">Preparing payment details...</p>
+                    </div>
+                  )}
+
+                  {/* Payment form for Stripe - only show when payment info is loaded */}
+                  {paymentMethod === 'stripe' && paymentInfo && !isLoadingPaymentInfo && (
                     <div className="mt-6 space-y-4 border dark:border-gray-700 p-6 rounded-md bg-card dark:bg-gray-800">
                       <div className="grid grid-cols-2 gap-5">
                         <div className="col-span-2">
@@ -280,26 +344,39 @@ const PaymentPage = () => {
                           />
                         </div>
                       </div>
+                      
+                      {/* Display client secret or other payment info if needed */}
+                      {paymentInfo.clientSecret && (
+                        <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
+                          <p>Payment initialized with Stripe</p>
+                        </div>
+                      )}
                     </div>
                   )}
-                  
-                  {paymentMethod === 'paypal' && (
+
+                  {/* PayPal info - only show when payment info is loaded */}
+                  {paymentMethod === 'paypal' && paymentInfo && !isLoadingPaymentInfo && (
                     <div className="mt-6 p-6 bg-blue-50 dark:bg-blue-900/30 rounded-md text-center dark:text-gray-200">
                       <p>You will be redirected to PayPal to complete your payment.</p>
+                      {paymentInfo.redirectUrl && (
+                        <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                          Redirect URL is ready. Click &quot;Pay&quot; to continue to PayPal.
+                        </p>
+                      )}
                     </div>
                   )}
                 </CardContent>
                 <CardFooter className="border-t bg-muted/20 dark:bg-gray-800/30 flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4 sm:justify-between p-6 dark:border-gray-700">
-                  <Button 
-                    onClick={handlePayment} 
-                    disabled={isProcessing}
+                  <Button
+                    onClick={handlePayment}
+                    disabled={isProcessing || isLoadingPaymentInfo || !paymentMethod || !paymentInfo}
                     className="w-full sm:w-auto dark:hover:bg-blue-600"
                     size="lg"
                   >
                     {isProcessing ? "Processing Payment..." : `Pay $${invoice.amount}`}
                   </Button>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={() => router.back()}
                     className="w-full sm:w-auto dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700 dark:border-gray-600"
                   >
@@ -307,7 +384,7 @@ const PaymentPage = () => {
                   </Button>
                 </CardFooter>
               </Card>
-              
+
               {error && (
                 <div className="mt-4 p-4 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded-md flex items-start gap-3">
                   <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
@@ -315,7 +392,7 @@ const PaymentPage = () => {
                 </div>
               )}
             </div>
-            
+
             <div>
               <Card className="shadow-sm sticky top-24 border-border dark:border-gray-700">
                 <CardHeader className="border-b bg-muted/40 dark:bg-gray-800/50 pb-4">

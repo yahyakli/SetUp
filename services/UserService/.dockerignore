@@ -1,0 +1,7 @@
+target/
+!target/userservice-0.0.1-SNAPSHOT.jar
+.git/
+.gitignore
+.idea/
+*.iml
+.DS_Store

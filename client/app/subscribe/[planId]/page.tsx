@@ -50,7 +50,7 @@ const SubscribePage = () => {
     const fetchSubscriptions = async () => {
       setSubscriptionChecking(true);
       try {
-        const response = await axios.get(`${BILLING_SERVICE_URL}/api/subscriptions/user/${user?.id}`, {
+        const response = await axios.get(`${BILLING_SERVICE_URL}/api/subscriptions/user/current/${user?.id}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -105,9 +105,8 @@ const SubscribePage = () => {
 
   const handleCancelSubscription = async () => {
     try {
-      const response = await axios.put(
-        `${BILLING_SERVICE_URL}/api/subscriptions/${activeSubscription?.id}/${user?.id}/cancel`, 
-        {}, // Empty body object
+      const response = await axios.delete(
+        `${BILLING_SERVICE_URL}/api/subscriptions/${activeSubscription?.id}`, 
         {
           headers: {
             'Authorization': `Bearer ${token}`

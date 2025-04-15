@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  userservice:
+    build: .
+    container_name: userservice
+    ports:
+      - "1010:1010"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USERNAME=root
+      - DB_PASSWORD=mysqlpwd
+      - STORAGE_SERVICE_URL=http://localhost:3030
+    volumes:
+      - avatar-uploads:/app/src/main/resources/static/uploads/avatars
+    depends_on:
+      - mysql
+    networks:
+      - userservice-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: userservice-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_DATABASE=userservicedb
+      - MYSQL_ROOT_PASSWORD=mysqlpwd
+    volumes:
+      - mysql-data:/var/lib/mysql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    networks:
+      - userservice-network
+
+networks:
+  userservice-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
+  avatar-uploads:

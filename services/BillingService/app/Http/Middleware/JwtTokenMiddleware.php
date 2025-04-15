@@ -10,7 +10,7 @@ use Firebase\JWT\Key;
 use Firebase\JWT\SignatureInvalidException;
 use Illuminate\Http\Request;
 
-class VerifyToken
+class JwtTokenMiddleware
 {
     /**
      * Handle an incoming request.
