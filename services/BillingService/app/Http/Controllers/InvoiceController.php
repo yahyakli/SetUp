@@ -43,14 +43,8 @@ class InvoiceController extends Controller
     /**
      * Display the specified invoice.
      */
-    public function show(string $id, Request $request)
+    public function show(string $id, $userId)
     {
-        $request->validate([
-            'user_id' => 'required|string',
-        ]);
-        
-        $userId = $request->user_id;
-        
         $invoice = Invoice::with('subscription.plan')
             ->whereHas('subscription', function ($query) use ($userId) {
                 $query->where('user_id', $userId);
@@ -62,7 +56,7 @@ class InvoiceController extends Controller
     }
 
     /**
-     * Pay a pending invoice.
+     * Pay a pending invoice using Stripe.
      */
     public function pay(string $id, Request $request)
     {
@@ -83,11 +77,19 @@ class InvoiceController extends Controller
             
         DB::beginTransaction();
         try {
-            // Create payment intent
+            // Create or retrieve Stripe customer
+            $stripeCustomerId = $this->getOrCreateStripeCustomer($userId, $request->payment_method_id);
+            
+            // Update subscription with stripe customer id
+            $invoice->subscription->update([
+                'stripe_customer_id' => $stripeCustomerId,
+            ]);
+            
+            // Create Stripe payment intent
             $paymentIntent = $this->stripe->paymentIntents->create([
                 'amount' => $invoice->amount * 100, // Stripe uses cents
                 'currency' => 'usd',
-                'customer' => $invoice->subscription->stripe_customer_id,
+                'customer' => $stripeCustomerId,
                 'payment_method' => $request->payment_method_id,
                 'off_session' => true,
                 'confirm' => true,
@@ -112,6 +114,10 @@ class InvoiceController extends Controller
                     'status' => 'paid',
                     'paid_at' => now(),
                 ]);
+                
+                $message = 'Payment successful. Your subscription is now active.';
+            } else {
+                $message = 'Payment requires additional action.';
             }
             
             DB::commit();
@@ -119,6 +125,9 @@ class InvoiceController extends Controller
             return response()->json([
                 'invoice' => $invoice->fresh()->load('subscription.plan'),
                 'client_secret' => $paymentIntent->client_secret,
+                'payment_status' => $paymentIntent->status,
+                'message' => $message,
+                'subscription' => $invoice->subscription->fresh()->load('plan'),
             ]);
             
         } catch (ApiErrorException $e) {
@@ -130,6 +139,41 @@ class InvoiceController extends Controller
             Log::error('Invoice payment error: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to process payment'], 500);
         }
+    }
+
+    /**
+     * Get or create a Stripe customer for the user.
+     */
+    protected function getOrCreateStripeCustomer(string $userId, string $paymentMethodId)
+    {
+        // In a real application, you might want to store this in a customers table
+        // For now, we'll search for existing customers or create a new one
+        $customers = $this->stripe->customers->all([
+            'limit' => 1,
+            'email' => $userId . '@example.com', // Using user ID as email for simplicity
+        ]);
+        
+        if (!empty($customers->data)) {
+            $customer = $customers->data[0];
+            
+            // Attach the payment method to the customer
+            $this->stripe->paymentMethods->attach($paymentMethodId, [
+                'customer' => $customer->id,
+            ]);
+            
+            return $customer->id;
+        }
+        
+        // Create a new customer with the payment method
+        $customer = $this->stripe->customers->create([
+            'email' => $userId . '@example.com',
+            'payment_method' => $paymentMethodId,
+            'metadata' => [
+                'user_id' => $userId,
+            ],
+        ]);
+        
+        return $customer->id;
     }
 
     /**

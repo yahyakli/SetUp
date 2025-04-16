@@ -10,11 +10,13 @@ import { useRouter } from 'next/navigation'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/lib/store'
 import { toast } from 'sonner'
+import axios from 'axios'
+import { BILLING_SERVICE_URL } from '@/constants/API_URLS'
 
 // Initialize Stripe with your publishable key
 
 export default function PlansSection() {
-  const { user } = useSelector((state: RootState) => state.user);
+  const { user, token } = useSelector((state: RootState) => state.user);
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -57,13 +59,25 @@ export default function PlansSection() {
     }
 
     setLoadingPlanId(planId);
-    
+
     try {
-      // Instead of creating a payment method here, redirect to setup page
-      router.push(`/payment/setup?plan_id=${planId}`);
+      // Create a subscription without payment_method_id
+      const response = await axios.post(BILLING_SERVICE_URL + '/api/subscriptions', {
+        user_id: user.id,
+        plan_id: planId,
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.status === 201) {
+        // Redirect to payment page with subscription and invoice info
+        router.push(`/payment/invoice/${response.data.invoice.id}?subscription_id=${response.data.subscription.id}`);
+      }
     } catch (error) {
       console.error('Subscription error:', error);
-      toast.error("There was an error processing your subscription. Please try again.");
+      toast.error("There was an error creating your subscription. Please try again.");
     } finally {
       setLoadingPlanId(null);
     }
@@ -133,11 +147,10 @@ export default function PlansSection() {
                     .map((plan) => (
                       <motion.div key={plan.id} variants={itemVariants} whileHover="hover">
                         <Card
-                          className={`flex flex-col h-full ${
-                            plan.special_title
+                          className={`flex flex-col h-full ${plan.special_title
                               ? 'border-2 border-blue-500 dark:border-blue-400 bg-gradient-to-b from-blue-50 to-white dark:from-gray-800 dark:to-gray-900 shadow-xl relative z-10 transform scale-105'
                               : 'border-gray-200 dark:border-gray-700'
-                          }`}
+                            }`}
                         >
                           {plan.special_title && (
                             <div className="absolute -top-4 left-0 right-0 mx-auto w-fit px-4 py-1 bg-blue-600 text-white text-sm font-bold rounded-full shadow-lg">
@@ -146,31 +159,28 @@ export default function PlansSection() {
                           )}
                           <CardHeader className={plan.special_title ? 'pt-8' : ''}>
                             <div className="flex justify-between items-start">
-                              <CardTitle 
-                                className={`text-2xl font-bold ${
-                                  plan.special_title 
+                              <CardTitle
+                                className={`text-2xl font-bold ${plan.special_title
                                     ? 'bg-gradient-to-r from-blue-600 to-blue-400 dark:from-blue-400 dark:to-blue-300 bg-clip-text text-transparent'
                                     : ''
-                                }`}
+                                  }`}
                               >
                                 {plan.name}
                               </CardTitle>
                               {plan.billing_cycle !== 'unlimited' && (
-                                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                                  plan.special_title
+                                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${plan.special_title
                                     ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
                                     : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
-                                }`}>
+                                  }`}>
                                   {plan.billing_cycle.charAt(0).toUpperCase() + plan.billing_cycle.slice(1)}
                                 </span>
                               )}
                             </div>
                             <CardDescription className="min-h-[50px]">{plan.description}</CardDescription>
-                            <div className={`text-4xl font-bold mt-4 ${
-                              plan.special_title 
+                            <div className={`text-4xl font-bold mt-4 ${plan.special_title
                                 ? 'bg-gradient-to-r from-blue-600 to-blue-400 dark:from-blue-400 dark:to-blue-300 bg-clip-text text-transparent'
                                 : ''
-                            }`}>
+                              }`}>
                               ${plan.price}
                               <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
                                 {plan.billing_cycle === 'monthly' ? '/month' :
@@ -229,11 +239,10 @@ export default function PlansSection() {
                               </Link>
                             ) : (
                               <Button
-                                className={`w-full group ${
-                                  plan.special_title
+                                className={`w-full group ${plan.special_title
                                     ? 'bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 text-white font-bold shadow-md'
                                     : ''
-                                }`}
+                                  }`}
                                 onClick={() => handleSubscribe(plan.id)}
                                 disabled={loadingPlanId === plan.id}
                               >

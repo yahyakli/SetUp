@@ -106,10 +106,14 @@ export const Navbar = () => {
   const hasChatPermission = userPermissions?.chat === true;
   
   // Check if user can create more projects
-  const canCreateProject = userPermissions?.projects ? projects.length < userPermissions.projects : false;
+  const canCreateProject = userPermissions?.projects 
+    ? userPermissions.projects === -1 || projects.length < userPermissions.projects 
+    : false;
   
   // Check if user can create more teams
-  const canCreateTeam = userPermissions?.teams ? teams.length < userPermissions.teams : false;
+  const canCreateTeam = userPermissions?.teams 
+    ? userPermissions.teams === -1 || teams.length < userPermissions.teams 
+    : false;
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -165,7 +169,7 @@ export const Navbar = () => {
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>You&#39;ve reached your project limit ({userPermissions?.projects}). <Link href="/plans/upgrade" className="underline font-medium">Upgrade now</Link> to create more projects.</p>
+                      <p>You&#39;ve reached your project limit ({userPermissions?.projects === -1 ? 'Unlimited' : userPermissions?.projects}). <Link href="/plans" className="underline font-medium">Upgrade now</Link> to create more projects.</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -211,7 +215,7 @@ export const Navbar = () => {
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>You&#39;ve reached your team limit ({userPermissions?.teams}). <Link href="/plans/upgrade" className="underline font-medium">Upgrade now</Link> to create more teams.</p>
+                      <p>You&#39;ve reached your team limit ({userPermissions?.teams === -1 ? 'Unlimited' : userPermissions?.teams}). <Link href="/plans" className="underline font-medium">Upgrade now</Link> to create more teams.</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -262,7 +266,7 @@ export const Navbar = () => {
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Chat is not available in your current plan. <Link href="/plans/upgrade" className="underline font-medium">Upgrade now</Link> to unlock this feature.</p>
+                  <p>Chat is not available in your current plan. <Link href="/plans" className="underline font-medium">Upgrade now</Link> to unlock this feature.</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -349,7 +353,7 @@ export const Navbar = () => {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild className="pl-8">
-                    <Link href="/plans/upgrade" className="flex cursor-pointer items-center">
+                    <Link href="/plans" className="flex cursor-pointer items-center">
                       <span>Upgrade Plan</span>
                     </Link>
                   </DropdownMenuItem>
@@ -439,7 +443,7 @@ export const Navbar = () => {
                             </div>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>You&#39;ve reached your project limit ({userPermissions?.projects}). <Link href="/plans/upgrade" className="underline font-medium">Upgrade now</Link> to create more projects.</p>
+                            <p>You&#39;ve reached your project limit ({userPermissions?.projects === -1 ? 'Unlimited' : userPermissions?.projects}). <Link href="/plans" className="underline font-medium">Upgrade now</Link> to create more projects.</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -485,7 +489,7 @@ export const Navbar = () => {
                             </div>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>You&#39;ve reached your team limit ({userPermissions?.teams}). <Link href="/plans/upgrade" className="underline font-medium">Upgrade now</Link> to create more teams.</p>
+                            <p>You&#39;ve reached your team limit ({userPermissions?.teams === -1 ? 'Unlimited' : userPermissions?.teams}). <Link href="/plans" className="underline font-medium">Upgrade now</Link> to create more teams.</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -537,7 +541,7 @@ export const Navbar = () => {
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Chat is not available in your current plan. <Link href="/plans/upgrade" className="underline font-medium">Upgrade now</Link> to unlock this feature.</p>
+                          <p>Chat is not available in your current plan. <Link href="/plans" className="underline font-medium">Upgrade now</Link> to unlock this feature.</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -604,7 +608,7 @@ export const Navbar = () => {
                             Current Plan
                           </Link>
                           <Link
-                            href="/plans/upgrade"
+                            href="/plans"
                             className="flex items-center text-sm text-muted-foreground hover:text-foreground"
                           >
                             Upgrade Plan

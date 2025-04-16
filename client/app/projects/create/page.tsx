@@ -49,7 +49,8 @@ export default function CreateProjectPage() {
   const [endDate, setEndDate] = useState<Date | undefined>(undefined)
 
   // Check if user has project creation permission
-  const hasProjectsPermission = (userPermissions?.projects ?? 0) > projects.length;
+  const hasProjectsPermission = userPermissions?.projects === -1 || 
+    ((userPermissions?.projects ?? 0) > projects.length);
 
   // If user doesn't have permission, show restricted access message
   if (!hasProjectsPermission) {

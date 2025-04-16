@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -17,11 +17,35 @@ import { RootState } from '@/lib/store'
 import { useSelector } from 'react-redux'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
-
+import { useSearchParams } from 'next/navigation'
+import { toast } from 'sonner'
 
 export default function Page() {
   const { projects, projectLoading } = useSelector((state: RootState) => state.projects);
   const { tasks, taskLoading } = useSelector((state: RootState) => state.tasks);
+  const searchParams = useSearchParams();
+  const paymentSuccess = searchParams.get('payment_success');
+  const planName = searchParams.get('plan');
+  
+  useEffect(() => {
+    // Show success toast if redirected from successful payment
+    if (paymentSuccess === 'true' && planName) {
+      toast.success(
+        `Your subscription to the ${planName} plan was successful!`, 
+        {
+          duration: 5000,
+          position: 'top-center',
+          icon: '🎉',
+        }
+      );
+      
+
+      const url = new URL(window.location.href);
+      url.searchParams.delete('payment_success');
+      url.searchParams.delete('plan');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [paymentSuccess, planName]);
 
   const formatDate = (dateString: string | Date) => {
     return new Date(dateString).toLocaleDateString('en-US', {

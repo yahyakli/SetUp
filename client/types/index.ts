@@ -182,13 +182,14 @@ export interface Plan {
 
 export interface Invoice {
   id: number;
-  userId: string;
-  subscriptionId: number;
+  subscription_id: number;
+  stripe_invoice_id: string;
+  stripe_payment_intent_id: string;
   amount: number;
   status: string;
-  dueDate: Date;
-  paidAt: Date;
-  createdAt: Date;
+  due_date: Date;
+  paid_at: Date;
+  invoice_number: string;
 }
 
 export interface Subscription {
@@ -202,6 +203,7 @@ export interface Subscription {
   stripe_customer_id?: string;
   auto_renew: boolean;
   invoices?: Invoice[];
+  plan: Plan;
 }
 
 export interface userPermissions {

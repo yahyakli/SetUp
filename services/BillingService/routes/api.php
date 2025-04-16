@@ -23,7 +23,7 @@ Route::middleware(['jwt.token'])->group(function () {
 Route::middleware(['jwt.token'])->group(function () {
     Route::get('/subscriptions', [SubscriptionController::class, 'index']);
     Route::post('/subscriptions', [SubscriptionController::class, 'store']);
-    Route::get('/subscriptions/{id}', [SubscriptionController::class, 'show']);
+    Route::get('/subscriptions/{id}/{userId}', [SubscriptionController::class, 'show']);
     Route::post('/subscriptions/{id}/cancel', [SubscriptionController::class, 'cancel']);
     Route::get('/subscriptions/user/{userId}', [SubscriptionController::class, 'getUserSubscriptions']);
     Route::get('/subscriptions/user/{userId}/active', [SubscriptionController::class, 'getUserActiveSubscription']);
@@ -32,7 +32,7 @@ Route::middleware(['jwt.token'])->group(function () {
 // Invoices
 Route::middleware(['jwt.token'])->group(function () {
     Route::get('/invoices', [InvoiceController::class, 'index']);
-    Route::get('/invoices/{id}', [InvoiceController::class, 'show']);
+    Route::get('/invoices/{id}/{userId}', [InvoiceController::class, 'show']);
     Route::post('/invoices/{id}/pay', [InvoiceController::class, 'pay']);
     Route::post('/invoices/{id}/cancel', [InvoiceController::class, 'cancel']);
 });

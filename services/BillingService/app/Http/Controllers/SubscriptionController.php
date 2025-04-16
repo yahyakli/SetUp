@@ -41,40 +41,34 @@ class SubscriptionController extends Controller
     }
 
     /**
-     * Store a newly created subscription in storage.
+     * Store a newly created subscription in storage (without payment).
      */
     public function store(Request $request)
     {
         $request->validate([
             'user_id' => 'required|string',
             'plan_id' => 'required|exists:plans,id',
-            'payment_method_id' => 'required|string',
         ]);
 
         $userId = $request->user_id;
-        
         $plan = Plan::findOrFail($request->plan_id);
 
         DB::beginTransaction();
         try {
-            // Create or retrieve Stripe customer
-            $stripeCustomerId = $this->getOrCreateStripeCustomer($userId, $request->payment_method_id);
-            
             // Calculate subscription dates
             $startDate = now();
             $endDate = $this->calculateEndDate($startDate, $plan);
             
-            // Create subscription record
+            // Create subscription record with pending status
             $subscription = Subscription::create([
                 'user_id' => $userId,
                 'plan_id' => $plan->id,
                 'start_date' => $startDate,
                 'end_date' => $endDate,
-                'status' => 'pending',
-                'stripe_customer_id' => $stripeCustomerId,
+                'status' => 'pending', // Subscription is pending until payment
             ]);
             
-            // Create invoice
+            // Create invoice with pending status
             $invoice = Invoice::create([
                 'subscription_id' => $subscription->id,
                 'amount' => $plan->price,
@@ -83,49 +77,14 @@ class SubscriptionController extends Controller
                 'invoice_number' => Invoice::generateInvoiceNumber(),
             ]);
             
-            // Create Stripe payment intent
-            $paymentIntent = $this->stripe->paymentIntents->create([
-                'amount' => $plan->price * 100, // Stripe uses cents
-                'currency' => 'usd',
-                'customer' => $stripeCustomerId,
-                'payment_method' => $request->payment_method_id,
-                'off_session' => true,
-                'confirm' => true,
-                'metadata' => [
-                    'subscription_id' => $subscription->id,
-                    'invoice_id' => $invoice->id,
-                ],
-            ]);
-            
-            // Update invoice with payment intent ID
-            $invoice->update([
-                'stripe_payment_intent_id' => $paymentIntent->id,
-            ]);
-            
-            // If payment intent succeeded, update subscription and invoice status
-            if ($paymentIntent->status === 'succeeded') {
-                $subscription->update([
-                    'status' => 'active',
-                ]);
-                
-                $invoice->update([
-                    'status' => 'paid',
-                    'paid_at' => now(),
-                ]);
-            }
-            
             DB::commit();
             
             return response()->json([
                 'subscription' => $subscription->load('plan'),
                 'invoice' => $invoice,
-                'client_secret' => $paymentIntent->client_secret,
+                'message' => 'Subscription created successfully. Please proceed to payment.'
             ], 201);
             
-        } catch (ApiErrorException $e) {
-            DB::rollBack();
-            Log::error('Stripe error: ' . $e->getMessage());
-            return response()->json(['error' => $e->getMessage()], 400);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Subscription creation error: ' . $e->getMessage());
@@ -136,14 +95,8 @@ class SubscriptionController extends Controller
     /**
      * Display the specified subscription.
      */
-    public function show(string $id, Request $request)
-    {
-        $request->validate([
-            'user_id' => 'required|string',
-        ]);
-        
-        $userId = $request->user_id;
-        
+    public function show(string $id, $userId)
+    {        
         $subscription = Subscription::with(['plan', 'invoices'])
             ->where('id', $id)
             ->where('user_id', $userId)
