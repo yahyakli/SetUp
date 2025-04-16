@@ -165,14 +165,15 @@ export interface Notification {
 }
 
 export interface Plan {
-  id: string;
+  id: number;
   name: string;
   description: string;
   price: number;
-  specialTitle?: string;
-  isPublic: boolean;
+  special_title?: string;
+  is_active: boolean;
+  billing_cycle: string;
   projects: number;
-  teamOwned: number;
+  teams: number;
   chat: boolean;
   priority: boolean;
   analytics: boolean;
@@ -180,9 +181,9 @@ export interface Plan {
 }
 
 export interface Invoice {
-  id: string;
+  id: number;
   userId: string;
-  subscriptionId: string;
+  subscriptionId: number;
   amount: number;
   status: string;
   dueDate: Date;
@@ -191,13 +192,23 @@ export interface Invoice {
 }
 
 export interface Subscription {
-  id: string;
-  userId: string;
-  planId: string;
+  id: number;
+  user_id: string;
+  plan_id: number;
+  start_date: Date;
+  end_date: Date;
   status: string;
-  amount: number;
-  invoices: Invoice[];
-  dueDate: Date;
-  paidAt: Date;
-  createdAt: Date;
+  stripe_subscription_id?: string;
+  stripe_customer_id?: string;
+  auto_renew: boolean;
+  invoices?: Invoice[];
+}
+
+export interface userPermissions {
+  projects: number;
+  teams: number;
+  chat: boolean;
+  priority: boolean;
+  analytics: boolean;
+  security: boolean;
 }

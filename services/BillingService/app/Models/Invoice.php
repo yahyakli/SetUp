@@ -4,39 +4,80 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Invoice extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'subscription_id',
-        'user_id',
         'amount',
         'status',
-        'payment_gateway',
-        'gateway_invoice_id',
-        'gateway_payment_id',
-        'invoice_number',
-        'invoice_date',
+        'stripe_invoice_id',
+        'stripe_payment_intent_id',
         'due_date',
         'paid_at',
+        'invoice_number',
+        'metadata',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
-        'invoice_date' => 'datetime',
         'due_date' => 'datetime',
         'paid_at' => 'datetime',
+        'metadata' => 'array',
     ];
 
+    /**
+     * Get the subscription that owns the invoice.
+     */
     public function subscription()
     {
         return $this->belongsTo(Subscription::class);
     }
 
-    public function getFormattedAmountAttribute()
+    /**
+     * Check if the invoice is pending.
+     */
+    public function isPending()
     {
-        return '$' . number_format($this->amount, 2);
+        return $this->status === 'pending';
     }
-}
+
+    /**
+     * Check if the invoice is paid.
+     */
+    public function isPaid()
+    {
+        return $this->status === 'paid';
+    }
+
+    /**
+     * Check if the invoice is canceled.
+     */
+    public function isCanceled()
+    {
+        return $this->status === 'canceled';
+    }
+
+    /**
+     * Check if the invoice is failed.
+     */
+    public function isFailed()
+    {
+        return $this->status === 'failed';
+    }
+
+    /**
+     * Generate a unique invoice number.
+     */
+    public static function generateInvoiceNumber()
+    {
+        $prefix = 'INV-';
+        $timestamp = now()->format('Ymd');
+        $random = strtoupper(substr(md5(uniqid()), 0, 6));
+        
+        return $prefix . $timestamp . '-' . $random;
+    }
+} 

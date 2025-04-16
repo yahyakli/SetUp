@@ -14,14 +14,23 @@ class Plan extends Model
         'description',
         'price',
         'billing_cycle',
-        'features',
         'is_active',
+        'special_title',
+        'projects',
+        'teams',
+        'chat',
+        'priority',
+        'analytics',
+        'security',
     ];
 
     protected $casts = [
-        'features' => 'array',
         'is_active' => 'boolean',
         'price' => 'decimal:2',
+        'chat' => 'boolean',
+        'priority' => 'boolean',
+        'analytics' => 'boolean',
+        'security' => 'boolean',
     ];
 
     public function subscriptions()

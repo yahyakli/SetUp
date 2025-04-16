@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, LogOut, UserCircle, ChevronDown, Bell, CreditCard, ChevronRight } from 'lucide-react';
+import { Menu, LogOut, UserCircle, ChevronDown, Bell, CreditCard, ChevronRight, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -26,6 +26,12 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './
 import CreateTeamDialog from './CreateTeamDialog';
 import { Project, Team, Task } from '@/types/index';
 import { useAppContext } from '@/context/AppContext';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export const Navbar = () => {
   const { teams } = useSelector((state: RootState) => state.teams);
@@ -41,7 +47,7 @@ export const Navbar = () => {
   const [recentProjects, setRecentProjects] = useState<Project[]>([]);
   const [recentTasks, setRecentTasks] = useState<Task[]>([]);
 
-  const { authCheckComplete } = useAppContext();
+  const { authCheckComplete, userPermissions } = useAppContext();
 
   const [createTeamDialogOpen, setCreateTeamDialogOpen] = useState(false);
   const [subscriptionExpanded, setSubscriptionExpanded] = useState(false);
@@ -96,6 +102,15 @@ export const Navbar = () => {
     return notifications.filter(not => !not.read ).length + invitations.filter(inv => inv.status === 'pending').length;
   };
 
+  // Check if user has chat permission
+  const hasChatPermission = userPermissions?.chat === true;
+  
+  // Check if user can create more projects
+  const canCreateProject = userPermissions?.projects ? projects.length < userPermissions.projects : false;
+  
+  // Check if user can create more teams
+  const canCreateTeam = userPermissions?.teams ? teams.length < userPermissions.teams : false;
+
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between px-4 md:px-6 lg:px-8 mx-auto">
@@ -134,11 +149,27 @@ export const Navbar = () => {
                   Show All Projects
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/projects/create" className="cursor-pointer">
-                  Create New Project
-                </Link>
-              </DropdownMenuItem>
+              {canCreateProject ? (
+                <DropdownMenuItem asChild>
+                  <Link href="/projects/create" className="cursor-pointer">
+                    Create New Project
+                  </Link>
+                </DropdownMenuItem>
+              ) : (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="px-2 py-1.5 text-sm text-gray-400 cursor-not-allowed flex items-center">
+                        Create New Project
+                        <Lock className="ml-1 h-3 w-3" />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>You&#39;ve reached your project limit ({userPermissions?.projects}). <Link href="/plans/upgrade" className="underline font-medium">Upgrade now</Link> to create more projects.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -163,12 +194,28 @@ export const Navbar = () => {
                   Show All Your Teams
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={(e) => {
-                e.preventDefault();
-                setCreateTeamDialogOpen(true);
-              }}>
-                Create New Team
-              </DropdownMenuItem>
+              {canCreateTeam ? (
+                <DropdownMenuItem onSelect={(e) => {
+                  e.preventDefault();
+                  setCreateTeamDialogOpen(true);
+                }}>
+                  Create New Team
+                </DropdownMenuItem>
+              ) : (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="px-2 py-1.5 text-sm text-gray-400 cursor-not-allowed flex items-center">
+                        Create New Team
+                        <Lock className="ml-1 h-3 w-3" />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>You&#39;ve reached your team limit ({userPermissions?.teams}). <Link href="/plans/upgrade" className="underline font-medium">Upgrade now</Link> to create more teams.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -201,9 +248,25 @@ export const Navbar = () => {
           </DropdownMenu>
 
           {/* Chat Link - Replacing Plans Dropdown */}
-          <Link href="/chat" className={`cursor-pointer p-1 text-sm font-medium ${isActive('/chat') ? 'text-foreground' : 'text-muted-foreground'} hover:text-foreground/80 transition-colors py-2 flex items-center`}>
-            Chat
-          </Link>
+          {hasChatPermission ? (
+            <Link href="/chat" className={`cursor-pointer p-1 text-sm font-medium ${isActive('/chat') ? 'text-foreground' : 'text-muted-foreground'} hover:text-foreground/80 transition-colors py-2 flex items-center`}>
+              Chat
+            </Link>
+          ) : (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className={`cursor-not-allowed p-1 text-sm font-medium text-gray-400 py-2 flex items-center`}>
+                    Chat
+                    <Lock className="ml-1 h-3 w-3" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Chat is not available in your current plan. <Link href="/plans/upgrade" className="underline font-medium">Upgrade now</Link> to unlock this feature.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
         </nav>
 
         {/* Desktop Right Actions */}
@@ -359,12 +422,28 @@ export const Navbar = () => {
                     >
                       Show All Projects
                     </Link>
-                    <Link
-                      href="/projects/create"
-                      className="block text-sm text-muted-foreground hover:text-foreground"
-                    >
-                      Create New Project
-                    </Link>
+                    {canCreateProject ? (
+                      <Link
+                        href="/projects/create"
+                        className="block text-sm text-muted-foreground hover:text-foreground"
+                      >
+                        Create New Project
+                      </Link>
+                    ) : (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="text-sm text-gray-400 cursor-not-allowed flex items-center">
+                              Create New Project
+                              <Lock className="ml-1 h-3 w-3" />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>You&#39;ve reached your project limit ({userPermissions?.projects}). <Link href="/plans/upgrade" className="underline font-medium">Upgrade now</Link> to create more projects.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
                   </AccordionContent>
                 </AccordionItem>
 
@@ -389,12 +468,28 @@ export const Navbar = () => {
                     >
                       Show All Your Teams
                     </Link>
-                    <button
-                      onClick={() => setCreateTeamDialogOpen(true)}
-                      className="block text-sm text-muted-foreground hover:text-foreground text-left w-full"
-                    >
-                      Create New Team
-                    </button>
+                    {canCreateTeam ? (
+                      <button
+                        onClick={() => setCreateTeamDialogOpen(true)}
+                        className="block text-sm text-muted-foreground hover:text-foreground text-left w-full"
+                      >
+                        Create New Team
+                      </button>
+                    ) : (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="text-sm text-gray-400 cursor-not-allowed flex items-center">
+                              Create New Team
+                              <Lock className="ml-1 h-3 w-3" />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>You&#39;ve reached your team limit ({userPermissions?.teams}). <Link href="/plans/upgrade" className="underline font-medium">Upgrade now</Link> to create more teams.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
                   </AccordionContent>
                 </AccordionItem>
 
@@ -428,9 +523,25 @@ export const Navbar = () => {
 
                 {/* Chat Link */}
                 <AccordionItem value="chat" className="border-b">
-                  <Link href="/chat" className={`flex items-center justify-between px-4 py-4 ${isActive('/chat') ? 'text-foreground' : 'text-muted-foreground'}`}>
-                    Chat
-                  </Link>
+                  {hasChatPermission ? (
+                    <Link href="/chat" className={`flex items-center justify-between px-4 py-4 ${isActive('/chat') ? 'text-foreground' : 'text-muted-foreground'}`}>
+                      Chat
+                    </Link>
+                  ) : (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center justify-between px-4 py-4 text-gray-400 cursor-not-allowed">
+                            Chat
+                            <Lock className="h-3 w-3" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Chat is not available in your current plan. <Link href="/plans/upgrade" className="underline font-medium">Upgrade now</Link> to unlock this feature.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
                 </AccordionItem>
 
                 {/* User Section */}

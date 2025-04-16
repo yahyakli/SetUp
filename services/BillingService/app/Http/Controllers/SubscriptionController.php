@@ -2,87 +2,251 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Invoice;
 use App\Models\Plan;
 use App\Models\Subscription;
-use App\Services\PaymentGateway\PaymentGatewayManager;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Stripe\Exception\ApiErrorException;
+use Stripe\StripeClient;
 
 class SubscriptionController extends Controller
 {
-    protected $paymentGatewayManager;
+    protected $stripe;
 
-    public function __construct(PaymentGatewayManager $paymentGatewayManager)
+    public function __construct()
     {
-        $this->paymentGatewayManager = $paymentGatewayManager;
+        $this->stripe = new StripeClient(config('services.stripe.secret'));
     }
 
+    /**
+     * Display a listing of the subscriptions.
+     */
     public function index(Request $request)
     {
-        $subscriptions = Subscription::where('user_id', $request->user_id)->get();
-        return response()->json(['subscriptions' => $subscriptions]);
-    }
-
-    public function show($id, Request $request)
-    {
-        $subscription = Subscription::where('id', $id)
-            ->where('user_id', $request->user_id)
-            ->firstOrFail();
-        return response()->json(['subscription' => $subscription]);
-    }
-
-    public function create(Request $request)
-    {
-        $validated = $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'plan_id' => 'required|exists:plans,id',
-            'payment_gateway' => 'required|in:stripe,paypal',
-            'payment_method_id' => 'sometimes|string',
-            'return_url' => 'required|url',
-            'cancel_url' => 'required|url',
-        ]);
-
-        $plan = Plan::findOrFail($validated['plan_id']);
-        
-        // Initialize the correct payment gateway
-        $gateway = $this->paymentGatewayManager->gateway($validated['payment_gateway']);
-        
-        // Create subscription through the payment gateway
-        $paymentResponse = $gateway->createSubscription([
-            'user_id' => $validated['user_id'],
-            'plan' => $plan,
-            'payment_method_id' => $validated['payment_method_id'] ?? null,
-            'return_url' => $validated['return_url'],
-            'cancel_url' => $validated['cancel_url'],
+        $request->validate([
+            'user_id' => 'required|string',
         ]);
         
-        // Return appropriate response based on the gateway
-        return response()->json($paymentResponse);
-    }
-    
-    public function cancel($id, Request $request)
-    {
-        $subscription = Subscription::where('id', $id)
-            ->where('user_id', $request->user_id)
-            ->firstOrFail();
+        $userId = $request->user_id;
+        
+        $subscriptions = Subscription::with('plan')
+            ->where('user_id', $userId)
+            ->orderBy('created_at', 'desc')
+            ->get();
             
-        $gateway = $this->paymentGatewayManager->gateway($subscription->payment_gateway);
-        $cancellationResult = $gateway->cancelSubscription($subscription->gateway_subscription_id);
+        return response()->json($subscriptions);
+    }
+
+    /**
+     * Store a newly created subscription in storage.
+     */
+    public function store(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|string',
+            'plan_id' => 'required|exists:plans,id',
+            'payment_method_id' => 'required|string',
+        ]);
+
+        $userId = $request->user_id;
         
-        if ($cancellationResult['success']) {
-            $subscription->update([
-                'status' => 'canceled',
-                'canceled_at' => now(),
+        $plan = Plan::findOrFail($request->plan_id);
+
+        DB::beginTransaction();
+        try {
+            // Create or retrieve Stripe customer
+            $stripeCustomerId = $this->getOrCreateStripeCustomer($userId, $request->payment_method_id);
+            
+            // Calculate subscription dates
+            $startDate = now();
+            $endDate = $this->calculateEndDate($startDate, $plan);
+            
+            // Create subscription record
+            $subscription = Subscription::create([
+                'user_id' => $userId,
+                'plan_id' => $plan->id,
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'status' => 'pending',
+                'stripe_customer_id' => $stripeCustomerId,
             ]);
             
-            return response()->json(['message' => 'Subscription canceled successfully']);
+            // Create invoice
+            $invoice = Invoice::create([
+                'subscription_id' => $subscription->id,
+                'amount' => $plan->price,
+                'status' => 'pending',
+                'due_date' => now()->addDays(7),
+                'invoice_number' => Invoice::generateInvoiceNumber(),
+            ]);
+            
+            // Create Stripe payment intent
+            $paymentIntent = $this->stripe->paymentIntents->create([
+                'amount' => $plan->price * 100, // Stripe uses cents
+                'currency' => 'usd',
+                'customer' => $stripeCustomerId,
+                'payment_method' => $request->payment_method_id,
+                'off_session' => true,
+                'confirm' => true,
+                'metadata' => [
+                    'subscription_id' => $subscription->id,
+                    'invoice_id' => $invoice->id,
+                ],
+            ]);
+            
+            // Update invoice with payment intent ID
+            $invoice->update([
+                'stripe_payment_intent_id' => $paymentIntent->id,
+            ]);
+            
+            // If payment intent succeeded, update subscription and invoice status
+            if ($paymentIntent->status === 'succeeded') {
+                $subscription->update([
+                    'status' => 'active',
+                ]);
+                
+                $invoice->update([
+                    'status' => 'paid',
+                    'paid_at' => now(),
+                ]);
+            }
+            
+            DB::commit();
+            
+            return response()->json([
+                'subscription' => $subscription->load('plan'),
+                'invoice' => $invoice,
+                'client_secret' => $paymentIntent->client_secret,
+            ], 201);
+            
+        } catch (ApiErrorException $e) {
+            DB::rollBack();
+            Log::error('Stripe error: ' . $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 400);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Subscription creation error: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to create subscription'], 500);
+        }
+    }
+
+    /**
+     * Display the specified subscription.
+     */
+    public function show(string $id, Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|string',
+        ]);
+        
+        $userId = $request->user_id;
+        
+        $subscription = Subscription::with(['plan', 'invoices'])
+            ->where('id', $id)
+            ->where('user_id', $userId)
+            ->firstOrFail();
+            
+        return response()->json($subscription);
+    }
+
+    /**
+     * Cancel the specified subscription.
+     */
+    public function cancel(string $id, Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|string',
+        ]);
+        
+        $userId = $request->user_id;
+        
+        $subscription = Subscription::where('id', $id)
+            ->where('user_id', $userId)
+            ->firstOrFail();
+            
+        if ($subscription->status === 'canceled') {
+            return response()->json(['message' => 'Subscription is already canceled']);
         }
         
-        return response()->json(['error' => 'Failed to cancel subscription'], 500);
+        DB::beginTransaction();
+        try {
+            // Cancel subscription in Stripe if it exists
+            if ($subscription->stripe_subscription_id) {
+                $this->stripe->subscriptions->cancel($subscription->stripe_subscription_id);
+            }
+            
+            // Update subscription status
+            $subscription->update([
+                'status' => 'canceled',
+            ]);
+            
+            // Cancel any pending invoices
+            $subscription->invoices()
+                ->where('status', 'pending')
+                ->update(['status' => 'canceled']);
+                
+            DB::commit();
+            
+            return response()->json([
+                'message' => 'Subscription canceled successfully',
+                'subscription' => $subscription->load('plan'),
+            ]);
+            
+        } catch (ApiErrorException $e) {
+            DB::rollBack();
+            Log::error('Stripe error: ' . $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 400);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Subscription cancellation error: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to cancel subscription'], 500);
+        }
     }
-    
-    public function handleWebhook(Request $request, $gateway)
+
+    /**
+     * Get or create a Stripe customer for the user.
+     */
+    protected function getOrCreateStripeCustomer(string $userId, string $paymentMethodId)
     {
-        $gatewayService = $this->paymentGatewayManager->gateway($gateway);
-        return $gatewayService->handleWebhook($request);
+        // In a real application, you might want to store this in a customers table
+        // For now, we'll create a new customer each time
+        $customer = $this->stripe->customers->create([
+            'metadata' => [
+                'user_id' => $userId,
+            ],
+            'payment_method' => $paymentMethodId,
+        ]);
+        
+        return $customer->id;
     }
-}
+
+    /**
+     * Calculate the end date based on the plan.
+     */
+    protected function calculateEndDate(Carbon $startDate, Plan $plan)
+    {
+        switch ($plan->billing_cycle) {
+            case 'monthly':
+                return $startDate->copy()->addMonth();
+            case 'quarterly':
+                return $startDate->copy()->addMonths(3);
+            case 'yearly':
+                return $startDate->copy()->addYear();
+            default:
+                return $startDate->copy()->addMonth();
+        }
+    }
+
+    public function getUserSubscriptions(Request $request, $userId){
+        $subscriptions = Subscription::where('user_id', $userId)->get();
+        return response()->json(['subscriptions' => $subscriptions], 200);
+    }
+
+    public function getUserActiveSubscription(Request $request, $userId){
+        $subscription = Subscription::where('user_id', $userId)->where('status', 'active')->first();
+        return response()->json(['subscription' => $subscription], 200);
+    }
+} 

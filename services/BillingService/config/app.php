@@ -16,6 +16,9 @@ return [
     |
     */
 
+    'jwt_secret' => env('JWT_SECRET'),
+
+
     'name' => env('APP_NAME', 'Laravel'),
 
     /*

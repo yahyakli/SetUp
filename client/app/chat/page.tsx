@@ -15,6 +15,10 @@ import { CHAT_SERVICE_URL } from '@/constants/API_URLS';
 import { useSocketEvents } from '@/hooks/useSocketEvents';
 import { useChatRooms } from '@/hooks/useChatRooms';
 import { useSocket } from '@/context/SocketContext';
+import { useAppContext } from '@/context/AppContext';
+import { Lock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 export default function ChatPage() {
   const { user, token } = useSelector((state: RootState) => state.user);
@@ -22,13 +26,14 @@ export default function ChatPage() {
   const router = useRouter();
   const params = useParams();
   const roomId = params?.roomId as string;
+  const { userPermissions } = useAppContext();
 
+  // Define all hooks first, before any conditional returns
   const [selectedRoom, setSelectedRoom] = useState<ChatRoom | null>(null);
   const [showChatList, setShowChatList] = useState(true);
   const [messages, setMessages] = useState<Record<string, Message[]>>({});
   const [hasMoreMessages, setHasMoreMessages] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
-    // Initialize from localStorage if available, otherwise use default width
     if (typeof window !== 'undefined') {
       const savedWidth = localStorage.getItem('chatSidebarWidth');
       return savedWidth ? parseInt(savedWidth, 10) : 320;
@@ -37,10 +42,11 @@ export default function ChatPage() {
   });
   const [isMobile, setIsMobile] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
-
+  
   // Use the custom hook to get chat rooms and users
   const { chatRooms, users, loading, updateChatRooms, fetchUserData, fetchChatRooms } = useChatRooms();
   const apiCallsInProgressRef = useRef<Record<string, boolean>>({});
+
 
   // Use the custom hook for socket events
   useSocketEvents({
@@ -325,6 +331,27 @@ export default function ChatPage() {
   const handleCancelReply = () => {
     setReplyingTo(null);
   };
+
+  // Check if user has chat permission
+  const hasChatPermission = userPermissions?.chat;
+
+  // Now we can use conditional rendering
+  if (!hasChatPermission) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+        <div className="bg-muted/30 p-12 rounded-lg max-w-md flex flex-col items-center">
+          <Lock className="h-16 w-16 text-muted-foreground mb-4" />
+          <h2 className="text-2xl font-bold mb-2">Chat Access Restricted</h2>
+          <p className="text-muted-foreground mb-6">
+            Chat functionality is not available in your current plan. Upgrade to a premium plan to unlock this feature and enhance your team collaboration.
+          </p>
+          <Button asChild>
+            <Link href="/plans">Upgrade Your Plan</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col md:flex-row">

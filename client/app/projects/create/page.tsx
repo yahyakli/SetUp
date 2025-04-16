@@ -22,7 +22,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { format } from 'date-fns'
-import { CalendarIcon, Loader2 } from 'lucide-react'
+import { CalendarIcon, Loader2, Lock } from 'lucide-react'
 import { toast } from 'sonner'
 import axios, { AxiosError } from 'axios'
 import { PROJECT_SERVICE_URL } from '@/constants/API_URLS'
@@ -30,10 +30,14 @@ import { cn } from '@/lib/utils'
 import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '@/lib/store'
 import { addProject } from '@/lib/features/ProjectsSlice'
+import { useAppContext } from '@/context/AppContext'
+import Link from 'next/link'
 
 export default function CreateProjectPage() {
   const dispatch = useDispatch();
-  const { user, token } = useSelector((state: RootState) => state.user)
+  const { user, token } = useSelector((state: RootState) => state.user);
+  const { projects } = useSelector((state: RootState) => state.projects);
+  const { userPermissions } = useAppContext();
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
@@ -43,6 +47,29 @@ export default function CreateProjectPage() {
   })
   const [startDate, setStartDate] = useState<Date | undefined>(new Date())
   const [endDate, setEndDate] = useState<Date | undefined>(undefined)
+
+  // Check if user has project creation permission
+  const hasProjectsPermission = (userPermissions?.projects ?? 0) > projects.length;
+
+  // If user doesn't have permission, show restricted access message
+  if (!hasProjectsPermission) {
+    return (
+      <AppLayout>
+        <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+          <div className="bg-muted/30 p-12 rounded-lg max-w-md flex flex-col items-center">
+            <Lock className="h-16 w-16 text-muted-foreground mb-4" />
+            <h2 className="text-2xl font-bold mb-2">Project Creation Restricted</h2>
+            <p className="text-muted-foreground mb-6">
+              Creating projects is not available in your current plan. Upgrade to a premium plan to unlock this feature and enhance your team collaboration.
+            </p>
+            <Button asChild>
+              <Link href="/plans">Upgrade Your Plan</Link>
+            </Button>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target

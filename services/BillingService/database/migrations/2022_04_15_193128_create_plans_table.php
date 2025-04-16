@@ -16,8 +16,14 @@ return new class extends Migration
             $table->string('name');
             $table->text('description');
             $table->decimal('price', 10, 2);
-            $table->enum('billing_cycle', ['monthly', 'quarterly', 'yearly']);
-            $table->json('features');
+            $table->enum('billing_cycle', ['monthly', 'quarterly', 'yearly', 'unlimited']);
+            $table->string('special_title')->nullable();
+            $table->integer('projects');
+            $table->integer('teams');
+            $table->boolean('chat');
+            $table->boolean('priority');
+            $table->boolean('analytics');
+            $table->boolean('security');
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });

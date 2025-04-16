@@ -8,7 +8,7 @@ import { initTasks } from "@/lib/features/TasksSlice";
 import { initTeams, setTeamsLoading } from "@/lib/features/TeamsSlice";
 import { fetchUser } from "@/lib/features/userSlice";
 import { AppDispatch, RootState } from "@/lib/store";
-import { Message, Plan, Team } from "@/types/index";
+import { Message, Plan, Team, userPermissions } from "@/types/index";
 import axios from "axios";
 import { createContext, useContext, useEffect, useState } from "react";
 import { Subscription, useDispatch, useSelector } from "react-redux";
@@ -24,6 +24,7 @@ type AppContextType = {
   plans: Plan[] | null;
   plansLoading: boolean;
   userSubscription: Subscription | null;
+  userPermissions: userPermissions | null;
 };
 
 // Create the context with default values
@@ -36,7 +37,8 @@ const AppContext = createContext<AppContextType>({
   markLastMessageAsRead: () => {},
   plans: null,
   plansLoading: false,
-  userSubscription: null
+  userSubscription: null,
+  userPermissions: null
 });
 
 // Custom hook to use the AppContext
@@ -44,12 +46,14 @@ export const useAppContext = () => useContext(AppContext);
 
 export const AppContextProvider = ({ children }: { children: React.ReactNode }) => {
   const dispatch = useDispatch<AppDispatch>();
-  const { token, isLoading, user } = useSelector((state: RootState) => state.user);
+  const { token, isLoading: userLoading, user } = useSelector((state: RootState) => state.user);
   const [authCheckComplete, setAuthCheckComplete] = useState(false);
   const [lastMessages, setLastMessages] = useState<Record<string, Message>>({});
   const [plans, setPlans] = useState<Plan[] | null>(null);
   const [plansLoading, setPlansLoading] = useState<boolean>(true);
   const [userSubscription, setUserSubscription] = useState<Subscription | null>(null);
+  const [userPermissions, setUserPermissions] = useState<userPermissions | null>(null);
+  const [permissionsLoading, setPermissionsLoading] = useState<boolean>(true);
 
   // Function to update the last message for a chat room
   const updateLastMessage = (roomId: string, message: Message) => {
@@ -202,26 +206,74 @@ export const AppContextProvider = ({ children }: { children: React.ReactNode }) 
 
   const getPlans = async () => {
     setPlansLoading(true);
+    setPermissionsLoading(true);
     try {
-      const res = await axios.get(BILLING_SERVICE_URL + "/api/plans/public");
+      const res = await axios.get(BILLING_SERVICE_URL + "/api/plans/active");
 
       if (res.status === 200) {
-        setPlans(res.data);
+        setPlans(res.data.plans);
       }
 
-      const usrRes = await axios.get(BILLING_SERVICE_URL + "/api/subscriptions/user/" + user?.id + "/active", {
-        headers: { Authorization: "Bearer " + token }
-      });
+      // Only fetch subscription if user is logged in
+      if (user?.id && token) {
+        const usrRes = await axios.get(BILLING_SERVICE_URL + "/api/subscriptions/user/" + user?.id + "/active", {
+          headers: { Authorization: "Bearer " + token }
+        });
 
-      if (usrRes.status === 200) {
-        setUserSubscription(usrRes.data);
+        if (usrRes.status === 200) {
+          if (usrRes.data.subscription) {
+            setUserSubscription(usrRes.data.subscription);
+            
+            try{
+              const planRes = await axios.get(BILLING_SERVICE_URL + "/api/plans/" + usrRes.data.subscription.plan_id, {
+                headers: { Authorization: "Bearer " + token }
+              });
+
+              if (planRes.status === 200) {
+                setUserPermissions({
+                  projects: planRes.data.plan.projects,
+                  teams: planRes.data.plan.teams,
+                  chat: planRes.data.plan.chat,
+                  priority: planRes.data.plan.priority,
+                  analytics: planRes.data.plan.analytics,
+                  security: planRes.data.plan.security,
+                });
+              }
+            } catch (err) {
+              console.log(err);
+            }
+          } else {
+            setUserPermissions({
+              projects: 3,
+              teams: 1,
+              chat: false,
+              priority: false,
+              analytics: false,
+              security: false,
+            })
+          }
+        }
+      } else {
+        // Set default permissions for non-authenticated users
+        setUserPermissions({
+          projects: 3,
+          teams: 1,
+          chat: false,
+          priority: false,
+          analytics: false,
+          security: false,
+        });
       }
     } catch (err) {
       console.log(err);
     } finally {
       setPlansLoading(false);
+      setPermissionsLoading(false);
     }
   }
+
+  // Calculate the overall loading state
+  const isLoading = userLoading || !authCheckComplete || (!!user?.id && (plansLoading || permissionsLoading));
 
   // Context value
   const contextValue: AppContextType = {
@@ -233,7 +285,8 @@ export const AppContextProvider = ({ children }: { children: React.ReactNode }) 
     markLastMessageAsRead,
     plans,
     plansLoading,
-    userSubscription
+    userSubscription,
+    userPermissions
   };
 
   return (

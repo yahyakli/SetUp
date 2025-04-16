@@ -8,46 +8,56 @@ use App\Http\Controllers\SubscriptionController;
 use Illuminate\Support\Facades\Route;
 
 // Plans
-Route::get('/plans', [PlanController::class, 'index']);
+Route::get('/plans/active', [PlanController::class, 'index']);
 Route::get('/plans/{id}', [PlanController::class, 'show']);
 
 // Admin routes for plans management (should be protected)
-Route::middleware(['auth:api', 'api.token', 'is.admin'])->group(function () {
+Route::middleware(['jwt.token'])->group(function () {
+    Route::get('/plans', [PlanController::class, 'getAllPlans']);
     Route::post('/plans', [PlanController::class, 'store']);
     Route::put('/plans/{id}', [PlanController::class, 'update']);
     Route::delete('/plans/{id}', [PlanController::class, 'destroy']);
 });
 
 // Subscriptions
-Route::middleware(['auth:api', 'api.token'])->group(function () {
+Route::middleware(['jwt.token'])->group(function () {
     Route::get('/subscriptions', [SubscriptionController::class, 'index']);
+    Route::post('/subscriptions', [SubscriptionController::class, 'store']);
     Route::get('/subscriptions/{id}', [SubscriptionController::class, 'show']);
-    Route::post('/subscriptions', [SubscriptionController::class, 'create']);
     Route::post('/subscriptions/{id}/cancel', [SubscriptionController::class, 'cancel']);
+    Route::get('/subscriptions/user/{userId}', [SubscriptionController::class, 'getUserSubscriptions']);
+    Route::get('/subscriptions/user/{userId}/active', [SubscriptionController::class, 'getUserActiveSubscription']);
 });
 
 // Invoices
-Route::middleware(['auth:api', 'api.token'])->group(function () {
+Route::middleware(['jwt.token'])->group(function () {
     Route::get('/invoices', [InvoiceController::class, 'index']);
     Route::get('/invoices/{id}', [InvoiceController::class, 'show']);
-    Route::get('/invoices/{id}/download', [InvoiceController::class, 'downloadPdf']);
+    Route::post('/invoices/{id}/pay', [InvoiceController::class, 'pay']);
+    Route::post('/invoices/{id}/cancel', [InvoiceController::class, 'cancel']);
 });
 
 // Payment Methods
-Route::middleware(['auth:api', 'api.token'])->group(function () {
+Route::middleware(['jwt.token'])->group(function () {
     Route::get('/payment-methods', [PaymentMethodController::class, 'index']);
-    Route::post('/payment-methods', [PaymentMethodController::class, 'create']);
-    Route::delete('/payment-methods/{id}', [PaymentMethodController::class, 'delete']);
-    Route::post('/payment-methods/{id}/default', [PaymentMethodController::class, 'setDefault']);
+    Route::post('/payment-methods/setup-intent', [PaymentMethodController::class, 'createSetupIntent']);
+    Route::delete('/payment-methods/{id}', [PaymentMethodController::class, 'destroy']);
 });
 
 // Checkout
-Route::middleware(['auth:api', 'api.token'])->group(function () {
-    Route::post('/checkout', [CheckoutController::class, 'initiateCheckout']);
-    Route::get('/checkout/success', [CheckoutController::class, 'checkoutSuccess']);
-    Route::get('/checkout/cancel', [CheckoutController::class, 'checkoutCancel']);
+Route::middleware(['jwt.token'])->group(function () {
+    Route::post('/checkout/create-session', [CheckoutController::class, 'createCheckoutSession']);
 });
 
-// Webhooks (no authentication required)
-Route::post('/webhooks/stripe', [SubscriptionController::class, 'handleWebhook', 'stripe']);
-Route::post('/webhooks/paypal', [SubscriptionController::class, 'handleWebhook', 'paypal']);
+// Stripe Webhooks
+Route::post('/webhooks/stripe', [CheckoutController::class, 'handleCheckoutSessionCompleted']);
+
+// Test route without middleware for debugging
+Route::get('/test', function () {
+    return response()->json([
+        'message' => 'Hello, World!',
+        'routes' => Route::getRoutes()->getRoutesByMethod()['GET'],
+        'url' => request()->url(),
+        'path' => request()->path(),
+    ]);
+});
