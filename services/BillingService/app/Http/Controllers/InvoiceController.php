@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Stripe\Exception\ApiErrorException;
 use Stripe\StripeClient;
+use Barryvdh\DomPDF\Facade\PDF;
 
 class InvoiceController extends Controller
 {
@@ -230,5 +231,59 @@ class InvoiceController extends Controller
             Log::error('Invoice cancellation error: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to cancel invoice'], 500);
         }
+    }
+
+    public function getUserPaidInvoices($userId)
+    {
+        $invoices = Invoice::with('subscription.plan')
+            ->whereHas('subscription', function ($query) use ($userId) {
+                $query->where('user_id', $userId);
+            })
+            ->where('status', 'paid')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json($invoices, 200);
+    }
+
+    /**
+     * Generate and download a PDF invoice.
+     */
+    public function downloadPdf(string $id, Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|string',
+        ]);
+        
+        $userId = $request->user_id;
+        
+        $invoice = Invoice::with(['subscription.plan'])
+            ->whereHas('subscription', function ($query) use ($userId) {
+                $query->where('user_id', $userId);
+            })
+            ->where('id', $id)
+            ->firstOrFail();
+        
+        // Make sure the invoice is paid
+        if ($invoice->status !== 'paid') {
+            return response()->json(['error' => 'Only paid invoices can be downloaded'], 400);
+        }
+        
+        $data = [
+            'invoice' => $invoice,
+            'company' => [
+                'name' => config('SetUp-org.web.app', 'SetUp'),
+                'address' => 'Res La Mecque, Kadi tazi',
+                'city' => 'MOHAMMEDIA',
+                'state' => 'CASABLANCA-SETTAT',
+                'zip' => '28810',
+                'phone' => '0657838772',
+                'email' => 'contact@setup.com',
+            ]
+        ];
+        
+        $pdf = PDF::loadView('invoices.pdf', $data);
+        
+        return $pdf->download('invoice-' . $invoice->invoice_number . '.pdf');
     }
 } 

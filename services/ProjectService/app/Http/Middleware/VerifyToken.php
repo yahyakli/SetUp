@@ -35,6 +35,7 @@ class VerifyToken
 
             // Attach the decoded token to the request for further use in controllers
             $request->attributes->add(['decoded_token' => $decoded]);
+            $request->attributes->add(['token' => $token]);
         } catch (ExpiredException $e) {
             return response()->json(['error' => 'Token has expired'], 401);
         } catch (SignatureInvalidException $e) {

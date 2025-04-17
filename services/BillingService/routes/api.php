@@ -31,6 +31,11 @@ Route::middleware(['jwt.token'])->group(function () {
 
 // Invoices
 Route::middleware(['jwt.token'])->group(function () {
+    // Specific routes first
+    Route::get('/invoices/paid/{userId}', [InvoiceController::class, 'getUserPaidInvoices']);
+    Route::get('/invoices/{id}/download', [InvoiceController::class, 'downloadPdf']);
+    
+    // General routes after
     Route::get('/invoices', [InvoiceController::class, 'index']);
     Route::get('/invoices/{id}/{userId}', [InvoiceController::class, 'show']);
     Route::post('/invoices/{id}/pay', [InvoiceController::class, 'pay']);
@@ -61,3 +66,6 @@ Route::get('/test', function () {
         'path' => request()->path(),
     ]);
 });
+
+// Add this outside any middleware group for testing
+Route::get('/test-invoices/{userId}', [InvoiceController::class, 'getUserPaidInvoices']);

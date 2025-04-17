@@ -59,7 +59,6 @@ export const Navbar = () => {
       
       // Sort teams by updated_at and take up to the limit
       const sortedTeams = [...teams]
-        .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
         .slice(0, limit);
       
       setRecentTeams(sortedTeams);
@@ -73,7 +72,6 @@ export const Navbar = () => {
       
       // Sort projects by updated_at and take up to the limit
       const sortedProjects = [...projects]
-        .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
         .slice(0, limit);
       
       setRecentProjects(sortedProjects);
@@ -369,7 +367,7 @@ export const Navbar = () => {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild className="pl-8">
-                    <Link href="/plans/billing" className="flex cursor-pointer items-center">
+                    <Link href="/billing/history" className="flex cursor-pointer items-center">
                       <span>Billing History</span>
                     </Link>
                   </DropdownMenuItem>
@@ -616,16 +614,10 @@ export const Navbar = () => {
                             href="/plans"
                             className="flex items-center text-sm text-muted-foreground hover:text-foreground"
                           >
-                            Current Plan
+                            Plans
                           </Link>
                           <Link
-                            href="/plans"
-                            className="flex items-center text-sm text-muted-foreground hover:text-foreground"
-                          >
-                            Upgrade Plan
-                          </Link>
-                          <Link
-                            href="/plans/billing"
+                            href="/billing/history"
                             className="flex items-center text-sm text-muted-foreground hover:text-foreground"
                           >
                             Billing History

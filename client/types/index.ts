@@ -190,6 +190,7 @@ export interface Invoice {
   due_date: Date;
   paid_at: Date;
   invoice_number: string;
+  subscription?: Subscription;
 }
 
 export interface Subscription {

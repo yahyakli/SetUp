@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button'
 import { useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import ClientSideWrapper from '@/components/ClientSideWrapper';
+import { useAppContext } from '@/context/AppContext'
 
 // This component uses useSearchParams and will be wrapped in Suspense
 function DashboardContent() {
@@ -28,6 +29,7 @@ function DashboardContent() {
   const searchParams = useSearchParams();
   const paymentSuccess = searchParams?.get('payment_success');
   const planName = searchParams?.get('plan');
+  const { userPermissions } = useAppContext();
 
   useEffect(() => {
     // Show success toast if redirected from successful payment
@@ -60,9 +62,8 @@ function DashboardContent() {
     return projects.find((project) => project.id === id);
   }
 
-  const sortedProjects = [...projects].sort((a, b) => {
-    return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
-  });
+  const sortedProjects = [...projects]
+    .slice(0, userPermissions?.projects === -1 ? 4 : Math.min(4, userPermissions?.projects || 0));
 
   return (
     <div className="p-6 space-y-8 dark:bg-gray-900 bg-gray-50">
@@ -111,7 +112,7 @@ function DashboardContent() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {sortedProjects.slice(0, 4).map((project) => (
+            {sortedProjects.map((project) => (
               <Link key={project.id} href={`/projects/${project.id}`}>
                 <Card className="hover:shadow-lg transition-all">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

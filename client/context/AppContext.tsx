@@ -8,7 +8,7 @@ import { initTasks } from "@/lib/features/TasksSlice";
 import { initTeams, setTeamsLoading } from "@/lib/features/TeamsSlice";
 import { fetchUser } from "@/lib/features/userSlice";
 import { AppDispatch, RootState } from "@/lib/store";
-import { Message, Plan, Subscription, Team, userPermissions } from "@/types/index";
+import { Message, Plan, Subscription, userPermissions, Team, Project } from "@/types/index";
 import axios from "axios";
 import { createContext, useContext, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -115,7 +115,7 @@ export const AppContextProvider = ({ children }: { children: React.ReactNode }) 
     }
   }, [user?.id, token]);
 
-  // Teams initialization
+  // Teams initialization with permission limits
   const initTeamsFunc = async () => {
     dispatch(setTeamsLoading(true));
     try {
@@ -126,7 +126,16 @@ export const AppContextProvider = ({ children }: { children: React.ReactNode }) 
       });
 
       if (res.status === 200) {
-        const teams: Team[] = res.data.teams;
+        let teams = res.data.teams;
+        
+        // Apply permission limits if needed
+        if (userPermissions && userPermissions.teams !== -1) {
+          // Sort by updated_at before limiting
+          teams = teams
+            .sort((a: Team, b: Team) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+            .slice(0, userPermissions.teams);
+        }
+        
         dispatch(initTeams(teams));
       }
     } catch (err) {
@@ -136,7 +145,7 @@ export const AppContextProvider = ({ children }: { children: React.ReactNode }) 
     }
   };
 
-  // Projects initialization
+  // Projects initialization with permission limits
   const initProjectFunc = async () => {
     dispatch(setProjectLoading(true));
     try {
@@ -147,7 +156,17 @@ export const AppContextProvider = ({ children }: { children: React.ReactNode }) 
       });
 
       if (res.status === 200) {
-        dispatch(initProjects(res.data.projects));
+        let projects = res.data.projects;
+        
+        // Apply permission limits if needed
+        if (userPermissions && userPermissions.projects !== -1) {
+          // Sort by updated_at before limiting
+          projects = projects
+            .sort((a: Project, b: Project) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+            .slice(0, userPermissions.projects);
+        }
+        
+        dispatch(initProjects(projects));
       }
     } catch (err) {
       console.log(err);
@@ -228,7 +247,7 @@ export const AppContextProvider = ({ children }: { children: React.ReactNode }) 
             const endDate = new Date(usrRes.data.subscription.end_date);
             const currentDate = new Date();
             
-            if (endDate < currentDate) {
+            if (endDate > currentDate) {
               setUserSubscription(usrRes.data.subscription);
               setUserPermissions({
                 projects: usrRes.data.subscription.plan.projects,
