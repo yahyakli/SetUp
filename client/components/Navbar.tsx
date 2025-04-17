@@ -54,15 +54,31 @@ export const Navbar = () => {
 
   useEffect(() => {
     if (teams.length > 0) {
-      setRecentTeams(teams.slice(0, 3));
+      // Get the limit based on permissions (-1 means unlimited)
+      const limit = userPermissions?.teams === -1 ? 3 : Math.min(3, userPermissions?.teams || 0);
+      
+      // Sort teams by updated_at and take up to the limit
+      const sortedTeams = [...teams]
+        .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+        .slice(0, limit);
+      
+      setRecentTeams(sortedTeams);
     }
-  }, [teams]);
+  }, [teams, userPermissions?.teams]);
 
   useEffect(() => {
     if (projects.length > 0) {
-      setRecentProjects(projects.slice(0, 3));
+      // Get the limit based on permissions (-1 means unlimited)
+      const limit = userPermissions?.projects === -1 ? 3 : Math.min(3, userPermissions?.projects || 0);
+      
+      // Sort projects by updated_at and take up to the limit
+      const sortedProjects = [...projects]
+        .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+        .slice(0, limit);
+      
+      setRecentProjects(sortedProjects);
     }
-  }, [projects]);
+  }, [projects, userPermissions?.projects]);
 
   useEffect(() => {
     if (tasks.length > 0) {
@@ -349,12 +365,7 @@ export const Navbar = () => {
                 <>
                   <DropdownMenuItem asChild className="pl-8">
                     <Link href="/plans" className="flex cursor-pointer items-center">
-                      <span>Current Plan</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild className="pl-8">
-                    <Link href="/plans" className="flex cursor-pointer items-center">
-                      <span>Upgrade Plan</span>
+                      <span>Plans</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild className="pl-8">

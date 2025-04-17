@@ -193,13 +193,13 @@ class SubscriptionController extends Controller
         }
     }
 
-    public function getUserSubscriptions(Request $request, $userId){
+    public function getUserSubscriptions($userId){
         $subscriptions = Subscription::where('user_id', $userId)->get();
         return response()->json(['subscriptions' => $subscriptions], 200);
     }
 
-    public function getUserActiveSubscription(Request $request, $userId){
+    public function getUserActiveSubscription($userId){
         $subscription = Subscription::where('user_id', $userId)->where('status', 'active')->first();
-        return response()->json(['subscription' => $subscription], 200);
+        return response()->json(['subscription' => $subscription->load('plan')], 200);
     }
 } 

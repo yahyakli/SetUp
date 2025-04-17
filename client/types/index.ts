@@ -196,14 +196,16 @@ export interface Subscription {
   id: number;
   user_id: string;
   plan_id: number;
-  start_date: Date;
-  end_date: Date;
+  start_date: string;
+  end_date: string;
   status: string;
-  stripe_subscription_id?: string;
-  stripe_customer_id?: string;
+  stripe_subscription_id: string | null;
+  stripe_customer_id: string | null;
   auto_renew: boolean;
-  invoices?: Invoice[];
-  plan: Plan;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  plan?: Plan;
 }
 
 export interface userPermissions {

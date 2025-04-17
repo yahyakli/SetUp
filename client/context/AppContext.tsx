@@ -8,10 +8,10 @@ import { initTasks } from "@/lib/features/TasksSlice";
 import { initTeams, setTeamsLoading } from "@/lib/features/TeamsSlice";
 import { fetchUser } from "@/lib/features/userSlice";
 import { AppDispatch, RootState } from "@/lib/store";
-import { Message, Plan, Team, userPermissions } from "@/types/index";
+import { Message, Plan, Subscription, Team, userPermissions } from "@/types/index";
 import axios from "axios";
 import { createContext, useContext, useEffect, useState } from "react";
-import { Subscription, useDispatch, useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 
 // Define the context type
 type AppContextType = {
@@ -34,13 +34,13 @@ const AppContext = createContext<AppContextType>({
   authCheckComplete: false,
   isAuthenticated: false,
   lastMessages: {},
-  updateLastMessage: () => {},
-  markLastMessageAsRead: () => {},
+  updateLastMessage: () => { },
+  markLastMessageAsRead: () => { },
   plans: null,
   plansLoading: false,
   userSubscription: null,
   userPermissions: null,
-  setUserPermissions: () => {}
+  setUserPermissions: () => { }
 });
 
 // Custom hook to use the AppContext
@@ -71,14 +71,14 @@ export const AppContextProvider = ({ children }: { children: React.ReactNode }) 
       // Only update if the message ID matches the last message for this room
       if (prev[roomId] && prev[roomId]._id === messageId) {
         // Create a new message object with updated readBy array
-        const updatedMessage = { 
+        const updatedMessage = {
           ...prev[roomId],
           readBy: [
             ...(prev[roomId].readBy || []),
             { userId: user?.id || '', readAt: new Date() }
           ]
         };
-        
+
         return {
           ...prev,
           [roomId]: updatedMessage
@@ -181,11 +181,11 @@ export const AppContextProvider = ({ children }: { children: React.ReactNode }) 
           Authorization: "Bearer " + token
         }
       });
-      
-      if(res.status === 200){
+
+      if (res.status === 200) {
         dispatch(initTasks(res.data.data));
       }
-    } catch(err) {
+    } catch (err) {
       console.log(err);
     }
   };
@@ -194,14 +194,14 @@ export const AppContextProvider = ({ children }: { children: React.ReactNode }) 
     try {
       const res = await axios.get(NOTIFICATION_SERVICE_URL + "/api/notifications/user/" + user?.id, {
         headers: {
-          Authorization: "Bearer "+ token
+          Authorization: "Bearer " + token
         }
       });
 
-      if (res.status === 200){
+      if (res.status === 200) {
         dispatch(initNotifications(res.data));
       }
-    }catch(err){
+    } catch (err) {
       console.log(err);
     }
   }
@@ -224,27 +224,34 @@ export const AppContextProvider = ({ children }: { children: React.ReactNode }) 
 
         if (usrRes.status === 200) {
           if (usrRes.data.subscription) {
-            setUserSubscription(usrRes.data.subscription);
+            // Convert end_date string to Date object for comparison
+            const endDate = new Date(usrRes.data.subscription.end_date);
+            const currentDate = new Date();
             
-            try{
-              const planRes = await axios.get(BILLING_SERVICE_URL + "/api/plans/" + usrRes.data.subscription.plan_id, {
-                headers: { Authorization: "Bearer " + token }
+            if (endDate < currentDate) {
+              setUserSubscription(usrRes.data.subscription);
+              setUserPermissions({
+                projects: usrRes.data.subscription.plan.projects,
+                teams: usrRes.data.subscription.plan.teams,
+                chat: usrRes.data.subscription.plan.chat,
+                priority: usrRes.data.subscription.plan.priority,
+                analytics: usrRes.data.subscription.plan.analytics,
+                security: usrRes.data.subscription.plan.security,
               });
-
-              if (planRes.status === 200) {
-                setUserPermissions({
-                  projects: planRes.data.plan.projects,
-                  teams: planRes.data.plan.teams,
-                  chat: planRes.data.plan.chat,
-                  priority: planRes.data.plan.priority,
-                  analytics: planRes.data.plan.analytics,
-                  security: planRes.data.plan.security,
-                });
-              }
-            } catch (err) {
-              console.log(err);
+            } else {
+              // Subscription has expired - set default permissions
+              setUserSubscription(null);
+              setUserPermissions({
+                projects: 3,
+                teams: 1,
+                chat: false,
+                priority: false,
+                analytics: false,
+                security: false,
+              });
             }
           } else {
+            // No subscription - set default permissions
             setUserPermissions({
               projects: 3,
               teams: 1,
@@ -252,7 +259,7 @@ export const AppContextProvider = ({ children }: { children: React.ReactNode }) 
               priority: false,
               analytics: false,
               security: false,
-            })
+            });
           }
         }
       } else {
@@ -294,7 +301,7 @@ export const AppContextProvider = ({ children }: { children: React.ReactNode }) 
 
   return (
     <AppContext.Provider value={contextValue}>
-        {children}
+      {children}
     </AppContext.Provider>
   );
 };

@@ -490,7 +490,7 @@ export default function ChatMessageList({
               </div>
             )}
             
-            <div className={`rounded-2xl p-3 ${
+            <div className={`rounded-2xl cursor-pointer p-3 ${
               isCurrentUser 
                 ? 'bg-blue-500 text-white rounded-tr-none' 
                 : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-tl-none shadow-sm'

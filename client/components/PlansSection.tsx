@@ -17,6 +17,7 @@ import { BILLING_SERVICE_URL } from '@/constants/API_URLS'
 
 export default function PlansSection() {
   const { user, token } = useSelector((state: RootState) => state.user);
+  const { userSubscription } = useAppContext();
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -81,6 +82,16 @@ export default function PlansSection() {
     } finally {
       setLoadingPlanId(null);
     }
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    });
   };
 
   return (
@@ -148,8 +159,8 @@ export default function PlansSection() {
                       <motion.div key={plan.id} variants={itemVariants} whileHover="hover">
                         <Card
                           className={`flex flex-col h-full ${plan.special_title
-                              ? 'border-2 border-blue-500 dark:border-blue-400 bg-gradient-to-b from-blue-50 to-white dark:from-gray-800 dark:to-gray-900 shadow-xl relative z-10 transform scale-105'
-                              : 'border-gray-200 dark:border-gray-700'
+                            ? 'border-2 border-blue-500 dark:border-blue-400 bg-gradient-to-b from-blue-50 to-white dark:from-gray-800 dark:to-gray-900 shadow-xl relative z-10 transform scale-105'
+                            : 'border-gray-200 dark:border-gray-700'
                             }`}
                         >
                           {plan.special_title && (
@@ -161,16 +172,16 @@ export default function PlansSection() {
                             <div className="flex justify-between items-start">
                               <CardTitle
                                 className={`text-2xl font-bold ${plan.special_title
-                                    ? 'bg-gradient-to-r from-blue-600 to-blue-400 dark:from-blue-400 dark:to-blue-300 bg-clip-text text-transparent'
-                                    : ''
+                                  ? 'bg-gradient-to-r from-blue-600 to-blue-400 dark:from-blue-400 dark:to-blue-300 bg-clip-text text-transparent'
+                                  : ''
                                   }`}
                               >
                                 {plan.name}
                               </CardTitle>
                               {plan.billing_cycle !== 'unlimited' && (
                                 <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${plan.special_title
-                                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
-                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
+                                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
+                                  : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
                                   }`}>
                                   {plan.billing_cycle.charAt(0).toUpperCase() + plan.billing_cycle.slice(1)}
                                 </span>
@@ -178,8 +189,8 @@ export default function PlansSection() {
                             </div>
                             <CardDescription className="min-h-[50px]">{plan.description}</CardDescription>
                             <div className={`text-4xl font-bold mt-4 ${plan.special_title
-                                ? 'bg-gradient-to-r from-blue-600 to-blue-400 dark:from-blue-400 dark:to-blue-300 bg-clip-text text-transparent'
-                                : ''
+                              ? 'bg-gradient-to-r from-blue-600 to-blue-400 dark:from-blue-400 dark:to-blue-300 bg-clip-text text-transparent'
+                              : ''
                               }`}>
                               ${plan.price}
                               <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
@@ -232,19 +243,34 @@ export default function PlansSection() {
                           <CardFooter>
                             {plan.price == 0 ? (
                               <Link href="/dashboard" className='w-full'>
-                                <Button className="w-full group">
+                                <Button disabled={userSubscription !== null} className="w-full group">
                                   Get Started
                                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                                 </Button>
                               </Link>
+                            ) : userSubscription?.plan?.name === plan.name ? (
+                              <Button 
+                                className="w-full group bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30 border border-green-500/30"
+                                variant="ghost"
+                              >
+                                <div className="flex items-center justify-between w-full">
+                                  <div className="flex items-center gap-2">
+                                    <CheckCircle className="h-4 w-4 text-green-500" />
+                                    <span className="font-medium">Active</span>
+                                  </div>
+                                  <span className="text-xs text-muted-foreground">
+                                    until {formatDate(userSubscription?.end_date)}
+                                  </span>
+                                </div>
+                              </Button>
                             ) : (
                               <Button
                                 className={`w-full group ${plan.special_title
-                                    ? 'bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 text-white font-bold shadow-md'
-                                    : ''
+                                  ? 'bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 text-white font-bold shadow-md'
+                                  : ''
                                   }`}
                                 onClick={() => handleSubscribe(plan.id)}
-                                disabled={loadingPlanId === plan.id}
+                                disabled={loadingPlanId === plan.id || (userSubscription !== null && userSubscription?.plan?.name !== plan.name)}
                               >
                                 {loadingPlanId === plan.id ? (
                                   <>
@@ -293,12 +319,6 @@ export default function PlansSection() {
                               <CheckCircle className="h-5 w-5 text-green-500" />
                             </div>
                             <span>Dedicated account manager</span>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <div className="w-5 h-5 flex-shrink-0">
-                              <CheckCircle className="h-5 w-5 text-green-500" />
-                            </div>
-                            <span>1 TB storage</span>
                           </li>
                           <li className="flex items-center gap-2">
                             <div className="w-5 h-5 flex-shrink-0">
