@@ -60,7 +60,8 @@ import ProjectChatTab from '@/components/ProjectChatTab'
 
 export default function ProjectPage() {
   const dispatch = useDispatch()
-  const { id } = useParams()
+  const params = useParams() as { id: string };
+  const { id } = params;
   const router = useRouter()
   const searchParams = useSearchParams()
   const { projects, projectLoading } = useSelector((state: RootState) => state.projects);
@@ -74,16 +75,14 @@ export default function ProjectPage() {
   const [verificationCode, setVerificationCode] = useState('')
   
   // Get the current tab from URL or default to 'info'
-  const currentTab = searchParams.get('tab') || 'info'
+  const currentTab = searchParams?.get('tab') || 'info'
 
   // Function to handle tab changes
   const handleTabChange = (value: string) => {
-    // Create a new URLSearchParams object
-    const params = new URLSearchParams(searchParams.toString())
-    // Set the tab parameter
-    params.set('tab', value)
-    // Update the URL without refreshing the page
-    router.push(`/projects/${id}?${params.toString()}`, { scroll: false })
+    if (!searchParams) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', value);
+    router.push(`/projects/${id}?${params.toString()}`, { scroll: false });
   }
 
   // Update selectedDate when project data changes

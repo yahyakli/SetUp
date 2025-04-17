@@ -21,7 +21,7 @@ import { useDispatch } from 'react-redux'
 import { deleteTeamInState } from '@/lib/features/TeamsSlice'
 
 interface DeleteTeamModalProps {
-  teamId: string;
+  teamId: number;
   teamName: string;
   isOpen: boolean;
   onClose: () => void;

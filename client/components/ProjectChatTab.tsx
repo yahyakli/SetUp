@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/lib/store';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -29,13 +29,7 @@ export default function ProjectChatTab({ project }: ProjectChatTabProps) {
   const router = useRouter();
   const isProjectOwner = project.owner_id === user?.id;
 
-  useEffect(() => {
-    if (user && project) {
-      fetchChatRoom();
-    }
-  }, [user, project]);
-
-  const fetchChatRoom = async () => {
+  const fetchChatRoom = useCallback(async () => {
     try {
       setLoading(true);
       const response = await axios.get(
@@ -60,7 +54,13 @@ export default function ProjectChatTab({ project }: ProjectChatTabProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [project, user, token]);
+
+  useEffect(() => {
+    if (user && project) {
+      fetchChatRoom();
+    }
+  }, [user, project, fetchChatRoom]);
 
   const createChatRoom = async () => {
     try {

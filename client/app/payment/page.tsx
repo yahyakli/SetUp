@@ -1,22 +1,23 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import React, { Suspense, useEffect, useState } from 'react';
+import { useSafeSearchParams } from '@/components/SearchParamsProvider';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import Loader from '@/components/Loader';
+import AppLayout from '../AppLayout';
+import ClientSideWrapper from '@/components/ClientSideWrapper';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
-function CheckoutForm() {
+function CheckoutForm({ subscriptionId }: { subscriptionId: string | null }) {
   const stripe = useStripe();
   const elements = useElements();
   const [isLoading, setIsLoading] = useState(false);
-  const searchParams = useSearchParams();
-  const subscriptionId = searchParams.get('subscription_id');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,9 +70,22 @@ function CheckoutForm() {
   );
 }
 
-export default function PaymentPage() {
-  const searchParams = useSearchParams();
-  const clientSecret = searchParams.get('client_secret');
+// Update this component to use useSafeSearchParams
+function SearchParamsWrapper() {
+  const searchParams = useSafeSearchParams();
+  return (
+    <PaymentContent 
+      clientSecret={searchParams?.get('client_secret') || null}
+      subscriptionId={searchParams?.get('subscription_id') || null}
+    />
+  );
+}
+
+// This component no longer directly uses useSearchParams
+function PaymentContent({ clientSecret, subscriptionId }: { 
+  clientSecret: string | null, 
+  subscriptionId: string | null 
+}) {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
@@ -120,7 +134,7 @@ export default function PaymentPage() {
                 },
               }}
             >
-              <CheckoutForm />
+              <CheckoutForm subscriptionId={subscriptionId || null} />
             </Elements>
           ) : (
             <div className="flex justify-center py-8">
@@ -131,4 +145,27 @@ export default function PaymentPage() {
       </Card>
     </div>
   );
-} 
+}
+
+// Wrapper component that properly ensures Suspense around the useSearchParams hook
+function PaymentPageWrapper() {
+  return (
+    <div>
+      <Suspense fallback={<Loader />}>
+        <SearchParamsWrapper />
+      </Suspense>
+    </div>
+  );
+}
+
+export default function PaymentPage() {
+  return (
+    <AppLayout>
+      <ClientSideWrapper>
+        <PaymentPageWrapper />
+      </ClientSideWrapper>
+    </AppLayout>
+  );
+}
+
+export const dynamic = 'force-dynamic'; 

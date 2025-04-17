@@ -28,7 +28,7 @@ interface MessageInput {
   chatRoomId: string;
   content: string;
   contentType: string;
-  user_id: string;
+  user_id: string | undefined;
   parentMessageId?: string;
 }
 

@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { Suspense, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AppLayout from '@/app/AppLayout'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -32,8 +32,9 @@ import { RootState } from '@/lib/store'
 import { addProject } from '@/lib/features/ProjectsSlice'
 import { useAppContext } from '@/context/AppContext'
 import Link from 'next/link'
+import Loader from '@/components/Loader'
 
-export default function CreateProjectPage() {
+function CreateProjectPageContent() {
   const dispatch = useDispatch();
   const { user, token } = useSelector((state: RootState) => state.user);
   const { projects } = useSelector((state: RootState) => state.projects);
@@ -49,7 +50,7 @@ export default function CreateProjectPage() {
   const [endDate, setEndDate] = useState<Date | undefined>(undefined)
 
   // Check if user has project creation permission
-  const hasProjectsPermission = userPermissions?.projects === -1 || 
+  const hasProjectsPermission = userPermissions?.projects === -1 ||
     ((userPermissions?.projects ?? 0) > projects.length);
 
   // If user doesn't have permission, show restricted access message
@@ -123,7 +124,7 @@ export default function CreateProjectPage() {
         dispatch(addProject(res.data.project));
         toast.success('Project created successfully')
         router.push('/projects')
-      }else{
+      } else {
         toast.error("Server Error");
       }
     } catch (error) {
@@ -276,3 +277,14 @@ export default function CreateProjectPage() {
     </AppLayout>
   )
 }
+
+// This component uses useSearchParams and will be wrapped in Suspense
+export default function CreateProjectPage() {
+  return (
+    <Suspense fallback={<Loader />}>
+      <CreateProjectPageContent />
+    </Suspense>
+  );
+}
+
+export const dynamic = 'force-dynamic';

@@ -289,3 +289,6 @@ export default function Page() {
     </AppLayout>
   )
 }
+
+// Disable static generation for this page
+export const dynamic = 'force-dynamic';

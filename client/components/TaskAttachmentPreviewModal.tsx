@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -45,39 +45,22 @@ export default function AttachmentPreviewModal({
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === 'dark';
 
-  useEffect(() => {
-    if (isOpen && attachment?.attachment_url && isViewableAsText()) {
-      fetchFileContent();
-    }
-  }, [isOpen, attachment]);
-
-  if (!attachment) return null;
-
-  const fileUrl = attachment.attachment_url 
-    ? `${TASK_SERVICE_URL}/${attachment.attachment_url}` 
-    : '';
-  
-  const fileExtension = attachment.original_filename
-    ? attachment.original_filename.split('.').pop()?.toLowerCase()
-    : '';
-
-  const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(fileExtension || '');
-  const isPdf = fileExtension === 'pdf';
-  const isCode = ['js', 'jsx', 'ts', 'tsx', 'html', 'css', 'json', 'py', 'java', 'c', 'cpp'].includes(fileExtension || '');
-  const isText = ['txt', 'md', 'csv', 'log'].includes(fileExtension || '');
-  const isViewableAsText = () => {
-    const ext = attachment?.original_filename
-      ?.split('.')
+  const isViewableAsText = useCallback(() => {
+    if (!attachment?.original_filename) return false;
+    
+    const ext = attachment.original_filename
+      .split('.')
       .pop()
       ?.toLowerCase() || '';
     const isCode = ['js', 'jsx', 'ts', 'tsx', 'html', 'css', 'json', 'py', 'java', 'c', 'cpp'].includes(ext);
     const isText = ['txt', 'md', 'csv', 'log'].includes(ext);
     return isCode || isText;
-  };
+  }, [attachment]);
 
-  const fetchFileContent = async () => {
-    if (!fileUrl) return;
+  const fetchFileContent = useCallback(async () => {
+    if (!attachment?.attachment_url) return;
     
+    const fileUrl = `${TASK_SERVICE_URL}/${attachment.attachment_url}`;
     setIsLoading(true);
     setError(null);
     
@@ -94,7 +77,28 @@ export default function AttachmentPreviewModal({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [attachment]);
+
+  useEffect(() => {
+    if (isOpen && attachment?.attachment_url && isViewableAsText()) {
+      fetchFileContent();
+    }
+  }, [isOpen, attachment, fetchFileContent, isViewableAsText]);
+
+  if (!attachment) return null;
+
+  const fileUrl = attachment.attachment_url 
+    ? `${TASK_SERVICE_URL}/${attachment.attachment_url}` 
+    : '';
+  
+  const fileExtension = attachment.original_filename
+    ? attachment.original_filename.split('.').pop()?.toLowerCase()
+    : '';
+
+  const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(fileExtension || '');
+  const isPdf = fileExtension === 'pdf';
+  const isCode = ['js', 'jsx', 'ts', 'tsx', 'html', 'css', 'json', 'py', 'java', 'c', 'cpp'].includes(fileExtension || '');
+  const isText = ['txt', 'md', 'csv', 'log'].includes(fileExtension || '');
 
   const getLanguageForPrism = () => {
     switch (fileExtension) {

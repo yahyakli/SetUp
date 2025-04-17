@@ -45,7 +45,8 @@ import { addTask } from '@/lib/features/TasksSlice'
 export default function CreateTaskPage() {
   const router = useRouter()
   const dispatch = useDispatch()
-  const { id } = useParams()
+  const params = useParams() as { id: string };
+  const { id } = params;
   const { user, token } = useSelector((state: RootState) => state.user)
   
   const [project, setProject] = useState<Project | null>(null)

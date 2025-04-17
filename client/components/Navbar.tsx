@@ -95,7 +95,7 @@ export const Navbar = () => {
     if (path === '/dashboard') {
       return pathname === '/dashboard';
     }
-    return pathname.startsWith(path);
+    return pathname?.startsWith(path) || false;
   };
 
   const getPendingNotificationsAndInvitationsCount = () => {

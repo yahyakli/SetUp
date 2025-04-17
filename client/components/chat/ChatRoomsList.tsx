@@ -199,7 +199,7 @@ export default function ChatRoomsList({
       
       return () => clearTimeout(timer);
     }
-  }, [lastMessages]);
+  }, [lastMessages, searchQuery]);
 
   useEffect(() => {
     // Force refresh when chat rooms change, but avoid infinite loops
@@ -218,7 +218,7 @@ export default function ChatRoomsList({
         }
       });
     }
-  }, [chatRooms]); // Remove updateLastMessage from dependencies
+  }, [chatRooms, lastMessages, updateLastMessage]); // Remove updateLastMessage from dependencies
 
   return (
     <div 

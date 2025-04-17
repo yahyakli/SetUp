@@ -45,7 +45,8 @@ import { updateTask } from '@/lib/features/TasksSlice'
 export default function EditTaskPage() {
   const router = useRouter()
   const dispatch = useDispatch();
-  const { id } = useParams()
+  const params = useParams() as { id: string };
+  const { id } = params;
   const { user, token } = useSelector((state: RootState) => state.user)
 
   const [task, setTask] = useState<Task | null>(null)
@@ -295,7 +296,7 @@ export default function EditTaskPage() {
     }
 
     loadTeamMembers()
-  }, [selectedTeam, project, token])
+  }, [selectedTeam, project, assigneeId, token])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {

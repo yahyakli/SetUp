@@ -112,7 +112,7 @@ export default function ChatPage() {
         apiCallsInProgressRef.current[`messages_${roomId}`] = false;
       }
     };
-  }, [token, user?.id]);
+  }, [token, user?.id, messages]);
 
   // Memoize chat rooms to prevent unnecessary re-renders
   const memoizedChatRooms = useMemo(() => chatRooms, [chatRooms]);
@@ -312,7 +312,7 @@ export default function ChatPage() {
     return () => {
       socket.off('connect', handleReconnect);
     };
-  }, [socket, chatRooms]);
+  }, [socket, chatRooms, refreshChatRooms]);
 
   // This effect runs when the component mounts
   useEffect(() => {
@@ -320,7 +320,7 @@ export default function ChatPage() {
     if (fetchChatRooms) {
       fetchChatRooms(true); // Pass true to force a refresh
     }
-  }, []); // Empty dependency array means this runs once when mounted
+  }, [fetchChatRooms]); // Empty dependency array means this runs once when mounted
 
   // Handler for selecting a message to reply to
   const handleReplyMessage = (message: Message) => {

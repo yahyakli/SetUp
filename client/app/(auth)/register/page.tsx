@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, ChangeEvent, FormEvent } from "react";
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import axios from "axios";
 import { Button } from "@/components/ui/button";

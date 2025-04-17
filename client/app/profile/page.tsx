@@ -52,8 +52,9 @@ import { USERS_SERVICE_URL } from '@/constants/API_URLS';
 import { toast } from 'sonner';
 import { logout, updateUser } from '@/lib/features/userSlice';
 import { useRouter, useSearchParams } from 'next/navigation';
+import ClientSideWrapper from '@/components/ClientSideWrapper';
 
-const Page = () => {
+const ProfileContent = () => {
   const { user, token } = useSelector((state: RootState) => state.user);
   const dispatch = useDispatch();
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -99,13 +100,13 @@ const Page = () => {
   const searchParams = useSearchParams();
   
   // Get active tab from URL or default to "general"
-  const activeTab = searchParams.get('tab') || 'general';
+  const activeTab = searchParams?.get('tab') || 'general';
   
   // Function to update URL when tab changes
   const handleTabChange = (value: string) => {
     // Only update if the tab is actually changing
     if (value !== activeTab) {
-      const params = new URLSearchParams(searchParams.toString());
+      const params = new URLSearchParams(searchParams?.toString() || '');
       params.set('tab', value);
       router.push(`/profile?${params.toString()}`, { scroll: false });
     }
@@ -691,4 +692,13 @@ const Page = () => {
   );
 };
 
-export default Page;
+export default function ProfilePage() {
+  return (
+    <ClientSideWrapper>
+      <ProfileContent />
+    </ClientSideWrapper>
+  );
+}
+
+// Disable static generation for this page
+export const dynamic = 'force-dynamic';

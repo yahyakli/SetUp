@@ -17,7 +17,7 @@ export default function AuthLayout({
   const { token, isLoading } = useSelector((state: RootState) => state.user);
   const [authCheckComplete, setAuthCheckComplete] = useState(false);
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirectTo');
+  const redirectTo = searchParams?.get('redirectTo');
   
   useEffect(() => {
     // Only run on client-side

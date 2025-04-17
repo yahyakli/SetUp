@@ -18,7 +18,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
     // Only run on client-side and after auth check is complete
     if (typeof window !== 'undefined' && authCheckComplete && !isAuthenticated) {
       // Encode the current path to use as a redirect parameter
-      const encodedRedirect = encodeURIComponent(pathname);
+      const encodedRedirect = encodeURIComponent(pathname || '');
       router.push(`/login?redirectTo=${encodedRedirect}`);
     }
   }, [authCheckComplete, isAuthenticated, pathname, router]);

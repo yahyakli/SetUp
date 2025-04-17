@@ -31,9 +31,10 @@ import { useSelector } from 'react-redux'
 import { RootState } from '@/lib/store'
 import { Button } from '@/components/ui/button'
 import { useViewMode } from '@/hooks/useViewMode'
+import ClientSideWrapper from '@/components/ClientSideWrapper'
 
 
-export default function Page() {
+function PageContent() {
   const { teams, teamLoading } = useSelector((state: RootState) => state.teams);
   const [searchTerm, setSearchTerm] = useState('')
   const [memberCountFilter, setMemberCountFilter] = useState('All')
@@ -240,3 +241,13 @@ export default function Page() {
     </AppLayout>
   )
 }
+
+export default function Page() {
+  return (
+    <ClientSideWrapper>
+      <PageContent />
+    </ClientSideWrapper>
+  );
+}
+// Disable static generation for this page
+export const dynamic = 'force-dynamic';

@@ -62,7 +62,8 @@ import {
 } from "@/components/ui/alert-dialog"
 
 export default function Page() {
-  const { id } = useParams()
+  const params = useParams() as { id: string };
+  const { id } = params;
   const router = useRouter()
   const searchParams = useSearchParams()
   const dispatch = useDispatch()
@@ -73,16 +74,14 @@ export default function Page() {
   const [isPending, setIsPending] = useState(true)
   
   // Get the current tab from URL or default to 'members'
-  const activeTab = searchParams.get('tab') || 'members'
+  const activeTab = searchParams?.get('tab') || 'members'
   
   // Function to handle tab changes
   const handleTabChange = (value: string) => {
-    // Create a new URLSearchParams object
-    const params = new URLSearchParams(searchParams.toString())
-    // Set the tab parameter
-    params.set('tab', value)
-    // Update the URL without refreshing the page
-    router.push(`/teams/${id}?${params.toString()}`, { scroll: false })
+    if (!searchParams) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', value);
+    router.push(`/teams/${id}?${params.toString()}`, { scroll: false });
   }
   
   const [teamOwner, setTeamOwner] = useState<string | undefined>('');
@@ -615,7 +614,7 @@ export default function Page() {
                   {/* Existing Delete Team Modal */}
                   {team && (
                     <DeleteTeamModal
-                      teamId={id as string}
+                      teamId={parseInt(id as string, 10)}
                       teamName={team.name}
                       isOpen={showDeleteModal}
                       onClose={() => setShowDeleteModal(false)}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -38,12 +38,6 @@ export default function UserSelectionModal({ isOpen, onClose, chatRooms }: UserS
   const [creatingChat, setCreatingChat] = useState(false);
   
   useEffect(() => {
-    if (isOpen && teams.length > 0) {
-      fetchTeamUsers();
-    }
-  }, [isOpen, teams]);
-  
-  useEffect(() => {
     if (searchQuery) {
       setFilteredUsers(
         teamUsers.filter(user => 
@@ -57,7 +51,7 @@ export default function UserSelectionModal({ isOpen, onClose, chatRooms }: UserS
     }
   }, [searchQuery, teamUsers]);
   
-  const fetchTeamUsers = async () => {
+  const fetchTeamUsers = useCallback(async () => {
     setLoading(true);
     try {
       // Extract all user IDs from teams
@@ -121,7 +115,13 @@ export default function UserSelectionModal({ isOpen, onClose, chatRooms }: UserS
     } finally {
       setLoading(false);
     }
-  };
+  }, [teams, user, token, chatRooms, setTeamUsers, setFilteredUsers]);
+
+  useEffect(() => {
+    if (isOpen && teams.length > 0) {
+      fetchTeamUsers();
+    }
+  }, [isOpen, teams, fetchTeamUsers]);
   
   const startConversation = async (selectedUser: User) => {
     if (!user?.id || !selectedUser.id) return;

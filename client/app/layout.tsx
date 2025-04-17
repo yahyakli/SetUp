@@ -7,6 +7,7 @@ import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { AppContextProvider } from "@/context/AppContext";
 import NavigationProgress from "../components/NavigationProgress";
 import { SocketProvider } from '@/context/SocketContext';
+import { SearchParamsProvider } from '@/components/SearchParamsProvider';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -23,17 +24,19 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <NextThemesProvider attribute="class" defaultTheme="system" enableSystem>
-          <ReduxProvider>
-            <AppContextProvider>
-              <SocketProvider>
-                <NavigationProgress />
-                {children}
-                <Toaster />
-              </SocketProvider>
-            </AppContextProvider>
-          </ReduxProvider>
-        </NextThemesProvider>
+        <SearchParamsProvider>
+          <NextThemesProvider attribute="class" defaultTheme="system" enableSystem>
+            <ReduxProvider>
+              <AppContextProvider>
+                <SocketProvider>
+                  <NavigationProgress />
+                  {children}
+                  <Toaster />
+                </SocketProvider>
+              </AppContextProvider>
+            </ReduxProvider>
+          </NextThemesProvider>
+        </SearchParamsProvider>
       </body>
     </html>
   );

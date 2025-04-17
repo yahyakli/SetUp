@@ -24,7 +24,7 @@ export default function NavigationProgress() {
   // Monitor route changes with refs instead of state
   useEffect(() => {
     // Track navigation with a key based on the current path and search params
-    const currentKey = pathname + searchParams.toString();
+    const currentKey = pathname + (searchParams?.toString() || '');
     
     if (loadingKeyRef.current && loadingKeyRef.current !== currentKey) {
       // Route change completed
@@ -39,7 +39,7 @@ export default function NavigationProgress() {
     const handleRouteChangeStart = () => {
       if (!isChangingRef.current) {
         isChangingRef.current = true;
-        loadingKeyRef.current = pathname + searchParams.toString();
+        loadingKeyRef.current = pathname + (searchParams?.toString() || '');
         NProgress.start();
       }
     };

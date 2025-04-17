@@ -215,8 +215,8 @@ function PlanCard({ plan }: { plan: Plan | null }) {
 export default function InvoicePaymentPage() {
   const params = useParams();
   const searchParams = useSearchParams();
-  const invoiceId = params.id;
-  const subscriptionId = searchParams.get('subscription_id');
+  const invoiceId = params?.id;
+  const subscriptionId = searchParams?.get('subscription_id');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [invoice, setInvoice] = useState<Invoice | null>(null);

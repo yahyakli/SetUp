@@ -1,5 +1,5 @@
 "use client"
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, Suspense } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/lib/store'
@@ -38,11 +38,13 @@ import {
 } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import AttachmentPreviewModal from '@/components/TaskAttachmentPreviewModal'
+import Loader from '@/components/Loader'
 
-export default function TaskDetailPage() {
-  const { id } = useParams()
-  const router = useRouter()
-  const searchParams = useSearchParams()
+function TaskDetailContent() {
+  const params = useParams() as { id: string };
+  const { id } = params;
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, token } = useSelector((state: RootState) => state.user)
 
   const [task, setTask] = useState<Task | null>(null)
@@ -63,18 +65,16 @@ export default function TaskDetailPage() {
 
   const isTaskAssignee = task?.assignee_id === user?.id;
 
-  // Get the current tab from URL or default to 'details'
-  const currentTab = searchParams.get('tab') || 'details'
-
-  // Function to handle tab changes
+  // Fix searchParams null checks
+  const currentTab = searchParams?.get('tab') || 'details';
+  
+  // Fix handleTabChange function
   const handleTabChange = (value: string) => {
-    // Create a new URLSearchParams object
-    const params = new URLSearchParams(searchParams.toString())
-    // Set the tab parameter
-    params.set('tab', value)
-    // Update the URL without refreshing the page
-    router.push(`/tasks/${id}?${params.toString()}`, { scroll: false })
-  }
+    if (!searchParams) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', value);
+    router.push(`/tasks/${id}?${params.toString()}`, { scroll: false });
+  };
 
   // Fetch task data
   useEffect(() => {
@@ -863,4 +863,12 @@ export default function TaskDetailPage() {
       />
     </AppLayout>
   )
+}
+
+export default function TaskDetailPage() {
+  return (
+    <Suspense fallback={<Loader />}>
+      <TaskDetailContent />
+    </Suspense>
+  );
 }
