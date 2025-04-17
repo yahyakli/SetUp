@@ -8,7 +8,6 @@ import {
   CreditCard,
   Download,
   FileText,
-  Filter,
   Search,
   SortAsc,
   SortDesc,
@@ -29,13 +28,6 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -106,7 +98,7 @@ function BillingHistoryContent() {
       toast.promise(
         new Promise(async (resolve, reject) => {
           try {
-            const response = await axios.get(`${BILLING_SERVICE_URL}/api/invoices/${invoiceId}/download`, {
+            const response = await axios.post(`${BILLING_SERVICE_URL}/api/invoices/${invoiceId}/download`, { user_id: user?.id }, {
               headers: {
                 'Authorization': `Bearer ${token}`
               },
@@ -223,7 +215,7 @@ function BillingHistoryContent() {
             <Button 
               variant="outline" 
               className="flex items-center gap-2"
-              onClick={() => router.push('/billing/subscription')}
+              onClick={() => router.push(`/billing/subscription/${currentSubscription?.id}`)}
             >
               <CreditCard className="h-4 w-4" />
               Manage Subscription
@@ -257,22 +249,6 @@ function BillingHistoryContent() {
                   </div>
                   
                   <div className="flex gap-2">
-                    <Select
-                      value={statusFilter}
-                      onValueChange={setStatusFilter}
-                    >
-                      <SelectTrigger className="w-[130px]">
-                        <Filter className="h-4 w-4 mr-2" />
-                        <SelectValue placeholder="Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="paid">Paid</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="failed">Failed</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    
                     <Button
                       variant="outline"
                       size="icon"
@@ -515,21 +491,6 @@ function BillingHistoryContent() {
                           </Badge>
                         </div>
                       </div>
-                    </div>
-                    
-                    <div className="flex flex-col sm:flex-row gap-2 justify-end">
-                      <Button variant="outline" onClick={() => router.push('/billing/plans')}>
-                        Change Plan
-                      </Button>
-                      <Button 
-                        variant={currentSubscription.auto_renew ? "destructive" : "default"}
-                        onClick={() => {
-                          // Toggle auto-renew logic would go here
-                          toast.success(`Auto-renewal ${currentSubscription.auto_renew ? 'disabled' : 'enabled'}`);
-                        }}
-                      >
-                        {currentSubscription.auto_renew ? 'Cancel Auto-Renewal' : 'Enable Auto-Renewal'}
-                      </Button>
                     </div>
                   </div>
                 )}

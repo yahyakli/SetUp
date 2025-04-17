@@ -23,17 +23,18 @@ Route::middleware(['jwt.token'])->group(function () {
 Route::middleware(['jwt.token'])->group(function () {
     Route::get('/subscriptions', [SubscriptionController::class, 'index']);
     Route::post('/subscriptions', [SubscriptionController::class, 'store']);
-    Route::get('/subscriptions/{id}/{userId}', [SubscriptionController::class, 'show']);
+    Route::get('/subscriptions/{id}/user/{userId}', [SubscriptionController::class, 'show']);
     Route::post('/subscriptions/{id}/cancel', [SubscriptionController::class, 'cancel']);
     Route::get('/subscriptions/user/{userId}', [SubscriptionController::class, 'getUserSubscriptions']);
     Route::get('/subscriptions/user/{userId}/active', [SubscriptionController::class, 'getUserActiveSubscription']);
+    Route::post('/subscriptions/{id}/toggle-auto-renewal', [SubscriptionController::class, 'toggleSubscriptionAutoRenewal']);
 });
 
 // Invoices
 Route::middleware(['jwt.token'])->group(function () {
     // Specific routes first
     Route::get('/invoices/paid/{userId}', [InvoiceController::class, 'getUserPaidInvoices']);
-    Route::get('/invoices/{id}/download', [InvoiceController::class, 'downloadPdf']);
+    Route::post('/invoices/{id}/download', [InvoiceController::class, 'downloadPdf']);
     
     // General routes after
     Route::get('/invoices', [InvoiceController::class, 'index']);

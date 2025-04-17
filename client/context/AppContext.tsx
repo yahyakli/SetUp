@@ -26,6 +26,7 @@ type AppContextType = {
   userSubscription: Subscription | null;
   userPermissions: userPermissions | null;
   setUserPermissions: (permissions: userPermissions) => void;
+  setUserSubscription: (subscription: Subscription | null) => void;
 };
 
 // Create the context with default values
@@ -40,7 +41,8 @@ const AppContext = createContext<AppContextType>({
   plansLoading: false,
   userSubscription: null,
   userPermissions: null,
-  setUserPermissions: () => { }
+  setUserPermissions: () => { },
+  setUserSubscription: () => { }
 });
 
 // Custom hook to use the AppContext
@@ -315,7 +317,8 @@ export const AppContextProvider = ({ children }: { children: React.ReactNode }) 
     plansLoading,
     userSubscription,
     userPermissions,
-    setUserPermissions
+    setUserPermissions,
+    setUserSubscription
   };
 
   return (

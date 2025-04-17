@@ -18,7 +18,7 @@ import { useAppContext } from '@/context/AppContext';
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
 function PaymentForm({ invoice, subscription }: { invoice: Invoice, subscription: Subscription }) {
-  const { setUserPermissions } = useAppContext();
+  const { setUserPermissions, setUserSubscription } = useAppContext();
   const stripe = useStripe();
   const elements = useElements();
   const [isLoading, setIsLoading] = useState(false);
@@ -40,7 +40,7 @@ function PaymentForm({ invoice, subscription }: { invoice: Invoice, subscription
         elements,
         redirect: 'if_required',
         confirmParams: {
-          return_url: `${window.location.origin}/dashboard?payment_success=true&plan=${subscription.plan.name}`,
+          return_url: `${window.location.origin}/dashboard?payment_success=true&plan=${subscription.plan?.name}`,
         }
       });
 
@@ -69,7 +69,8 @@ function PaymentForm({ invoice, subscription }: { invoice: Invoice, subscription
           analytics: newSub.plan.analytics,
           security: newSub.plan.security
         });
-        router.push(`/dashboard?payment_success=true&plan=${subscription.plan.name}`);
+        setUserSubscription(newSub);
+        router.push(`/dashboard?payment_success=true&plan=${subscription.plan?.name}`);
       } else {
         // Handle additional actions if needed
         const { client_secret } = response.data;
@@ -79,7 +80,7 @@ function PaymentForm({ invoice, subscription }: { invoice: Invoice, subscription
           throw new Error(confirmError.message);
         } else {
           // Redirect directly to dashboard with success parameter
-          router.push(`/dashboard?payment_success=true&plan=${subscription.plan.name}`);
+          router.push(`/dashboard?payment_success=true&plan=${subscription.plan?.name}`);
         }
       }
     } catch (error) {
@@ -239,7 +240,7 @@ export default function InvoicePaymentPage() {
         });
         
         // Fetch subscription details
-        const subscriptionResponse = await axios.get(`${BILLING_SERVICE_URL}/api/subscriptions/${subscriptionId}/${user?.id}`, {
+        const subscriptionResponse = await axios.get(`${BILLING_SERVICE_URL}/api/subscriptions/${subscriptionId}/user/${user?.id}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -321,7 +322,7 @@ export default function InvoicePaymentPage() {
                 </div>
               </CardHeader>
               <CardContent className="pt-6">
-                <PlanCard plan={subscription.plan} />
+                <PlanCard plan={subscription.plan || null} />
                 
                 <div className="mt-6 pt-6 border-t">
                   <h3 className="text-lg font-medium mb-2">Invoice Details</h3>

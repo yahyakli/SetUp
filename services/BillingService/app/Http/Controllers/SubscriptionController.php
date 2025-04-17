@@ -95,14 +95,13 @@ class SubscriptionController extends Controller
     /**
      * Display the specified subscription.
      */
-    public function show(string $id, $userId)
+    public function show(string $id, string $userId)
     {        
-        $subscription = Subscription::with(['plan', 'invoices'])
-            ->where('id', $id)
+        $subscription = Subscription::where('id', $id)
             ->where('user_id', $userId)
             ->firstOrFail();
             
-        return response()->json($subscription);
+        return response()->json($subscription->load('plan'), 200);  
     }
 
     /**
@@ -201,5 +200,27 @@ class SubscriptionController extends Controller
     public function getUserActiveSubscription($userId){
         $subscription = Subscription::where('user_id', $userId)->where('status', 'active')->first();
         return response()->json(['subscription' => $subscription->load('plan')], 200);
+    }
+
+    public function toggleSubscriptionAutoRenewal(string $id, Request $request){
+        $request->validate([
+            'user_id' => 'required|string',
+        ]);
+
+        $userId = $request->user_id;
+
+        $subscription = Subscription::where('id', $id)->where('user_id', $userId)->first();
+
+        if (!$subscription) {
+            return response()->json(['error' => 'Subscription not found'], 404);
+        }
+
+        $subscription->update([
+            'auto_renew' => !$subscription->auto_renew,
+        ]);
+
+        $subscription->save();
+
+        return response()->json(['message' => 'Subscription auto renewal toggled successfully', 'subscription' => $subscription->load('plan', 'invoices')], 200);
     }
 } 

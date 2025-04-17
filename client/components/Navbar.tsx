@@ -47,7 +47,7 @@ export const Navbar = () => {
   const [recentProjects, setRecentProjects] = useState<Project[]>([]);
   const [recentTasks, setRecentTasks] = useState<Task[]>([]);
 
-  const { authCheckComplete, userPermissions } = useAppContext();
+  const { authCheckComplete, userPermissions, userSubscription } = useAppContext();
 
   const [createTeamDialogOpen, setCreateTeamDialogOpen] = useState(false);
   const [subscriptionExpanded, setSubscriptionExpanded] = useState(false);
@@ -366,6 +366,13 @@ export const Navbar = () => {
                       <span>Plans</span>
                     </Link>
                   </DropdownMenuItem>
+                  {userSubscription && (
+                    <DropdownMenuItem asChild className="pl-8">
+                      <Link href={`/billing/subscription/${userSubscription.id}`} className="flex cursor-pointer items-center">
+                        <span>Manage Subscription</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem asChild className="pl-8">
                     <Link href="/billing/history" className="flex cursor-pointer items-center">
                       <span>Billing History</span>
@@ -616,6 +623,14 @@ export const Navbar = () => {
                           >
                             Plans
                           </Link>
+                          {userSubscription && (
+                            <Link
+                              href={`/billing/subscription/${userSubscription.id}`}
+                              className="flex items-center text-sm text-muted-foreground hover:text-foreground"
+                          >
+                              Manage Subscription
+                            </Link>
+                          )}
                           <Link
                             href="/billing/history"
                             className="flex items-center text-sm text-muted-foreground hover:text-foreground"

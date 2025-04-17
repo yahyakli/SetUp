@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export const Footer = () => {
   return (
     <footer className="py-12 px-18 bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300">
@@ -16,24 +18,19 @@ export const Footer = () => {
             <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Products</h3>
             <ul className="space-y-2">
               <li>
-                <a href="#" className="hover:text-gray-900 dark:hover:text-white">
-                  Features
-                </a>
+                <Link href="/plans" className="hover:text-gray-900 dark:hover:text-white">
+                  Plans
+                </Link>
               </li>
               <li>
-                <a href="#" className="hover:text-gray-900 dark:hover:text-white">
-                  Pricing
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-gray-900 dark:hover:text-white">
+                <a href="/integrations" className="hover:text-gray-900 dark:hover:text-white">
                   Integrations
                 </a>
               </li>
               <li>
-                <a href="#" className="hover:text-gray-900 dark:hover:text-white">
+                <Link href="/enterprise" className="hover:text-gray-900 dark:hover:text-white">
                   Enterprise
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -41,24 +38,19 @@ export const Footer = () => {
             <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Resources</h3>
             <ul className="space-y-2">
               <li>
-                <a href="#" className="hover:text-gray-900 dark:hover:text-white">
+                <Link href="/docs" className="hover:text-gray-900 dark:hover:text-white">
                   Documentation
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="hover:text-gray-900 dark:hover:text-white">
-                  Blog
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-gray-900 dark:hover:text-white">
+                <Link href="/community" className="hover:text-gray-900 dark:hover:text-white">
                   Community
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="hover:text-gray-900 dark:hover:text-white">
+                <Link href="/support" className="hover:text-gray-900 dark:hover:text-white">
                   Support
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -66,24 +58,24 @@ export const Footer = () => {
             <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Company</h3>
             <ul className="space-y-2">
               <li>
-                <a href="#" className="hover:text-gray-900 dark:hover:text-white">
+                <Link href="/about" className="hover:text-gray-900 dark:hover:text-white">
                   About
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="hover:text-gray-900 dark:hover:text-white">
+                <Link href="/careers" className="hover:text-gray-900 dark:hover:text-white">
                   Careers
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="hover:text-gray-900 dark:hover:text-white">
+                <Link href="/contact" className="hover:text-gray-900 dark:hover:text-white">
                   Contact
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="hover:text-gray-900 dark:hover:text-white">
+                <Link href="/terms-of-service" className="hover:text-gray-900 dark:hover:text-white">
                   Legal
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -93,15 +85,15 @@ export const Footer = () => {
             &copy; 2025 SetUp. All rights reserved.
           </div>
           <div className="flex gap-4">
-            <a href="#" className="hover:text-gray-900 dark:hover:text-white">
+            <Link href="/privacy-policy" className="hover:text-gray-900 dark:hover:text-white">
               Privacy Policy
-            </a>
-            <a href="#" className="hover:text-gray-900 dark:hover:text-white">
+            </Link>
+            <Link href="/terms-of-service" className="hover:text-gray-900 dark:hover:text-white">
               Terms of Service
-            </a>
-            <a href="#" className="hover:text-gray-900 dark:hover:text-white">
+            </Link>
+            <Link href="/cookie-policy" className="hover:text-gray-900 dark:hover:text-white">
               Cookie Policy
-            </a>
+            </Link>
           </div>
         </div>
       </div>
