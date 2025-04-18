@@ -46,7 +46,6 @@ public class AuthenticationController {
         }
     }
 
-    @PreAuthorize("hasAuthority('ADMIN')")
     @PostMapping("/admin/login")
     public ResponseEntity<?> adminLogin(@Valid @RequestBody LoginRequest request, BindingResult result) {
         if (result.hasErrors()) {

@@ -1,16 +1,17 @@
 <aside 
-  class="fixed inset-y-0 left-0 z-20 w-64 bg-white dark:bg-dark-800 shadow-md transition-all duration-300 transform lg:translate-x-0 lg:static lg:inset-0"
-  [ngClass]="{'translate-x-0': isOpen, '-translate-x-full': !isOpen}"
+  class="fixed inset-y-0 left-0 z-20 bg-white dark:bg-dark-800 shadow-md transition-all duration-300 transform lg:static lg:inset-0"
+  [ngClass]="{
+    'translate-x-0 w-64': isOpen, 
+    '-translate-x-full w-0 lg:w-16': !isOpen
+  }"
 >
-  <div class="h-full flex flex-col">
+  <div class="h-full flex flex-col overflow-hidden">
     <!-- Logo area -->
     <div class="h-16 flex items-center justify-center border-b border-gray-200 dark:border-dark-700">
       <div class="flex items-center">
         <!-- Logo placeholder -->
-        <div class="h-10 w-10 bg-primary-500 rounded-md flex items-center justify-center">
-          <span class="text-white font-bold">S</span>
-        </div>
-        <span class="ml-2 text-xl font-bold text-gray-900 dark:text-white">SetUp</span>
+        <img src="/SULogo.png" alt="Logo" class="h-10 w-10 rounded-md">
+        <span class="ml-2 text-xl font-bold text-gray-900 dark:text-white" [ngClass]="{'hidden': !isOpen}">SetUp</span>
       </div>
     </div>
     
@@ -23,9 +24,9 @@
             routerLinkActive="bg-gray-100 dark:bg-dark-700 text-primary-500"
             class="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-700 transition-colors"
           >
-            <span [innerHTML]="item.icon" class="mr-3 flex-shrink-0 text-gray-500 dark:text-gray-400"></span>
-            <span class="flex-1">{{ item.label }}</span>
-            <span *ngIf="item.badge" class="bg-primary-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+            <span [innerHTML]="item.icon" class="flex-shrink-0 text-gray-500 dark:text-gray-400" [ngClass]="{'mr-3': isOpen}"></span>
+            <span class="flex-1" [ngClass]="{'hidden': !isOpen}">{{ item.label }}</span>
+            <span *ngIf="item.badge && isOpen" class="bg-primary-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
               {{ item.badge }}
             </span>
           </a>
@@ -34,7 +35,7 @@
     </nav>
     
     <!-- Bottom section -->
-    <div class="p-4 border-t border-gray-200 dark:border-dark-700">
+    <div class="p-4 border-t border-gray-200 dark:border-dark-700" [ngClass]="{'hidden': !isOpen}">
       <div class="bg-gray-100 dark:bg-dark-700 rounded-md p-3">
         <div class="flex items-center">
           <div class="flex-shrink-0">

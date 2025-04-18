@@ -27,6 +27,7 @@ export class HeaderComponent {
     private router: Router
   ) {
     this.user = this.authService.getUser();
+    console.log(this.user);
     
     this.themeService.theme$.subscribe(theme => {
       this.isDarkMode = theme === 'dark';

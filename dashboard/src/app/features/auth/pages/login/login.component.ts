@@ -37,8 +37,8 @@ export class LoginComponent {
     this.errorMessage = '';
 
     try {
-      const { email, password } = this.loginForm.value;
-      await this.authService.login(email, password);
+      const { email, password, rememberMe } = this.loginForm.value;
+      await this.authService.login(email, password, rememberMe);
       this.router.navigate(['/dashboard']);
     } catch (error: any) {
       this.errorMessage = error.response?.data?.message || 'Failed to login. Please try again.';

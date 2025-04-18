@@ -1,45 +1,83 @@
 import { Injectable } from '@angular/core';
 import { CookieService } from 'ngx-cookie-service';
-// import axios from 'axios';
+import axios from 'axios';
 import { BehaviorSubject } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
   private readonly TOKEN_KEY = 'setup_auth_token';
-  private readonly USER_KEY = 'setup_user';
+  public user: any;
   private isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
-  
+
   isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
 
+
   constructor(private cookieService: CookieService) {
-    setTimeout(() => {
-      this.isAuthenticatedSubject.next(this.hasToken());
-    }, 0);
+    // Initialize authentication state immediately
+    this.initAuthState();
+    // Configure axios to include the auth token in all requests
+    this.setupAxiosInterceptors();
   }
 
-  async login(email: string, password: string): Promise<any> {
-    // For demo purposes, simulate a successful login
-    const mockResponse = {
-      token: 'mock-jwt-token',
-      user: {
-        id: 1,
-        name: 'Admin User',
-        email: email,
-        role: 'admin'
-      }
-    };
+  private initAuthState(): void {
+    const isAuthenticated = this.hasToken();
+    this.isAuthenticatedSubject.next(isAuthenticated);
     
-    this.setSession(mockResponse);
-    return mockResponse;
+    // If authenticated, try to load the user data
+    if (isAuthenticated) {
+      this.getUser().catch(error => console.error('Failed to load user data on init:', error));
+    }
+  }
+
+  private setupAxiosInterceptors(): void {
+    // Add request interceptor to include the token in all requests
+    axios.interceptors.request.use(config => {
+      const token = this.getToken();
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    }, error => {
+      return Promise.reject(error);
+    });
+
+    // Add response interceptor to handle authentication errors
+    axios.interceptors.response.use(
+      response => response,
+      error => {
+        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+          // Token might be expired or invalid
+          this.logout();
+          // You might want to redirect to login page here
+        }
+        return Promise.reject(error);
+      }
+    );
+  }
+
+  async login(email: string, password: string, rememberMe: boolean): Promise<any> {
+    try {
+      const response = await axios.post(`${environment.USER_SERVICE_URL}/api/auth/admin/login`, {
+        email,
+        password,
+        rememberMe
+      });
+      this.setSession(response.data);
+      return response.data;
+    } catch (error) {
+      console.log(error);
+      throw error;
+    }
   }
 
   logout(): void {
     try {
       this.cookieService.delete(this.TOKEN_KEY);
-      localStorage.removeItem(this.USER_KEY);
       this.isAuthenticatedSubject.next(false);
+      this.user = null;
     } catch (error) {
       console.error('Error during logout:', error);
     }
@@ -63,10 +101,16 @@ export class AuthService {
     }
   }
 
-  getUser(): any {
+  async getUser(): Promise<any> {
     try {
-      const userStr = localStorage.getItem(this.USER_KEY);
-      return userStr ? JSON.parse(userStr) : null;
+      if (!this.isAuthenticated()) {
+        return null;
+      }
+      
+      const response = await axios.get(`${environment.USER_SERVICE_URL}/api/users/me`);
+      this.user = response.data;
+      console.log(this.user);
+      return response.data;
     } catch (error) {
       console.error('Error getting user:', error);
       return null;
@@ -75,8 +119,9 @@ export class AuthService {
 
   private setSession(authResult: any): void {
     try {
-      this.cookieService.set(this.TOKEN_KEY, authResult.token, 30);
-      localStorage.setItem(this.USER_KEY, JSON.stringify(authResult.user));
+      // Set cookie expiration based on rememberMe
+      const expirationDays = authResult.rememberMe ? 30 : 1;
+      this.cookieService.set(this.TOKEN_KEY, authResult.token, expirationDays);
       this.isAuthenticatedSubject.next(true);
     } catch (error) {
       console.error('Error setting session:', error);
