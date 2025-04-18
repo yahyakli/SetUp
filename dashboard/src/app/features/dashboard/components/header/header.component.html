@@ -1,0 +1,153 @@
+<header class="bg-white dark:bg-dark-800 shadow-sm z-10 transition-colors duration-200">
+  <div class="flex items-center justify-between h-16 px-4">
+    <!-- Left side: Logo and menu toggle -->
+    <div class="flex items-center">
+      <button 
+        (click)="toggleSidebar.emit()" 
+        class="p-2 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-700 focus:outline-none"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+      
+      <!-- Logo placeholder -->
+      <div class="ml-4 flex items-center">
+        <span class="text-xl font-bold text-primary-500">SetUp</span>
+      </div>
+    </div>
+    
+    <!-- Right side: Search, notifications, theme toggle, profile -->
+    <div class="flex items-center space-x-4">
+      <!-- Search -->
+      <div class="hidden md:block relative">
+        <input 
+          type="text" 
+          placeholder="Search..." 
+          class="w-64 pl-10 pr-4 py-2 rounded-md border border-gray-300 dark:border-dark-600 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-dark-700 dark:text-white"
+        >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 absolute left-3 top-2.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </div>
+      
+      <!-- Notifications -->
+      <div class="relative">
+        <button 
+          (click)="toggleNotifications()" 
+          class="p-2 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-700 focus:outline-none relative"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+          </svg>
+          <span class="absolute top-1 right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">3</span>
+        </button>
+        
+        <!-- Notifications dropdown -->
+        <div *ngIf="isNotificationsOpen" class="absolute right-0 mt-2 w-80 bg-white dark:bg-dark-700 rounded-md shadow-lg py-1 z-50">
+          <div class="px-4 py-2 border-b border-gray-200 dark:border-dark-600">
+            <h3 class="text-sm font-semibold text-gray-700 dark:text-white">Notifications</h3>
+          </div>
+          
+          <div class="max-h-60 overflow-y-auto">
+            <!-- Notification items -->
+            <a href="#" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-dark-600">
+              <div class="flex items-start">
+                <div class="flex-shrink-0 bg-primary-100 dark:bg-primary-900 rounded-full p-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                  </svg>
+                </div>
+                <div class="ml-3">
+                  <p class="text-sm font-medium text-gray-900 dark:text-white">New message from John</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">Hey, can we discuss the project timeline?</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">2 minutes ago</p>
+                </div>
+              </div>
+            </a>
+            
+            <a href="#" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-dark-600">
+              <div class="flex items-start">
+                <div class="flex-shrink-0 bg-green-100 dark:bg-green-900 rounded-full p-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div class="ml-3">
+                  <p class="text-sm font-medium text-gray-900 dark:text-white">Task completed</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">Frontend design for the dashboard is complete</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">1 hour ago</p>
+                </div>
+              </div>
+            </a>
+            
+            <a href="#" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-dark-600">
+              <div class="flex items-start">
+                <div class="flex-shrink-0 bg-yellow-100 dark:bg-yellow-900 rounded-full p-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div class="ml-3">
+                  <p class="text-sm font-medium text-gray-900 dark:text-white">Deadline approaching</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">Project "Mobile App" is due in 2 days</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">5 hours ago</p>
+                </div>
+              </div>
+            </a>
+          </div>
+          
+          <div class="px-4 py-2 border-t border-gray-200 dark:border-dark-600">
+            <a href="#" class="text-sm text-primary-500 hover:text-primary-600 font-medium">View all notifications</a>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Theme toggle -->
+      <button 
+        (click)="toggleTheme()" 
+        class="p-2 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-700 focus:outline-none"
+      >
+        <svg *ngIf="!isDarkMode" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+        <svg *ngIf="isDarkMode" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+      </button>
+      
+      <!-- Profile dropdown -->
+      <div class="relative">
+        <button 
+          (click)="toggleProfileMenu()" 
+          class="flex items-center space-x-2 focus:outline-none"
+        >
+          <div class="h-8 w-8 rounded-full bg-primary-500 flex items-center justify-center text-white">
+            {{ user?.name?.charAt(0) || 'A' }}
+          </div>
+          <span class="hidden md:block text-sm font-medium text-gray-700 dark:text-gray-300">{{ user?.name || 'Admin' }}</span>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+          </svg>
+        </button>
+        
+        <!-- Profile menu -->
+        <div *ngIf="isProfileMenuOpen" class="absolute right-0 mt-2 w-48 bg-white dark:bg-dark-700 rounded-md shadow-lg py-1 z-50">
+          <a href="#" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-600">
+            Your Profile
+          </a>
+          <a href="#" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-600">
+            Settings
+          </a>
+          <div class="border-t border-gray-200 dark:border-dark-600"></div>
+          <button 
+            (click)="logout()" 
+            class="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-600"
+          >
+            Sign out
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</header> 

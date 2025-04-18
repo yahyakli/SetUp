@@ -77,4 +77,31 @@ public class AuthenticationService {
                 .user(user)
                 .build();
     }
+
+    public AuthResponse AdminLogin(LoginRequest request) {
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getEmail(),
+                        request.getPassword()
+                )
+        );
+
+        var user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (!user.getRole().equals(Role.ADMIN)) {
+            throw new RuntimeException("User is not an admin");
+        }
+
+        var jwtToken = jwtService.generateToken(
+                new HashMap<>(),
+                user,
+                request.isRememberMe()
+        );
+
+        return AuthResponse.builder()
+                .token(jwtToken)
+                .user(user)
+                .build();
+    }
 }
