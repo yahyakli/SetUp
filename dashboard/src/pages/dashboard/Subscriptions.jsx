@@ -1,37 +1,43 @@
-import { useState } from 'react';
 import DataTable from '../../components/dashboard/DataTable';
 import { PencilIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { useApp } from '../../context/AppContext';
 
 const Subscriptions = () => {
-  const [subscriptions] = useState([
-    { id: 1, plan: 'Basic', customer: 'John Doe', status: 'Active', startDate: '2023-01-15', endDate: '2024-01-15', amount: '$99/year' },
-    { id: 2, plan: 'Pro', customer: 'ABC Corp', status: 'Active', startDate: '2023-02-10', endDate: '2024-02-10', amount: '$199/year' },
-    { id: 3, plan: 'Enterprise', customer: 'XYZ Inc', status: 'Active', startDate: '2023-01-05', endDate: '2024-01-05', amount: '$499/year' },
-    { id: 4, plan: 'Basic', customer: 'Jane Smith', status: 'Expired', startDate: '2022-03-20', endDate: '2023-03-20', amount: '$99/year' },
-    { id: 5, plan: 'Pro', customer: 'New Startup', status: 'Active', startDate: '2023-04-15', endDate: '2024-04-15', amount: '$199/year' },
-    { id: 6, plan: 'Basic', customer: 'Small Business', status: 'Cancelled', startDate: '2023-02-01', endDate: '2023-05-01', amount: '$99/year' },
-    { id: 7, plan: 'Enterprise', customer: 'Big Corp', status: 'Active', startDate: '2023-03-10', endDate: '2024-03-10', amount: '$499/year' },
-    { id: 8, plan: 'Pro', customer: 'Tech Team', status: 'Active', startDate: '2023-05-05', endDate: '2024-05-05', amount: '$199/year' },
-    { id: 9, plan: 'Basic', customer: 'Freelancer', status: 'Active', startDate: '2023-06-01', endDate: '2024-06-01', amount: '$99/year' },
-    { id: 10, plan: 'Pro', customer: 'Design Agency', status: 'Active', startDate: '2023-04-20', endDate: '2024-04-20', amount: '$199/year' },
-  ]);
+  const { subscriptions, getUserById, getPlanById, loadingPlans } = useApp();
+
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  }
 
   const columns = [
-    { key: 'plan', label: 'Plan' },
-    { key: 'customer', label: 'Customer' },
+    { key: 'plan_id', label: 'Plan', render: (subscription) => {
+      if (loadingPlans) {
+        return <div>Loading...</div>;
+      }
+      const plan = getPlanById(subscription.plan_id);
+      return plan.name;
+    } },
+    { key: 'user_id', label: 'Customer', render: (subscription) => {
+      const user = getUserById(subscription.user_id);
+      return user.firstName + ' ' + user.lastName;
+    } },
     { 
       key: 'status', 
       label: 'Status',
       render: (subscription) => {
+        const status = subscription.status || 'Unknown';
         let statusClass = '';
-        switch(subscription.status) {
-          case 'Active':
+        
+        // Convert to lowercase for case-insensitive comparison
+        switch(status.toLowerCase()) {
+          case 'active':
             statusClass = 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
             break;
-          case 'Expired':
+          case 'expired':
             statusClass = 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
             break;
-          case 'Cancelled':
+          case 'cancelled':
+          case 'canceled': // Handle alternative spelling
             statusClass = 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
             break;
           default:
@@ -40,34 +46,24 @@ const Subscriptions = () => {
         
         return (
           <span className={`px-2 py-1 rounded-full text-xs ${statusClass}`}>
-            {subscription.status}
+            {status}
           </span>
         );
       }
     },
-    { key: 'startDate', label: 'Start Date' },
-    { key: 'endDate', label: 'End Date' },
-    { key: 'amount', label: 'Amount' },
-    {
-      key: 'actions',
-      label: 'Actions',
-      render: (subscription) => (
-        <div className="flex space-x-2">
-          <button 
-            className="text-gray-500 hover:text-primary-500 dark:text-gray-400 dark:hover:text-primary-400"
-            aria-label={`Edit subscription for ${subscription.customer}`}
-          >
-            <PencilIcon className="h-5 w-5" />
-          </button>
-          <button 
-            className="text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400"
-            aria-label={`Delete subscription for ${subscription.customer}`}
-          >
-            <TrashIcon className="h-5 w-5" />
-          </button>
-        </div>
-      )
-    }
+    { key: 'start_date', label: 'Start Date', render: (subscription) => {
+      return formatDate(subscription.start_date);
+    } },
+    { key: 'end_date', label: 'End Date', render: (subscription) => {
+      return formatDate(subscription.end_date);
+    } },
+    { key: 'amount', label: 'Amount', render: (subscription) => {
+      if (loadingPlans) {
+        return <div>Loading...</div>;
+      }
+      const plan = getPlanById(subscription.plan_id);
+      return plan.price;
+    } },
   ];
 
   return (

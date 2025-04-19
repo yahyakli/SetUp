@@ -40,6 +40,11 @@ class SubscriptionController extends Controller
         return response()->json($subscriptions);
     }
 
+    public function getAllSubscriptions(){
+        $subscriptions = Subscription::with('plan')->get();
+        return response()->json($subscriptions);
+    }
+
     /**
      * Store a newly created subscription in storage (without payment).
      */

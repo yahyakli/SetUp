@@ -40,8 +40,8 @@ const DataTable = ({ columns, data, title, pagination = true, itemsPerPage = 10 
         <table className="table">
           <thead className="table-header">
             <tr>
-              {columns.map((column) => (
-                <th key={column.key} className="table-header-cell">
+              {columns.map((column, index) => (
+                <th key={column.key || `column-${index}`} className="table-header-cell">
                   {column.label}
                 </th>
               ))}
@@ -51,8 +51,8 @@ const DataTable = ({ columns, data, title, pagination = true, itemsPerPage = 10 
             {currentItems.length > 0 ? (
               currentItems.map((item, index) => (
                 <tr key={index} className="table-row">
-                  {columns.map((column) => (
-                    <td key={column.key} className="table-cell">
+                  {columns.map((column, colIndex) => (
+                    <td key={column.key || `cell-${index}-${colIndex}`} className="table-cell">
                       {column.render ? column.render(item) : item[column.key]}
                     </td>
                   ))}

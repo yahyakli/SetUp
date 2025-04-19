@@ -11,32 +11,37 @@ import Teams from './pages/dashboard/Teams';
 import Subscriptions from './pages/dashboard/Subscriptions';
 import Invoices from './pages/dashboard/Invoices';
 import Income from './pages/dashboard/Income';
+import Plans from './pages/dashboard/Plans';
+import { AppProvider } from './context/AppContext';
 
 function App() {
   return (
     <AuthProvider>
-      <ThemeProvider>
-        <Router>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            
-            <Route element={<ProtectedRoute />}>
-              <Route path="/dashboard" element={<DashboardLayout />}>
-                <Route index element={<Overview />} />
-                <Route path="users" element={<Users />} />
-                <Route path="projects" element={<Projects />} />
-                <Route path="teams" element={<Teams />} />
-                <Route path="subscriptions" element={<Subscriptions />} />
-                <Route path="invoices" element={<Invoices />} />
-                <Route path="income" element={<Income />} />
+      <AppProvider>
+        <ThemeProvider>
+          <Router>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+
+              <Route element={<ProtectedRoute />}>
+                <Route path="/dashboard" element={<DashboardLayout />}>
+                  <Route index element={<Overview />} />
+                  <Route path="users" element={<Users />} />
+                  <Route path="projects" element={<Projects />} />
+                  <Route path="teams" element={<Teams />} />
+                  <Route path="plans" element={<Plans />} />
+                  <Route path="subscriptions" element={<Subscriptions />} />
+                  <Route path="invoices" element={<Invoices />} />
+                  <Route path="income" element={<Income />} />
+                </Route>
               </Route>
-            </Route>
-            
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
-        </Router>
-      </ThemeProvider>
+
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
+          </Router>
+        </ThemeProvider>
+      </AppProvider>
     </AuthProvider>
   );
 }

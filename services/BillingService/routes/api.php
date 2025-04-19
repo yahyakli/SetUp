@@ -22,6 +22,7 @@ Route::middleware(['jwt.token'])->group(function () {
 // Subscriptions
 Route::middleware(['jwt.token'])->group(function () {
     Route::get('/subscriptions', [SubscriptionController::class, 'index']);
+    Route::get('/subscriptions/all', [SubscriptionController::class, 'getAllSubscriptions']);
     Route::post('/subscriptions', [SubscriptionController::class, 'store']);
     Route::get('/subscriptions/{id}/user/{userId}', [SubscriptionController::class, 'show']);
     Route::post('/subscriptions/{id}/cancel', [SubscriptionController::class, 'cancel']);

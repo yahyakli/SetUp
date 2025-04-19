@@ -3,7 +3,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { 
   HomeIcon, UsersIcon, BriefcaseIcon, UserGroupIcon, 
   CreditCardIcon, ReceiptPercentIcon as ReceiptIcon, CurrencyDollarIcon, 
-  Bars3Icon as MenuIcon, XMarkIcon as XIcon
+  Bars3Icon as MenuIcon, XMarkIcon as XIcon,
+  DocumentTextIcon
 } from '@heroicons/react/24/outline';
 
 const Sidebar = () => {
@@ -15,6 +16,7 @@ const Sidebar = () => {
     { name: 'Users', href: '/dashboard/users', icon: UsersIcon },
     { name: 'Projects', href: '/dashboard/projects', icon: BriefcaseIcon },
     { name: 'Teams', href: '/dashboard/teams', icon: UserGroupIcon },
+    { name: 'Plans', href: '/dashboard/plans', icon: DocumentTextIcon },
     { name: 'Subscriptions', href: '/dashboard/subscriptions', icon: CreditCardIcon },
     { name: 'Invoices', href: '/dashboard/invoices', icon: ReceiptIcon },
     { name: 'Income', href: '/dashboard/income', icon: CurrencyDollarIcon },

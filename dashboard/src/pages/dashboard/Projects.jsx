@@ -1,25 +1,20 @@
-import { useState } from 'react';
 import DataTable from '../../components/dashboard/DataTable';
 import { PencilIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
-
+import { useApp } from '../../context/AppContext';
 const Projects = () => {
-  const [projects] = useState([
-    { id: 1, name: 'Website Redesign', client: 'ABC Corp', team: 'Design', status: 'In Progress', startDate: '2023-01-10', endDate: '2023-03-15', budget: '$12,000' },
-    { id: 2, name: 'Mobile App Development', client: 'XYZ Inc', team: 'Development', status: 'In Progress', startDate: '2023-02-05', endDate: '2023-06-30', budget: '$45,000' },
-    { id: 3, name: 'E-commerce Platform', client: 'Shop Easy', team: 'Development', status: 'Completed', startDate: '2022-11-15', endDate: '2023-02-28', budget: '$35,000' },
-    { id: 4, name: 'Brand Identity', client: 'New Startup', team: 'Design', status: 'In Progress', startDate: '2023-03-01', endDate: '2023-04-15', budget: '$8,500' },
-    { id: 5, name: 'SEO Optimization', client: 'Local Business', team: 'Marketing', status: 'Not Started', startDate: '2023-04-10', endDate: '2023-05-30', budget: '$5,000' },
-    { id: 6, name: 'CRM Implementation', client: 'Sales Co', team: 'Development', status: 'In Progress', startDate: '2023-02-15', endDate: '2023-05-15', budget: '$28,000' },
-    { id: 7, name: 'Social Media Campaign', client: 'Fashion Brand', team: 'Marketing', status: 'Completed', startDate: '2023-01-05', endDate: '2023-02-15', budget: '$7,500' },
-    { id: 8, name: 'Internal Dashboard', client: 'Our Company', team: 'Development', status: 'In Progress', startDate: '2023-03-10', endDate: '2023-06-10', budget: '$18,000' },
-    { id: 9, name: 'Product Launch', client: 'Tech Innovators', team: 'Marketing', status: 'Not Started', startDate: '2023-05-01', endDate: '2023-06-15', budget: '$12,500' },
-    { id: 10, name: 'Customer Portal', client: 'Service Provider', team: 'Development', status: 'In Progress', startDate: '2023-02-20', endDate: '2023-07-30', budget: '$32,000' },
-  ]);
-
+  const { projects, getUserById } = useApp();
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
   const columns = [
     { key: 'name', label: 'Project Name' },
-    { key: 'client', label: 'Client' },
-    { key: 'team', label: 'Team' },
+    { key: 'owner_id', label: 'Owner', render: (project) => getUserById(project.owner_id).firstName + ' ' + getUserById(project.owner_id).lastName },
     { 
       key: 'status', 
       label: 'Status',
@@ -46,29 +41,8 @@ const Projects = () => {
         );
       }
     },
-    { key: 'startDate', label: 'Start Date' },
-    { key: 'endDate', label: 'End Date' },
-    { key: 'budget', label: 'Budget' },
-    {
-      key: 'actions',
-      label: 'Actions',
-      render: (project) => (
-        <div className="flex space-x-2">
-          <button 
-            className="text-gray-500 hover:text-primary-500 dark:text-gray-400 dark:hover:text-primary-400"
-            aria-label={`Edit ${project.name}`}
-          >
-            <PencilIcon className="h-5 w-5" />
-          </button>
-          <button 
-            className="text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400"
-            aria-label={`Delete ${project.name}`}
-          >
-            <TrashIcon className="h-5 w-5" />
-          </button>
-        </div>
-      )
-    }
+    { key: 'start_date', label: 'Start Date', render: (project) => formatDate(project.start_date) },
+    { key: 'end_date', label: 'End Date', render: (project) => formatDate(project.end_date) },
   ];
 
   return (
