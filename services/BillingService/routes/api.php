@@ -36,6 +36,8 @@ Route::middleware(['jwt.token'])->group(function () {
     // Specific routes first
     Route::get('/invoices/paid/{userId}', [InvoiceController::class, 'getUserPaidInvoices']);
     Route::post('/invoices/{id}/download', [InvoiceController::class, 'downloadPdf']);
+    Route::get('/invoices/admin/download/{id}', [InvoiceController::class, 'adminDownloadPdf']);
+    Route::get('/invoices/all', [InvoiceController::class, 'getAllInvoices']);
     
     // General routes after
     Route::get('/invoices', [InvoiceController::class, 'index']);

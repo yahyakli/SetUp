@@ -1,25 +1,33 @@
-import { useState } from 'react';
 import DataTable from '../../components/dashboard/DataTable';
 import { EyeIcon, ArrowDownTrayIcon as DocumentDownloadIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { useApp } from '../../context/AppContext';
+import axios from 'axios';
+import { BILLING_SERVICE_URL } from '../../../constants';
 
 const Invoices = () => {
-  const [invoices] = useState([
-    { id: 'INV-001', customer: 'John Doe', amount: '$99.00', status: 'Paid', date: '2023-01-15', dueDate: '2023-01-30' },
-    { id: 'INV-002', customer: 'ABC Corp', amount: '$199.00', status: 'Paid', date: '2023-02-10', dueDate: '2023-02-25' },
-    { id: 'INV-003', customer: 'XYZ Inc', amount: '$499.00', status: 'Paid', date: '2023-01-05', dueDate: '2023-01-20' },
-    { id: 'INV-004', customer: 'Jane Smith', amount: '$99.00', status: 'Overdue', date: '2023-03-20', dueDate: '2023-04-04' },
-    { id: 'INV-005', customer: 'New Startup', amount: '$199.00', status: 'Pending', date: '2023-04-15', dueDate: '2023-04-30' },
-    { id: 'INV-006', customer: 'Small Business', amount: '$99.00', status: 'Paid', date: '2023-02-01', dueDate: '2023-02-16' },
-    { id: 'INV-007', customer: 'Big Corp', amount: '$499.00', status: 'Pending', date: '2023-03-10', dueDate: '2023-03-25' },
-    { id: 'INV-008', customer: 'Tech Team', amount: '$199.00', status: 'Paid', date: '2023-05-05', dueDate: '2023-05-20' },
-    { id: 'INV-009', customer: 'Freelancer', amount: '$99.00', status: 'Paid', date: '2023-06-01', dueDate: '2023-06-16' },
-    { id: 'INV-010', customer: 'Design Agency', amount: '$199.00', status: 'Pending', date: '2023-04-20', dueDate: '2023-05-05' },
-  ]);
+  const { invoices, getUserById, loadingInvoices } = useApp();
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  }
+
+  const handleDownloadInvoice = async (invoiceId) => {
+    try {
+      const response = await axios.get(`${BILLING_SERVICE_URL}/api/invoices/admin/download/${invoiceId}`);
+      console.log(response);
+    } catch (error) {
+      console.error('Error downloading invoice:', error);
+    }
+  }
 
   const columns = [
-    { key: 'id', label: 'Invoice ID' },
-    { key: 'customer', label: 'Customer' },
-    { key: 'amount', label: 'Amount' },
+    { key: 'invoice_number', label: 'Invoice ID' },
+    { label: 'Customer', render: (invoice) => {
+      const customer = getUserById(invoice.subscription.user_id);
+      return customer.firstName + ' ' + customer.lastName;
+    } },
+    { key: 'amount', label: 'Amount', render: (invoice) => {
+      return invoice.amount;
+    } },
     { 
       key: 'status', 
       label: 'Status',
@@ -46,8 +54,9 @@ const Invoices = () => {
         );
       }
     },
-    { key: 'date', label: 'Issue Date' },
-    { key: 'dueDate', label: 'Due Date' },
+    { key: 'paid_at', label: 'Paid At', render: (invoice) => {
+      return formatDate(invoice.paid_at);
+    } },
     {
       key: 'actions',
       label: 'Actions',
@@ -55,13 +64,8 @@ const Invoices = () => {
         <div className="flex space-x-2">
           <button 
             className="text-gray-500 hover:text-primary-500 dark:text-gray-400 dark:hover:text-primary-400"
-            aria-label={`View invoice ${invoice.id}`}
-          >
-            <EyeIcon className="h-5 w-5" />
-          </button>
-          <button 
-            className="text-gray-500 hover:text-primary-500 dark:text-gray-400 dark:hover:text-primary-400"
             aria-label={`Download invoice ${invoice.id}`}
+            onClick={() => handleDownloadInvoice(invoice.id)}
           >
             <DocumentDownloadIcon className="h-5 w-5" />
           </button>
@@ -82,6 +86,7 @@ const Invoices = () => {
         title="All Invoices" 
         pagination={true}
         itemsPerPage={8}
+        loading={loadingInvoices}
       />
     </div>
   );

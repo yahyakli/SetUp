@@ -1,15 +1,13 @@
-import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   HomeIcon, UsersIcon, BriefcaseIcon, UserGroupIcon, 
   CreditCardIcon, ReceiptPercentIcon as ReceiptIcon, CurrencyDollarIcon, 
-  Bars3Icon as MenuIcon, XMarkIcon as XIcon,
+  XMarkIcon as XIcon,
   DocumentTextIcon
 } from '@heroicons/react/24/outline';
 
-const Sidebar = () => {
+const Sidebar = ({ collapsed, mobileMenuOpen, setMobileMenuOpen }) => {
   const location = useLocation();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
@@ -24,18 +22,6 @@ const Sidebar = () => {
 
   return (
     <>
-      {/* Mobile menu button */}
-      <div className="lg:hidden fixed top-0 left-0 z-20 p-4">
-        <button
-          type="button"
-          className="text-gray-500 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500"
-          onClick={() => setMobileMenuOpen(true)}
-        >
-          <span className="sr-only">Open sidebar</span>
-          <MenuIcon className="h-6 w-6" aria-hidden="true" />
-        </button>
-      </div>
-
       {/* Mobile sidebar */}
       <div className={`fixed inset-0 flex z-40 lg:hidden ${mobileMenuOpen ? '' : 'hidden'}`} role="dialog" aria-modal="true">
         {/* Overlay */}
@@ -92,12 +78,16 @@ const Sidebar = () => {
       </div>
 
       {/* Static sidebar for desktop */}
-      <div className="hidden lg:flex lg:flex-shrink-0">
-        <div className="flex flex-col w-64">
+      <div className={`hidden lg:flex lg:flex-shrink-0 transition-all duration-300 ease-in-out ${collapsed ? 'lg:w-16' : 'lg:w-64'}`}>
+        <div className="flex flex-col w-full">
           <div className="flex-1 flex flex-col min-h-0 border-r border-gray-200 dark:border-dark-700 bg-white dark:bg-dark-800">
             <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
-              <div className="flex items-center flex-shrink-0 px-4">
-                <h1 className="text-xl font-bold text-primary-500">SetUp Admin</h1>
+              <div className={`flex items-center flex-shrink-0 px-4 ${collapsed ? 'justify-center' : ''}`}>
+                {!collapsed ? (
+                  <h1 className="text-xl font-bold text-primary-500">SetUp Admin</h1>
+                ) : (
+                  <h1 className="text-xl font-bold text-primary-500">SA</h1>
+                )}
               </div>
               <nav className="mt-5 flex-1 px-2 space-y-1">
                 {navigation.map((item) => (
@@ -105,14 +95,19 @@ const Sidebar = () => {
                     key={item.name}
                     to={item.href}
                     className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                      collapsed ? 'justify-center' : ''
+                    } ${
                       location.pathname === item.href || 
                       (item.href !== '/dashboard' && location.pathname.startsWith(item.href))
                         ? 'bg-primary-50 dark:bg-primary-900 text-primary-500'
                         : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700'
                     }`}
+                    title={collapsed ? item.name : ''}
                   >
                     <item.icon
-                      className={`mr-3 flex-shrink-0 h-6 w-6 ${
+                      className={`flex-shrink-0 h-6 w-6 ${
+                        collapsed ? '' : 'mr-3'
+                      } ${
                         location.pathname === item.href || 
                         (item.href !== '/dashboard' && location.pathname.startsWith(item.href))
                           ? 'text-primary-500'
@@ -120,7 +115,7 @@ const Sidebar = () => {
                       }`}
                       aria-hidden="true"
                     />
-                    {item.name}
+                    {!collapsed && item.name}
                   </Link>
                 ))}
               </nav>

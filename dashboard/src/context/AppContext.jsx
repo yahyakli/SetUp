@@ -14,15 +14,16 @@ export const AppProvider = ({ children }) => {
   const [teams, setTeams] = useState([]);
   const [plans, setPlans] = useState([]);
   const [subscriptions, setSubscriptions] = useState([]);
-  // const [invoices, setInvoices] = useState([]);
+  const [invoices, setInvoices] = useState([]);
   // const [income, setIncome] = useState([]);
   
   // Add loading states for each data type
-  const [loadingUsers, setLoadingUsers] = useState(false);
-  const [loadingProjects, setLoadingProjects] = useState(false);
-  const [loadingTeams, setLoadingTeams] = useState(false);
-  const [loadingPlans, setLoadingPlans] = useState(false);
-  const [loadingSubscriptions, setLoadingSubscriptions] = useState(false);
+  const [loadingUsers, setLoadingUsers] = useState(true);
+  const [loadingProjects, setLoadingProjects] = useState(true);
+  const [loadingTeams, setLoadingTeams] = useState(true);
+  const [loadingPlans, setLoadingPlans] = useState(true);
+  const [loadingSubscriptions, setLoadingSubscriptions] = useState(true);
+  const [loadingInvoices, setLoadingInvoices] = useState(true);
 
   const getUsers = async () => {
     try {
@@ -91,7 +92,6 @@ export const AppProvider = ({ children }) => {
       });
 
       if (response.status === 200) {
-        console.log(response.data.plans);
         setPlans(response.data.plans);
       }
     } catch (error) {
@@ -120,6 +120,25 @@ export const AppProvider = ({ children }) => {
     }
   }
 
+  const getInvoices = async () => {
+    try {
+      setLoadingInvoices(true);
+      const response = await axios.get(`${BILLING_SERVICE_URL}/api/invoices/all`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.status === 200) {
+        setInvoices(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching invoices:", error);
+    } finally {
+      setLoadingInvoices(false);
+    }
+  }
+
   useEffect(() => {
     if (token) {
       getUsers();
@@ -127,6 +146,7 @@ export const AppProvider = ({ children }) => {
       getTeams();
       getSubscriptions();
       getPlans();
+      getInvoices();
     }
   }, [token]);
 
@@ -146,18 +166,21 @@ export const AppProvider = ({ children }) => {
     plans,
     subscriptions,
     getPlanById,
+    invoices,
     // Expose loading states
     loadingUsers,
     loadingProjects,
     loadingTeams,
     loadingPlans,
     loadingSubscriptions,
+    loadingInvoices,
     // Add refresh functions to allow manual data refresh
     refreshUsers: getUsers,
     refreshProjects: getProjects,
     refreshTeams: getTeams,
     refreshPlans: getPlans,
     refreshSubscriptions: getSubscriptions,
+    refreshInvoices: getInvoices,
   };
   
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

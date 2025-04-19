@@ -3,7 +3,7 @@ import { PencilIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { useApp } from '../../context/AppContext';
 
 const Plans = () => {
-  const { plans } = useApp();
+  const { plans, loadingPlans } = useApp();
   
   const columns = [
     { key: 'name', label: 'Plan Name' },
@@ -78,6 +78,7 @@ const Plans = () => {
         title="Subscription Plans" 
         pagination={true}
         itemsPerPage={8}
+        loading={loadingPlans}
       />
     </div>
   );

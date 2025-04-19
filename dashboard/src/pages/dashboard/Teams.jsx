@@ -2,7 +2,7 @@ import DataTable from '../../components/dashboard/DataTable';import { PencilIcon
 import { useApp } from '../../context/AppContext';
 
 const Teams = () => {
-  const { teams, getUserById } = useApp();
+  const { teams, getUserById, loadingTeams } = useApp();
 
   const columns = [
     { key: 'name', label: 'Team Name' },
@@ -31,6 +31,7 @@ const Teams = () => {
         title="All Teams" 
         pagination={true}
         itemsPerPage={8}
+        loading={loadingTeams}
       />
     </div>
   );

@@ -20,6 +20,11 @@ class InvoiceController extends Controller
         $this->stripe = new StripeClient(config('services.stripe.secret'));
     }
 
+    public function getAllInvoices(){
+        $invoices = Invoice::with('subscription')->get();
+        return response()->json($invoices);
+    }
+
     /**
      * Display a listing of the invoices for a user.
      */
@@ -286,4 +291,37 @@ class InvoiceController extends Controller
         
         return $pdf->download('invoice-' . $invoice->invoice_number . '.pdf');
     }
+
+    /**
+     * Generate and download a PDF invoice for admin users.
+     */
+    public function adminDownloadPdf(string $id)
+    {
+        $invoice = Invoice::with(['subscription.plan'])
+            ->where('id', $id)
+            ->firstOrFail();
+        
+        // Make sure the invoice is paid
+        if ($invoice->status !== 'paid') {
+            return response()->json(['error' => 'Only paid invoices can be downloaded'], 400);
+        }
+        
+        $data = [
+            'invoice' => $invoice,
+            'company' => [
+                'name' => config('SetUp-org.web.app', 'SetUp'),
+                'address' => 'Res La Mecque, Kadi tazi',
+                'city' => 'MOHAMMEDIA',
+                'state' => 'CASABLANCA-SETTAT',
+                'zip' => '28810',
+                'phone' => '0657838772',
+                'email' => 'contact@setup.com',
+            ]
+        ];
+        
+        $pdf = PDF::loadView('invoices.pdf', $data);
+        
+        return $pdf->download('invoice-' . $invoice->invoice_number . '.pdf');
+    }
+
 } 

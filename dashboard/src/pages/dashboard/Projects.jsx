@@ -1,8 +1,7 @@
 import DataTable from '../../components/dashboard/DataTable';
-import { PencilIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { useApp } from '../../context/AppContext';
 const Projects = () => {
-  const { projects, getUserById } = useApp();
+  const { projects, getUserById, loadingProjects } = useApp();
   const formatDate = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -57,6 +56,7 @@ const Projects = () => {
         title="All Projects" 
         pagination={true}
         itemsPerPage={8}
+        loading={loadingProjects}
       />
     </div>
   );

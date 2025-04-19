@@ -1,9 +1,8 @@
 import DataTable from '../../components/dashboard/DataTable';
-import { PencilIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { useApp } from '../../context/AppContext';
 
 const Subscriptions = () => {
-  const { subscriptions, getUserById, getPlanById, loadingPlans } = useApp();
+  const { subscriptions, getUserById, getPlanById, loadingPlans, loadingSubscriptions } = useApp();
 
   const formatDate = (date) => {
     return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -78,6 +77,7 @@ const Subscriptions = () => {
         title="All Subscriptions" 
         pagination={true}
         itemsPerPage={8}
+        loading={loadingSubscriptions}
       />
     </div>
   );
