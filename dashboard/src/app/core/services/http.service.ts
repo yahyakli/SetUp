@@ -1,123 +1,63 @@
 import { Injectable } from '@angular/core';
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
-import { AuthService } from './auth.service';
-import { environment } from '../../../environments/environment';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { APP_CONSTANTS } from '../../constants';
 
 @Injectable({
   providedIn: 'root'
 })
 export class HttpService {
-  private axiosInstance: AxiosInstance;
-  private apiUrl = environment.apiUrl;
-
-  constructor(private authService: AuthService) {
-    this.axiosInstance = axios.create({
-      baseURL: '/api', // Replace with your API base URL
-      timeout: 10000,
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-
-    // Request interceptor to add auth token
-    this.axiosInstance.interceptors.request.use(
-      (config) => {
-        const token = this.authService.getToken();
-        if (token) {
-          config.headers['Authorization'] = `Bearer ${token}`;
-        }
-        return config;
-      },
-      (error) => Promise.reject(error)
-    );
-
-    // Response interceptor to handle errors
-    this.axiosInstance.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        if (error.response?.status === 401) {
-          this.authService.logout();
-          window.location.href = '/auth/login';
-        }
-        return Promise.reject(error);
-      }
-    );
+  private getHeaders(contentType: string = 'application/json'): HttpHeaders {
+    const token = localStorage.getItem(APP_CONSTANTS.TOKEN_KEY);
+    let headers = new HttpHeaders();
+    
+    if (contentType) {
+      headers = headers.set('Content-Type', contentType);
+    }
+    
+    if (token) {
+      headers = headers.set('Authorization', `Bearer ${token}`);
+    }
+    
+    return headers;
   }
 
-  get<T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
-    return this.axiosInstance.get<T>(`${this.apiUrl}/${url}`, config);
-  }
+  constructor(private http: HttpClient) {}
 
-  post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
-    return this.axiosInstance.post<T>(`${this.apiUrl}/${url}`, data, config);
-  }
-
-  put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
-    return this.axiosInstance.put<T>(`${this.apiUrl}/${url}`, data, config);
-  }
-
-  delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
-    return this.axiosInstance.delete<T>(`${this.apiUrl}/${url}`, config);
-  }
-
-  getObservable<T = any>(url: string, config?: AxiosRequestConfig): Observable<AxiosResponse<T>> {
-    return new Observable<AxiosResponse<T>>((observer) => {
-      this.get<T>(url, config).then(
-        (response) => {
-          observer.next(response);
-          observer.complete();
-        },
-        (error) => {
-          observer.error(error);
-          observer.complete();
-        }
-      );
+  get<T>(url: string, params = {}): Observable<T> {
+    return this.http.get<T>(url, {
+      headers: this.getHeaders(),
+      params
     });
   }
 
-  postObservable<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Observable<AxiosResponse<T>> {
-    return new Observable<AxiosResponse<T>>((observer) => {
-      this.post<T>(url, data, config).then(
-        (response) => {
-          observer.next(response);
-          observer.complete();
-        },
-        (error) => {
-          observer.error(error);
-          observer.complete();
-        }
-      );
+  post<T>(url: string, body: any, contentType: string = 'application/json'): Observable<T> {
+    // Handle FormData differently (don't set content-type as browser will set it with boundary)
+    if (body instanceof FormData) {
+      const headers = this.getHeaders(null);
+      return this.http.post<T>(url, body, { headers });
+    }
+    
+    return this.http.post<T>(url, body, {
+      headers: this.getHeaders(contentType)
     });
   }
 
-  putObservable<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Observable<AxiosResponse<T>> {
-    return new Observable<AxiosResponse<T>>((observer) => {
-      this.put<T>(url, data, config).then(
-        (response) => {
-          observer.next(response);
-          observer.complete();
-        },
-        (error) => {
-          observer.error(error);
-          observer.complete();
-        }
-      );
+  put<T>(url: string, body: any): Observable<T> {
+    return this.http.put<T>(url, body, {
+      headers: this.getHeaders()
     });
   }
 
-  deleteObservable<T = any>(url: string, config?: AxiosRequestConfig): Observable<AxiosResponse<T>> {
-    return new Observable<AxiosResponse<T>>((observer) => {
-      this.delete<T>(url, config).then(
-        (response) => {
-          observer.next(response);
-          observer.complete();
-        },
-        (error) => {
-          observer.error(error);
-          observer.complete();
-        }
-      );
+  patch<T>(url: string, body: any): Observable<T> {
+    return this.http.patch<T>(url, body, {
+      headers: this.getHeaders()
+    });
+  }
+
+  delete<T>(url: string): Observable<T> {
+    return this.http.delete<T>(url, {
+      headers: this.getHeaders()
     });
   }
 } 

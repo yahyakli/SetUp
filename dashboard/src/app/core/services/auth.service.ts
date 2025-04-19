@@ -1,139 +1,102 @@
 import { Injectable } from '@angular/core';
-import { CookieService } from 'ngx-cookie-service';
-import axios from 'axios';
-import { BehaviorSubject } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { Observable, BehaviorSubject, tap, of } from 'rxjs';
+import { APP_CONSTANTS } from '../../constants';
+import { User, AuthState } from '../../types';
 import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  private readonly TOKEN_KEY = 'setup_auth_token';
-  public user: any;
-  private isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
+  private baseUrl = environment.USER_SERVICE_URL;
+  private authState = new BehaviorSubject<AuthState>({
+    token: localStorage.getItem(APP_CONSTANTS.TOKEN_KEY),
+    user: JSON.parse(localStorage.getItem(APP_CONSTANTS.USER_KEY) || 'null'),
+    isAuthenticated: !!localStorage.getItem(APP_CONSTANTS.TOKEN_KEY)
+  });
 
-  isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
+  public authState$ = this.authState.asObservable();
 
+  constructor(private http: HttpClient) {}
 
-  constructor(private cookieService: CookieService) {
-    // Initialize authentication state immediately
-    this.initAuthState();
-    // Configure axios to include the auth token in all requests
-    this.setupAxiosInterceptors();
+  login(email: string, password: string, rememberMe: boolean): Observable<any> {
+    return this.http.post<{token: string, user: User}>(`${this.baseUrl}/auth/login`, { email, password, rememberMe })
+      .pipe(
+        tap(response => {
+          this.setSession(response.token, response.user);
+        })
+      );
   }
 
-  private initAuthState(): void {
-    const isAuthenticated = this.hasToken();
-    this.isAuthenticatedSubject.next(isAuthenticated);
-    
-    // If authenticated, try to load the user data
-    if (isAuthenticated) {
-      this.getUser().catch(error => console.error('Failed to load user data on init:', error));
-    }
-  }
-
-  private setupAxiosInterceptors(): void {
-    // Add request interceptor to include the token in all requests
-    axios.interceptors.request.use(config => {
-      const token = this.getToken();
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      return config;
-    }, error => {
-      return Promise.reject(error);
-    });
-
-    // Add response interceptor to handle authentication errors
-    axios.interceptors.response.use(
-      response => response,
-      error => {
-        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-          // Token might be expired or invalid
-          this.logout();
-          // You might want to redirect to login page here
-        }
-        return Promise.reject(error);
-      }
-    );
-  }
-
-  async login(email: string, password: string, rememberMe: boolean): Promise<any> {
-    try {
-      const response = await axios.post(`${environment.USER_SERVICE_URL}/api/auth/admin/login`, {
-        email,
-        password,
-        rememberMe
-      });
-      this.setSession(response.data);
-      return response.data;
-    } catch (error) {
-      console.log(error);
-      throw error;
-    }
+  register(userData: Partial<User>): Observable<any> {
+    return this.http.post<{token: string, user: User}>(`${this.baseUrl}/auth/register`, userData)
+      .pipe(
+        tap(response => {
+          this.setSession(response.token, response.user);
+        })
+      );
   }
 
   logout(): void {
-    try {
-      this.cookieService.delete(this.TOKEN_KEY);
-      this.isAuthenticatedSubject.next(false);
-      this.user = null;
-    } catch (error) {
-      console.error('Error during logout:', error);
+    localStorage.removeItem(APP_CONSTANTS.TOKEN_KEY);
+    localStorage.removeItem(APP_CONSTANTS.USER_KEY);
+    this.authState.next({
+      token: null,
+      user: null,
+      isAuthenticated: false
+    });
+  }
+
+  refreshToken(): Observable<{token: string}> {
+    return this.http.post<{token: string}>(`${this.baseUrl}/auth/refresh-token`, {})
+      .pipe(
+        tap(response => {
+          localStorage.setItem(APP_CONSTANTS.TOKEN_KEY, response.token);
+          const currentState = this.authState.value;
+          this.authState.next({
+            ...currentState,
+            token: response.token
+          });
+        })
+      );
+  }
+
+  getCurrentUser(): Observable<User> {
+    // If we already have the user in state, return it
+    if (this.authState.value.user) {
+      return of(this.authState.value.user);
     }
+    
+    // Otherwise fetch from API
+    return this.http.get<User>(`${this.baseUrl}/users/me`)
+      .pipe(
+        tap(user => {
+          localStorage.setItem(APP_CONSTANTS.USER_KEY, JSON.stringify(user));
+          const currentState = this.authState.value;
+          this.authState.next({
+            ...currentState,
+            user
+          });
+        })
+      );
   }
 
   isAuthenticated(): boolean {
-    try {
-      return this.getToken() !== null;
-    } catch (error) {
-      console.error('Error checking authentication:', error);
-      return false;
-    }
+    return this.authState.value.isAuthenticated;
   }
 
   getToken(): string | null {
-    try {
-      return this.cookieService.get(this.TOKEN_KEY) || null;
-    } catch (error) {
-      console.error('Error getting token:', error);
-      return null;
-    }
+    return localStorage.getItem(APP_CONSTANTS.TOKEN_KEY);
   }
 
-  async getUser(): Promise<any> {
-    try {
-      if (!this.isAuthenticated()) {
-        return null;
-      }
-      
-      const response = await axios.get(`${environment.USER_SERVICE_URL}/api/users/me`);
-      this.user = response.data;
-      console.log(this.user);
-      return response.data;
-    } catch (error) {
-      console.error('Error getting user:', error);
-      return null;
-    }
-  }
-
-  private setSession(authResult: any): void {
-    try {
-      // Set cookie expiration based on rememberMe
-      const expirationDays = authResult.rememberMe ? 30 : 1;
-      this.cookieService.set(this.TOKEN_KEY, authResult.token, expirationDays);
-      this.isAuthenticatedSubject.next(true);
-    } catch (error) {
-      console.error('Error setting session:', error);
-    }
-  }
-
-  private hasToken(): boolean {
-    try {
-      return this.getToken() !== null;
-    } catch (error) {
-      console.error('Error checking token:', error);
-      return false;
-    }
+  private setSession(token: string, user: User): void {
+    localStorage.setItem(APP_CONSTANTS.TOKEN_KEY, token);
+    localStorage.setItem(APP_CONSTANTS.USER_KEY, JSON.stringify(user));
+    this.authState.next({
+      token,
+      user,
+      isAuthenticated: true
+    });
   }
 } 

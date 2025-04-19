@@ -12,8 +12,8 @@ export const routes: Routes = [
     loadChildren: () => import('./features/auth/auth.routes').then(m => m.AUTH_ROUTES),
     canActivate: [() => {
       // Redirect authenticated users away from auth pages
-      const token = document.cookie.includes('setup_auth_token=');
-      return !token || '/dashboard';
+      const token = document.cookie.includes('token=');
+      return !token || '/dashboard/overview';
     }]
   },
   {

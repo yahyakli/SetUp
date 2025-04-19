@@ -26,7 +26,6 @@ export class HeaderComponent {
     private themeService: ThemeService,
     private router: Router
   ) {
-    this.user = this.authService.getUser();
     console.log(this.user);
     
     this.themeService.theme$.subscribe(theme => {
