@@ -1,6 +1,6 @@
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { SunIcon, MoonIcon, LogoutIcon } from '@heroicons/react/outline';
+import { SunIcon, MoonIcon, ArrowRightOnRectangleIcon as LogoutIcon } from '@heroicons/react/24/outline';
 
 const Header = () => {
   const { user, logout } = useAuth();
