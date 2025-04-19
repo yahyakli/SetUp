@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import DataTable from '../../components/dashboard/DataTable';
-import { PencilIcon, TrashIcon, UserAddIcon } from '@heroicons/react/outline';
+import { PencilIcon, TrashIcon, UserPlusIcon as UserAddIcon } from '@heroicons/react/24/outline';
 
 const Users = () => {
   const [users] = useState([
@@ -62,10 +62,6 @@ const Users = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Users</h1>
-        <button className="btn-primary flex items-center">
-          <UserAddIcon className="h-5 w-5 mr-2" />
-          Add User
-        </button>
       </div>
       
       <DataTable 

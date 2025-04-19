@@ -4,142 +4,282 @@
     <meta charset="utf-8">
     <title>Invoice #{{ $invoice->invoice_number }}</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            font-size: 14px;
-            line-height: 1.5;
-            color: #333;
+        :root {
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --secondary: #f3f4f6;
+            --accent: #4f46e5;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
         }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: var(--gray-700);
+            background-color: var(--gray-50);
+            margin: 0;
+            padding: 0;
+        }
+        
         .invoice-box {
             max-width: 800px;
             margin: auto;
-            padding: 30px;
-            border: 1px solid #eee;
-            box-shadow: 0 0 10px rgba(0, 0, 0, .15);
+            padding: 25px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
         }
-        .invoice-box table {
-            width: 100%;
-            line-height: inherit;
-            text-align: left;
-            border-collapse: collapse;
+        
+        .invoice-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--gray-200);
         }
-        .invoice-box table td {
-            padding: 5px;
-            vertical-align: top;
+        
+        .company-logo {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
         }
-        .invoice-box table tr.top table td {
-            padding-bottom: 20px;
-        }
-        .invoice-box table tr.top table td.title {
-            font-size: 45px;
-            line-height: 45px;
-            color: #333;
-        }
-        .invoice-box table tr.information table td {
-            padding-bottom: 40px;
-        }
-        .invoice-box table tr.heading td {
-            background: #eee;
-            border-bottom: 1px solid #ddd;
-            font-weight: bold;
-        }
-        .invoice-box table tr.details td {
-            padding-bottom: 20px;
-        }
-        .invoice-box table tr.item td {
-            border-bottom: 1px solid #eee;
-        }
-        .invoice-box table tr.item.last td {
-            border-bottom: none;
-        }
-        .invoice-box table tr.total td:nth-child(2) {
-            border-top: 2px solid #eee;
-            font-weight: bold;
-        }
-        .text-right {
+        
+        .invoice-info {
             text-align: right;
         }
-        .text-center {
+        
+        .invoice-number {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--gray-800);
+            margin-bottom: 4px;
+        }
+        
+        .invoice-date {
+            color: var(--gray-600);
+            margin-bottom: 2px;
+        }
+        
+        .invoice-due {
+            color: var(--gray-600);
+        }
+        
+        .addresses {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        
+        .company-details, .customer-details {
+            width: 45%;
+        }
+        
+        .address-title {
+            font-weight: 600;
+            color: var(--gray-500);
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+        
+        .address-content {
+            color: var(--gray-800);
+        }
+        
+        .customer-id {
+            margin-top: 8px;
+            color: var(--gray-600);
+            font-size: 11px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            background-color: var(--primary);
+            color: white;
+            font-weight: 600;
+            text-align: left;
+            padding: 8px 10px;
+            border-radius: 4px 4px 0 0;
+            font-size: 12px;
+        }
+        
+        th:last-child {
+            text-align: right;
+        }
+        
+        td {
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+        
+        tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .item-row td {
+            color: var(--gray-700);
+        }
+        
+        .total-row td {
+            font-weight: 700;
+            color: var(--gray-900);
+            font-size: 14px;
+            padding-top: 10px;
+        }
+        
+        .payment-info {
+            margin: 15px 0;
+            padding: 10px;
+            background-color: var(--gray-100);
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .payment-method, .payment-status {
+            width: 48%;
+        }
+        
+        .payment-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--gray-500);
+            margin-bottom: 3px;
+        }
+        
+        .payment-value {
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+        
+        .status-paid {
+            color: var(--success);
+        }
+        
+        .status-pending {
+            color: var(--warning);
+        }
+        
+        .status-failed {
+            color: var(--danger);
+        }
+        
+        .footer {
+            margin-top: 25px;
             text-align: center;
+            color: var(--gray-600);
+            padding-top: 15px;
+            border-top: 1px solid var(--gray-200);
         }
-        .mt-3 {
-            margin-top: 1rem;
+        
+        .thank-you {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 8px;
         }
-        .mt-5 {
-            margin-top: 3rem;
+        
+        .contact-info {
+            font-size: 11px;
+            margin-top: 8px;
+        }
+        
+        .text-right {
+            text-align: right;
         }
     </style>
 </head>
 <body>
     <div class="invoice-box">
+        <div class="invoice-header">
+            <div class="company-logo">
+                {{ $company['name'] }}
+            </div>
+            <div class="invoice-info">
+                <div class="invoice-number">Invoice #{{ $invoice->invoice_number }}</div>
+                <div class="invoice-date">Created: {{ $invoice->created_at->format('F d, Y') }}</div>
+                <div class="invoice-due">Due: {{ $invoice->due_date ? $invoice->due_date->format('F d, Y') : 'Paid' }}</div>
+            </div>
+        </div>
+        
+        <div class="addresses">
+            <div class="company-details">
+                <div class="address-title">From</div>
+                <div class="address-content">
+                    {{ $company['name'] }}<br>
+                    {{ $company['address'] }}<br>
+                    {{ $company['city'] }}, {{ $company['state'] }} {{ $company['zip'] }}
+                </div>
+            </div>
+            
+            <div class="customer-details">
+                <div class="address-title">To</div>
+                <div class="address-content">
+                    Customer
+                </div>
+                <div class="customer-id">
+                    Customer ID: {{ $invoice->subscription->user_id }}<br>
+                    Subscription ID: {{ $invoice->subscription->id }}
+                </div>
+            </div>
+        </div>
+        
+        <div class="payment-info">
+            <div class="payment-method">
+                <div class="payment-label">Payment Method</div>
+                <div class="payment-value">Credit Card</div>
+            </div>
+            <div class="payment-status">
+                <div class="payment-label">Status</div>
+                <div class="payment-value status-{{ strtolower($invoice->status) }}">
+                    {{ ucfirst($invoice->status) }}
+                </div>
+            </div>
+        </div>
+        
         <table>
-            <tr class="top">
-                <td colspan="2">
-                    <table>
-                        <tr>
-                            <td class="title">
-                                {{ $company['name'] }}
-                            </td>
-                            <td class="text-right">
-                                Invoice #: {{ $invoice->invoice_number }}<br>
-                                Created: {{ $invoice->created_at->format('F d, Y') }}<br>
-                                Due: {{ $invoice->due_date ? $invoice->due_date->format('F d, Y') : 'Paid' }}
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-            
-            <tr class="information">
-                <td colspan="2">
-                    <table>
-                        <tr>
-                            <td>
-                                {{ $company['name'] }}<br>
-                                {{ $company['address'] }}<br>
-                                {{ $company['city'] }}, {{ $company['state'] }} {{ $company['zip'] }}
-                            </td>
-                            <td class="text-right">
-                                Customer ID: {{ $invoice->subscription->user_id }}<br>
-                                Subscription ID: {{ $invoice->subscription->id }}
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-            
-            <tr class="heading">
-                <td>Payment Method</td>
-                <td class="text-right">Status</td>
-            </tr>
-            
-            <tr class="details">
-                <td>Credit Card</td>
-                <td class="text-right">{{ ucfirst($invoice->status) }}</td>
-            </tr>
-            
-            <tr class="heading">
-                <td>Item</td>
-                <td class="text-right">Price</td>
-            </tr>
-            
-            <tr class="item">
-                <td>{{ $invoice->subscription->plan->name }} Subscription</td>
-                <td class="text-right">${{ number_format($invoice->amount, 2) }}</td>
-            </tr>
-            
-            <tr class="total">
-                <td></td>
-                <td class="text-right">Total: ${{ number_format($invoice->amount, 2) }}</td>
-            </tr>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th class="text-right">Price</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="item-row">
+                    <td>{{ $invoice->subscription->plan->name }} Subscription</td>
+                    <td class="text-right">${{ number_format($invoice->amount, 2) }}</td>
+                </tr>
+                <tr class="total-row">
+                    <td>Total</td>
+                    <td class="text-right">${{ number_format($invoice->amount, 2) }}</td>
+                </tr>
+            </tbody>
         </table>
         
-        <div class="mt-5 text-center">
-            <p>Thank you for your business!</p>
-            <p class="mt-3">
-                If you have any questions about this invoice, please contact us:<br>
-                {{ $company['phone'] }} | {{ $company['email'] }}
-            </p>
+        <div class="footer">
+            <div class="thank-you">Thank you for your business!</div>
+            <div class="contact-info">
+                If you have any questions about this invoice, please contact us: {{ $company['phone'] }} | {{ $company['email'] }}
+            </div>
         </div>
     </div>
 </body>

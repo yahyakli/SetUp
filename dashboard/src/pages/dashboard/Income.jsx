@@ -1,5 +1,9 @@
 import { useState } from 'react';
-import { CurrencyDollarIcon, TrendingUpIcon, TrendingDownIcon } from '@heroicons/react/outline';
+import { 
+  CurrencyDollarIcon, 
+  ArrowTrendingUpIcon as TrendingUpIcon, 
+  ArrowTrendingDownIcon as TrendingDownIcon 
+} from '@heroicons/react/24/outline';
 import LineChart from '../../components/dashboard/LineChart';
 import BarChart from '../../components/dashboard/BarChart';
 import StatCard from '../../components/dashboard/StatCard';

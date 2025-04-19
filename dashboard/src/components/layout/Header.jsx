@@ -28,7 +28,7 @@ const Header = () => {
             
             <div className="flex items-center">
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mr-2">
-                {user?.name}
+                {user?.firstName} {user?.lastName}
               </span>
               <button
                 onClick={logout}

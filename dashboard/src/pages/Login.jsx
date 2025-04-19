@@ -1,16 +1,24 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { SunIcon, MoonIcon } from '@heroicons/react/outline';
+import { SunIcon, MoonIcon } from '@heroicons/react/24/outline';
+import logo from '/SULogo.png';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
-  const { login } = useAuth();
+  const { login, token } = useAuth();
   const navigate = useNavigate();
   const { darkMode, toggleTheme } = useTheme();
+
+  useEffect(() => {
+    if (token) {
+      navigate('/dashboard');
+    }
+  }, [token, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,7 +29,7 @@ const Login = () => {
       return;
     }
     
-    const success = await login({ email, password });
+    const success = await login({ email, password, rememberMe });
     if (success) {
       navigate('/dashboard');
     }
@@ -45,6 +53,7 @@ const Login = () => {
       
       <div className="max-w-md w-full space-y-8">
         <div>
+          <img src={logo} alt="logo" className="w-20 h-20 mx-auto rounded-lg border-2 border-gray-300 dark:border-dark-600" />
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
             SetUp Admin Dashboard
           </h2>
@@ -88,6 +97,21 @@ const Login = () => {
               />
             </div>
           </div>
+          <div>
+            <label htmlFor="remember-me" className="flex items-center">
+              <input
+                id="remember-me"
+                name="remember-me"
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="h-4 w-4 text-primary-500 focus:ring-primary-500 border-gray-300 rounded"
+              />
+              <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
+                Remember me
+              </span>
+            </label>
+          </div>
 
           {error && (
             <div className="text-red-500 text-sm text-center">{error}</div>
@@ -100,12 +124,6 @@ const Login = () => {
             >
               Sign in
             </button>
-          </div>
-          
-          <div className="text-sm text-center text-gray-500 dark:text-gray-400">
-            <p>Demo credentials:</p>
-            <p>Email: admin@setup.com</p>
-            <p>Password: password</p>
           </div>
         </form>
       </div>

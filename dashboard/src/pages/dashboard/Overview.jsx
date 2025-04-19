@@ -1,4 +1,6 @@
-import { UsersIcon, BriefcaseIcon, UserGroupIcon, CurrencyDollarIcon } from '@heroicons/react/outline';
+import { 
+  UsersIcon, BriefcaseIcon, UserGroupIcon, CurrencyDollarIcon 
+} from '@heroicons/react/24/outline';
 import StatCard from '../../components/dashboard/StatCard';
 import LineChart from '../../components/dashboard/LineChart';
 import BarChart from '../../components/dashboard/BarChart';

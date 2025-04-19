@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import DataTable from '../../components/dashboard/DataTable';
-import { EyeIcon, DocumentDownloadIcon, PlusIcon } from '@heroicons/react/outline';
+import { EyeIcon, ArrowDownTrayIcon as DocumentDownloadIcon, PlusIcon } from '@heroicons/react/24/outline';
 
 const Invoices = () => {
   const [invoices] = useState([
@@ -74,10 +74,6 @@ const Invoices = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Invoices</h1>
-        <button className="btn-primary flex items-center">
-          <PlusIcon className="h-5 w-5 mr-2" />
-          Create Invoice
-        </button>
       </div>
       
       <DataTable 

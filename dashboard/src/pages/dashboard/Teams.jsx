@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import DataTable from '../../components/dashboard/DataTable';
-import { PencilIcon, TrashIcon, UserGroupIcon } from '@heroicons/react/outline';
+import { PencilIcon, TrashIcon, UserGroupIcon } from '@heroicons/react/24/outline';
 
 const Teams = () => {
   const [teams] = useState([
@@ -46,10 +46,6 @@ const Teams = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Teams</h1>
-        <button className="btn-primary flex items-center">
-          <UserGroupIcon className="h-5 w-5 mr-2" />
-          Create Team
-        </button>
       </div>
       
       <DataTable 

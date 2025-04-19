@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   HomeIcon, UsersIcon, BriefcaseIcon, UserGroupIcon, 
-  CreditCardIcon, ReceiptIcon, CurrencyDollarIcon, 
+  CreditCardIcon, ReceiptPercentIcon as ReceiptIcon, CurrencyDollarIcon, 
   Bars3Icon as MenuIcon, XMarkIcon as XIcon
 } from '@heroicons/react/24/outline';
 
