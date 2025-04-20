@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { 
   HomeIcon, UsersIcon, BriefcaseIcon, UserGroupIcon, 
-  CreditCardIcon, ReceiptPercentIcon as ReceiptIcon, CurrencyDollarIcon, 
+  CreditCardIcon, ReceiptPercentIcon as ReceiptIcon, 
   XMarkIcon as XIcon,
   DocumentTextIcon
 } from '@heroicons/react/24/outline';
@@ -17,7 +17,6 @@ const Sidebar = ({ collapsed, mobileMenuOpen, setMobileMenuOpen }) => {
     { name: 'Plans', href: '/dashboard/plans', icon: DocumentTextIcon },
     { name: 'Subscriptions', href: '/dashboard/subscriptions', icon: CreditCardIcon },
     { name: 'Invoices', href: '/dashboard/invoices', icon: ReceiptIcon },
-    { name: 'Income', href: '/dashboard/income', icon: CurrencyDollarIcon },
   ];
 
   return (

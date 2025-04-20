@@ -10,7 +10,6 @@ import Projects from './pages/dashboard/Projects';
 import Teams from './pages/dashboard/Teams';
 import Subscriptions from './pages/dashboard/Subscriptions';
 import Invoices from './pages/dashboard/Invoices';
-import Income from './pages/dashboard/Income';
 import Plans from './pages/dashboard/Plans';
 import { AppProvider } from './context/AppContext';
 
@@ -32,7 +31,6 @@ function App() {
                   <Route path="plans" element={<Plans />} />
                   <Route path="subscriptions" element={<Subscriptions />} />
                   <Route path="invoices" element={<Invoices />} />
-                  <Route path="income" element={<Income />} />
                 </Route>
               </Route>
 

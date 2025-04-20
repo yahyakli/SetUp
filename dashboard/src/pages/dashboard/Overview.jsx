@@ -15,6 +15,8 @@ const Overview = () => {
   const [projectsData, setProjectsData] = useState([]);
   const [incomeData, setIncomeData] = useState([]);
   const [monthlyLabels, setMonthlyLabels] = useState([]);
+  const [teamDistributionLabels, setTeamDistributionLabels] = useState([]);
+  const [teamDistributionData, setTeamDistributionData] = useState([]);
   
   useEffect(() => {
     // Only set loading to false when all data is loaded
@@ -182,6 +184,43 @@ const Overview = () => {
     }
   }, [invoices, monthlyLabels]);
   
+  // Calculate team distribution data based on team member roles
+  useEffect(() => {
+    if (teamMembers && teamMembers.length > 0) {
+      // Count occurrences of each role
+      const roleCount = {};
+      
+      teamMembers.forEach(member => {
+        if (member.role) {
+          // Capitalize first letter of role for consistent display
+          const role = member.role.charAt(0).toUpperCase() + member.role.slice(1).toLowerCase();
+          
+          if (roleCount[role]) {
+            roleCount[role]++;
+          } else {
+            roleCount[role] = 1;
+          }
+        }
+      });
+      
+      // Convert to arrays for the chart
+      const labels = [];
+      const data = [];
+      
+      // Sort roles by count (descending) to show most common roles first
+      Object.entries(roleCount)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5) // Limit to top 5 roles for better visualization
+        .forEach(([role, count]) => {
+          labels.push(role);
+          data.push(count);
+        });
+      
+      setTeamDistributionLabels(labels);
+      setTeamDistributionData(data);
+    }
+  }, [teamMembers]);
+  
   // Mock data for stats
   const stats = [
     { title: 'Total Users', value: users.length, icon: UsersIcon },
@@ -189,9 +228,6 @@ const Overview = () => {
     { title: 'Total Teams', value: teams.length, icon: UserGroupIcon },
     { title: 'Total Income', value: income, icon: CurrencyDollarIcon },
   ];
-
-  const teamDistributionLabels = ['Development', 'Design', 'Marketing', 'Sales', 'Support'];
-  const teamDistributionData = [40, 20, 15, 15, 10];
 
   // Loading skeleton component
   const LoadingSkeleton = () => (
@@ -278,7 +314,7 @@ const Overview = () => {
           labels={monthlyLabels} 
         />
         <PieChart 
-          title="Team Distribution" 
+          title="Team Member Roles" 
           data={teamDistributionData} 
           labels={teamDistributionLabels} 
         />
