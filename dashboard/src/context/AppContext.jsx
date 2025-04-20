@@ -174,13 +174,14 @@ export const AppProvider = ({ children }) => {
     loadingPlans,
     loadingSubscriptions,
     loadingInvoices,
-    // Add refresh functions to allow manual data refresh
-    refreshUsers: getUsers,
-    refreshProjects: getProjects,
-    refreshTeams: getTeams,
-    refreshPlans: getPlans,
-    refreshSubscriptions: getSubscriptions,
-    refreshInvoices: getInvoices,
+
+    // Setters
+    setPlans,
+    setSubscriptions,
+    setInvoices,
+    setUsers,
+    setProjects,
+    setTeams,
   };
   
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
