@@ -15,7 +15,8 @@ export const AppProvider = ({ children }) => {
   const [plans, setPlans] = useState([]);
   const [subscriptions, setSubscriptions] = useState([]);
   const [invoices, setInvoices] = useState([]);
-  // const [income, setIncome] = useState([]);
+  const [income, setIncome] = useState(null);
+  const [teamMembers, setTeamMembers] = useState([]);
   
   // Add loading states for each data type
   const [loadingUsers, setLoadingUsers] = useState(true);
@@ -24,6 +25,8 @@ export const AppProvider = ({ children }) => {
   const [loadingPlans, setLoadingPlans] = useState(true);
   const [loadingSubscriptions, setLoadingSubscriptions] = useState(true);
   const [loadingInvoices, setLoadingInvoices] = useState(true);
+  const [loadingIncome, setLoadingIncome] = useState(true);
+  const [loadingTeamMembers, setLoadingTeamMembers] = useState(true);
 
   const getUsers = async () => {
     try {
@@ -139,6 +142,26 @@ export const AppProvider = ({ children }) => {
     }
   }
 
+  const getTeamMembers = async () => {
+    try {
+      setLoadingTeamMembers(true);
+      const response = await axios.get(`${PROJECT_SERVICE_URL}/api/team-members`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.status === 200) {
+        setTeamMembers(response.data.team_members);
+      }
+    } catch (error) {
+      console.error("Error fetching team members:", error);
+    } finally {
+      setLoadingTeamMembers(false);
+    }
+  }
+  
+
   useEffect(() => {
     if (token) {
       getUsers();
@@ -147,8 +170,20 @@ export const AppProvider = ({ children }) => {
       getSubscriptions();
       getPlans();
       getInvoices();
+      getTeamMembers();
     }
   }, [token]);
+
+  useEffect(() => {
+    if (invoices.length > 0) {
+      let totalIncome = 0;
+      invoices.forEach((invoice) => {
+        totalIncome += +invoice.amount;
+      });
+      setIncome(totalIncome);
+      setLoadingIncome(false);
+    }
+  }, [invoices]);
 
   const getUserById = (userId) => {
     return users.find((user) => user.id === userId);
@@ -167,6 +202,8 @@ export const AppProvider = ({ children }) => {
     subscriptions,
     getPlanById,
     invoices,
+    income,
+    teamMembers,
     // Expose loading states
     loadingUsers,
     loadingProjects,
@@ -174,7 +211,8 @@ export const AppProvider = ({ children }) => {
     loadingPlans,
     loadingSubscriptions,
     loadingInvoices,
-
+    loadingIncome,
+    loadingTeamMembers,
     // Setters
     setPlans,
     setSubscriptions,
