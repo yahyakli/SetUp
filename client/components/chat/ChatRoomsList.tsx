@@ -204,9 +204,10 @@ export default function ChatRoomsList({
   useEffect(() => {
     // Force refresh when chat rooms change, but avoid infinite loops
     if (chatRooms.length > 0) {
-      // Use a ref to track which rooms we've already processed
+      // Create a ref to track which rooms we've already processed
       const processedRooms = new Set();
       
+      // Only process rooms that have changed
       chatRooms.forEach(room => {
         if (room.lastMessage && !processedRooms.has(room._id)) {
           // Only update if the message in context is different or doesn't exist
@@ -218,7 +219,7 @@ export default function ChatRoomsList({
         }
       });
     }
-  }, [chatRooms, lastMessages, updateLastMessage]); // Remove updateLastMessage from dependencies
+  }, [chatRooms]); // Remove updateLastMessage from dependencies
 
   return (
     <div 
@@ -297,7 +298,13 @@ export default function ChatRoomsList({
                   <div className="flex items-start gap-3">
                     {room.type === 'direct' ? (
                       <Avatar className="h-12 w-12 border-2 border-white dark:border-gray-800 shadow-sm">
-                        <AvatarImage src={getUserAvatar(room.participants.find(id => id !== currentUserId) || '') ? USERS_SERVICE_URL + getUserAvatar(room.participants.find(id => id !== currentUserId) || '') : ''} />
+                        {/* Only try to load image if there's actually an avatar URL */}
+                        {getUserAvatar(room.participants.find(id => id !== currentUserId) || '') && (
+                          <AvatarImage 
+                            src={`${USERS_SERVICE_URL}${getUserAvatar(room.participants.find(id => id !== currentUserId) || '')}`} 
+                            alt="User avatar" 
+                          />
+                        )}
                         <AvatarFallback className="bg-gradient-to-br from-blue-400 to-blue-600 text-white">
                           {getUserInitials(room.participants.find(id => id !== currentUserId) || '')}
                         </AvatarFallback>

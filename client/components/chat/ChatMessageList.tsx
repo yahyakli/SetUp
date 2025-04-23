@@ -448,17 +448,36 @@ export default function ChatMessageList({
         onDoubleClick={() => handleMessageDoubleClick(message)}
       >
         <div className="flex items-center gap-2 max-w-[80%]">
-          {!isCurrentUser && showUserInfo ? (
-            showAvatar ? (
-              <Avatar className="h-10 w-10 border-2 border-white dark:border-gray-800 shadow-sm">
-                <AvatarImage src={USERS_SERVICE_URL + getUserAvatar(message.senderId)} />
-                <AvatarFallback className="bg-gradient-to-br from-green-400 to-green-600 text-white">
-                  {getUserInitials(message.senderId)}
-                </AvatarFallback>
-              </Avatar>
-            ) : (
-              <div className="w-10 h-10 flex-shrink-0 opacity-0"></div>
-            )
+          {!isCurrentUser && showAvatar && showUserInfo && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 font-medium">
+              {getUserName(message.senderId)}
+            </p>
+          )}
+          
+          {!isCurrentUser && showAvatar ? (
+            <Avatar className="h-10 w-10 border-2 border-white dark:border-gray-800 shadow-sm">
+              {(() => {
+                const avatarUrl = getUserAvatar(message.senderId) 
+                  ? USERS_SERVICE_URL + getUserAvatar(message.senderId)
+                  : '';
+                const initials = getUserInitials(message.senderId);
+                
+                return (
+                  <>
+                    {avatarUrl ? (
+                      <AvatarImage 
+                        key={`avatar-${message.senderId}`}
+                        src={avatarUrl} 
+                        alt={initials} 
+                      />
+                    ) : null}
+                    <AvatarFallback className="bg-gradient-to-br from-green-400 to-green-600 text-white">
+                      {initials}
+                    </AvatarFallback>
+                  </>
+                );
+              })()}
+            </Avatar>
           ) : null}
           
           <div>
@@ -513,23 +532,25 @@ export default function ChatMessageList({
             </div>
             
             <div className="flex items-center mt-1 justify-end">
-              {/* Read receipts - show avatars of users who read the message */}
+              {/* Read receipts - show check icon instead of avatars */}
               {shouldShowReadReceipts && (
-                <div className="flex -space-x-1 mr-2" title="Read by">
-                  {readByUsers.slice(0, 3).map(user => (
-                    <Avatar 
-                      key={user?.id} 
-                      className="h-4 w-4 border border-white dark:border-gray-800"
-                      title={`${user?.firstName} ${user?.lastName} • ${format(new Date(user?.readAt || ''), 'h:mm a')}`}
-                    >
-                      <AvatarImage src={(USERS_SERVICE_URL || '') + user?.avatar} />
-                      <AvatarFallback className="text-[8px]">
-                        {user?.firstName[0]}{user?.lastName[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                  ))}
-                  {readByUsers.length > 3 && (
-                    <span className="text-xs text-gray-500 ml-1">+{readByUsers.length - 3}</span>
+                <div className="flex items-center mr-2" title={`Read by ${readByUsers.length} ${readByUsers.length === 1 ? 'person' : 'people'}`}>
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400" 
+                    viewBox="0 0 20 20" 
+                    fill="currentColor"
+                  >
+                    <path 
+                      fillRule="evenodd" 
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" 
+                      clipRule="evenodd" 
+                    />
+                  </svg>
+                  {readByUsers.length > 1 && (
+                    <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">
+                      {readByUsers.length}
+                    </span>
                   )}
                 </div>
               )}

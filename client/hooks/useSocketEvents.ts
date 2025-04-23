@@ -39,6 +39,15 @@ export function useSocketEvents({
       let pendingUpdates: Record<string, { roomId: string, message: Message }> = {};
       
       return (roomId: string, message: Message) => {
+        // Skip if message is undefined or null
+        if (!message || !roomId) return;
+        
+        // Check if this is a duplicate update
+        const existingUpdate = pendingUpdates[roomId];
+        if (existingUpdate && existingUpdate.message._id === message._id) {
+          return; // Skip duplicate updates for the same message
+        }
+        
         // Store the latest update for this room
         pendingUpdates[roomId] = { roomId, message };
         
@@ -49,6 +58,7 @@ export function useSocketEvents({
         timeout = setTimeout(() => {
           // Process all pending updates at once
           updateChatRooms((prev: ChatRoom[]) => {
+            // Make a copy to avoid reference issues
             const updatedRooms = [...prev];
             const movedRooms: ChatRoom[] = [];
             
@@ -57,6 +67,19 @@ export function useSocketEvents({
               const roomIndex = updatedRooms.findIndex(room => room._id === roomId);
               if (roomIndex !== -1) {
                 const room = updatedRooms[roomIndex];
+                
+                // Skip if the message is the same (by ID)
+                if (room.lastMessage && room.lastMessage._id === message._id) {
+                  // Only update if readBy has changed
+                  const currentReadBy = room.lastMessage.readBy || [];
+                  const newReadBy = message.readBy || [];
+                  
+                  // If readBy arrays are the same length, no need to update
+                  if (currentReadBy.length === newReadBy.length) {
+                    return;
+                  }
+                }
+                
                 const updatedRoom = {
                   ...room,
                   lastMessage: message
@@ -76,25 +99,8 @@ export function useSocketEvents({
             return [...movedRooms, ...updatedRooms];
           });
           
-          // Update messages for the selected room if needed
-          if (selectedRoom && pendingUpdates[selectedRoom._id]) {
-            const { roomId, message } = pendingUpdates[selectedRoom._id];
-            setMessages((prev: Record<string, Message[]>) => {
-              const roomMessages = prev[roomId] || [];
-              const messageExists = roomMessages.some((msg: Message) => msg._id === message._id);
-              
-              if (!messageExists) {
-                return {
-                  ...prev,
-                  [roomId]: [...roomMessages, message]
-                };
-              }
-              return prev;
-            });
-          }
-          
           timeout = null;
-        }, 100); // 100ms debounce time
+        }, 200); // Increase debounce time to 200ms
       };
     })(),
     [updateChatRooms, setMessages, selectedRoom]
