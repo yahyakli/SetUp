@@ -62,13 +62,6 @@ Route::middleware('verify.token')->group(function () {
         Route::post('/search', [TeamController::class, 'search']);
     });
 
-    Route::prefix('invitations')->group(function () {
-        Route::post('/accept', [InvitationController::class, 'accept']);
-        Route::post('/decline', [InvitationController::class, 'decline']);
-        Route::get('/team/{teamId}', [InvitationController::class, 'listTeamInvitations']);
-        Route::get('/user/{userId}', [InvitationController::class, 'listUserInvitations']);
-    });
-
     // Team Member Routes
     Route::prefix('team-members')->group(function () {
         // Basic CRUD
