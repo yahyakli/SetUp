@@ -19,8 +19,9 @@ const Overview = () => {
   const [teamDistributionData, setTeamDistributionData] = useState([]);
   
   useEffect(() => {
-    // Only set loading to false when all data is loaded
-    setLoading(loadingUsers || loadingProjects || loadingTeams || loadingIncome || loadingInvoices || loadingTeamMembers);
+    // Set loading to false even if arrays are empty but loading states are done
+    const dataLoading = loadingUsers || loadingProjects || loadingTeams || loadingIncome || loadingInvoices || loadingTeamMembers;
+    setLoading(dataLoading);
   }, [loadingUsers, loadingProjects, loadingTeams, loadingIncome, loadingInvoices, loadingTeamMembers]);
   
   // Calculate monthly labels (used by all charts)
@@ -97,6 +98,9 @@ const Overview = () => {
       });
       
       setUserGrowthData(monthData);
+    } else {
+      // Set default data for empty users array
+      setUserGrowthData(Array(12).fill(0));
     }
   }, [users, monthlyLabels]);
   
@@ -136,6 +140,9 @@ const Overview = () => {
       });
       
       setProjectsData(monthData);
+    } else {
+      // Set default data for empty projects array
+      setProjectsData(Array(12).fill(0));
     }
   }, [projects, monthlyLabels]);
   
@@ -181,6 +188,9 @@ const Overview = () => {
       const roundedMonthData = monthData.map(amount => Math.round(amount));
       
       setIncomeData(roundedMonthData);
+    } else {
+      // Set default data for empty invoices array
+      setIncomeData(Array(12).fill(0));
     }
   }, [invoices, monthlyLabels]);
   
@@ -218,15 +228,19 @@ const Overview = () => {
       
       setTeamDistributionLabels(labels);
       setTeamDistributionData(data);
+    } else {
+      // Set default values for empty data
+      setTeamDistributionLabels(['No Data']);
+      setTeamDistributionData([1]);
     }
   }, [teamMembers]);
   
   // Mock data for stats
   const stats = [
-    { title: 'Total Users', value: users.length, icon: UsersIcon },
-    { title: 'Total Projects', value: projects.length, icon: BriefcaseIcon },
-    { title: 'Total Teams', value: teams.length, icon: UserGroupIcon },
-    { title: 'Total Income', value: income, icon: CurrencyDollarIcon },
+    { title: 'Total Users', value: users.length || 0, icon: UsersIcon },
+    { title: 'Total Projects', value: projects.length || 0, icon: BriefcaseIcon },
+    { title: 'Total Teams', value: teams.length || 0, icon: UserGroupIcon },
+    { title: 'Total Income', value: income || 0, icon: CurrencyDollarIcon },
   ];
 
   // Loading skeleton component

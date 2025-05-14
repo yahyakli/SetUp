@@ -14,49 +14,65 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const token = Cookies.get('token');
-      setToken(token);
-      if (token) {
+      try {
+        setLoading(true);
+        const storedToken = Cookies.get('token');
+        
+        if (!storedToken) {
+          // No token found, immediately set loading to false
+          setToken(null);
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+        
+        // We have a token, update the state
+        setToken(storedToken);
+        
         try {
           const response = await axios.get(`${USER_SERVICE_URL}/api/users/me`, {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${storedToken}` }
           });
 
           if (response.status === 200) {
             setUser(response.data);
           } else {
+            // Invalid token response
             Cookies.remove('token');
+            setToken(null);
+            setUser(null);
             setError('Authentication failed. Please login again.');
           }
         } catch (err) {
           console.error('Authentication error:', err);
           Cookies.remove('token');
+          setToken(null);
+          setUser(null);
           setError('Authentication failed. Please login again.');
-        } finally {
-          setLoading(false);
         }
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     checkAuth();
-  }, [token]);
+  }, []); // Only run on mount, not on token change
 
   const login = async (credentials) => {
     try {
       setLoading(true);
+      setError(null);
+      
       // In a real app, you would make an API call here
       const response = await axios.post(`${USER_SERVICE_URL}/api/auth/login`, credentials);
 
       if (response.status === 200) {
-        const token = response.data.token;
+        const responseToken = response.data.token;
         const expires = credentials.rememberMe ? 30 : 7;
-        Cookies.set('token', token, { expires });
+        Cookies.set('token', responseToken, { expires });
 
         setUser(response.data.user);
-        setToken(token);
-
-        setError(null);
+        setToken(responseToken);
         return true;
       } else {
         setError(response.data.message || 'Login failed');
@@ -71,8 +87,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    setLoading(true); // Start loading to prevent flashing
     Cookies.remove('token');
     setUser(null);
+    setToken(null);
+    setLoading(false); // End loading
   };
 
   const value = {

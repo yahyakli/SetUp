@@ -12,12 +12,24 @@ import Subscriptions from './pages/dashboard/Subscriptions';
 import Invoices from './pages/dashboard/Invoices';
 import Plans from './pages/dashboard/Plans';
 import { AppProvider } from './context/AppContext';
+import { useAuth } from './context/AuthContext';
+
+// Create a component to handle root redirects based on auth state
+const RootRedirect = () => {
+  const { token, loading } = useAuth();
+  
+  // While checking auth, show nothing to prevent flashing
+  if (loading) return null;
+  
+  // After auth check, redirect based on token
+  return <Navigate to={token ? "/dashboard" : "/login"} replace />;
+};
 
 function App() {
   return (
     <AuthProvider>
-      <AppProvider>
-        <ThemeProvider>
+      <ThemeProvider>
+        <AppProvider>
           <Router>
             <Routes>
               <Route path="/login" element={<Login />} />
@@ -34,12 +46,12 @@ function App() {
                 </Route>
               </Route>
 
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/" element={<RootRedirect />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </Router>
-        </ThemeProvider>
-      </AppProvider>
+        </AppProvider>
+      </ThemeProvider>
     </AuthProvider>
   );
 }

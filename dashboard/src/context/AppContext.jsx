@@ -182,6 +182,10 @@ export const AppProvider = ({ children }) => {
       });
       setIncome(totalIncome);
       setLoadingIncome(false);
+    } else {
+      // Set income to 0 if there are no invoices
+      setIncome(0);
+      setLoadingIncome(false);
     }
   }, [invoices]);
 
