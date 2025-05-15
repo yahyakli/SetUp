@@ -82,7 +82,7 @@ export const Footer = () => {
         </div>
         <div className="border-t border-gray-200 dark:border-gray-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
           <div className="mb-4 md:mb-0 text-gray-700 dark:text-gray-300">
-            &copy; 2025 SetUp. All rights reserved.
+            &copy; 2025 SetUp. All rights reserved. made by <a href="https://akliyahya.vercel.app" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-600">AKLI YAHYA</a>
           </div>
           <div className="flex gap-4">
             <Link href="/privacy-policy" className="hover:text-gray-900 dark:hover:text-white">
