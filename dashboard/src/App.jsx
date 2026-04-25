@@ -13,6 +13,7 @@ import Invoices from './pages/dashboard/Invoices';
 import Plans from './pages/dashboard/Plans';
 import { AppProvider } from './context/AppContext';
 import { useAuth } from './context/AuthContext';
+import { ToastContainer } from 'react-toastify';
 
 // Create a component to handle root redirects based on auth state
 const RootRedirect = () => {
@@ -31,6 +32,7 @@ function App() {
       <ThemeProvider>
         <AppProvider>
           <Router>
+            <ToastContainer />
             <Routes>
               <Route path="/login" element={<Login />} />
 

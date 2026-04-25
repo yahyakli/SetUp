@@ -1,331 +1,166 @@
 "use client";
 
-import { BILLING_SERVICE_URL, NOTIFICATION_SERVICE_URL, PROJECT_SERVICE_URL, TASK_SERVICE_URL } from "@/constants/API_URLS";
-import { initInvitations } from "@/lib/features/InvitationsSlice";
-import { initNotifications } from "@/lib/features/NotificationsSlice";
-import { initProjects, setProjectLoading } from "@/lib/features/ProjectsSlice";
-import { initTasks } from "@/lib/features/TasksSlice";
-import { initTeams, setTeamsLoading } from "@/lib/features/TeamsSlice";
-import { fetchUser } from "@/lib/features/userSlice";
-import { AppDispatch, RootState } from "@/lib/store";
-import { Message, Plan, Subscription, userPermissions, Team, Project } from "@/types/index";
-import axios from "axios";
-import { createContext, useContext, useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/lib/store';
+import axios from 'axios';
+import { BILLING_SERVICE_URL } from '@/constants/API_URLS';
+import { Message, Plan, Subscription, userPermissions as UserPermissions } from '@/types';
 
-// Define the context type
-type AppContextType = {
-  isLoading: boolean;
+interface AppContextType {
   authCheckComplete: boolean;
   isAuthenticated: boolean;
+  isLoading: boolean;
+  userSubscription: Subscription | null;
+  userPermissions: UserPermissions;
+  setUserSubscription: React.Dispatch<React.SetStateAction<Subscription | null>>;
+  setUserPermissions: React.Dispatch<React.SetStateAction<UserPermissions>>;
+  plans: Plan[];
+  plansLoading: boolean;
   lastMessages: Record<string, Message>;
   updateLastMessage: (roomId: string, message: Message) => void;
-  markLastMessageAsRead: (roomId: string, messageId: string) => void;
-  plans: Plan[] | null;
-  plansLoading: boolean;
-  userSubscription: Subscription | null;
-  userPermissions: userPermissions | null;
-  setUserPermissions: (permissions: userPermissions) => void;
-  setUserSubscription: (subscription: Subscription | null) => void;
+  markLastMessageAsRead: (roomId: string, userId: string) => void;
+}
+
+const defaultPermissions: UserPermissions = {
+  projects: 2, // Default free limit
+  teams: 1,    // Default free limit
+  chat: false,
+  priority: false,
+  analytics: false,
+  security: false,
 };
 
-// Create the context with default values
-const AppContext = createContext<AppContextType>({
-  isLoading: true,
-  authCheckComplete: false,
-  isAuthenticated: false,
-  lastMessages: {},
-  updateLastMessage: () => { },
-  markLastMessageAsRead: () => { },
-  plans: null,
-  plansLoading: false,
-  userSubscription: null,
-  userPermissions: null,
-  setUserPermissions: () => { },
-  setUserSubscription: () => { }
-});
+const AppContext = createContext<AppContextType | undefined>(undefined);
 
-// Custom hook to use the AppContext
-export const useAppContext = () => useContext(AppContext);
+export const useAppContext = () => {
+  const context = useContext(AppContext);
+  if (!context) {
+    throw new Error('useAppContext must be used within an AppContextProvider');
+  }
+  return context;
+};
 
-export const AppContextProvider = ({ children }: { children: React.ReactNode }) => {
-  const dispatch = useDispatch<AppDispatch>();
-  const { token, isLoading: userLoading, user } = useSelector((state: RootState) => state.user);
+export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, token, isAuthenticated, isLoading: authLoading } = useSelector((state: RootState) => state.user);
+  
   const [authCheckComplete, setAuthCheckComplete] = useState(false);
-  const [lastMessages, setLastMessages] = useState<Record<string, Message>>({});
-  const [plans, setPlans] = useState<Plan[] | null>(null);
-  const [plansLoading, setPlansLoading] = useState<boolean>(true);
   const [userSubscription, setUserSubscription] = useState<Subscription | null>(null);
-  const [userPermissions, setUserPermissions] = useState<userPermissions | null>(null);
-  const [permissionsLoading, setPermissionsLoading] = useState<boolean>(true);
+  const [userPermissions, setUserPermissions] = useState<UserPermissions>(defaultPermissions);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
+  const [lastMessages, setLastMessages] = useState<Record<string, Message>>({});
 
-  // Function to update the last message for a chat room
-  const updateLastMessage = (roomId: string, message: Message) => {
+  const fetchUserSubscription = useCallback(async () => {
+    if (!token || !user) {
+      setAuthCheckComplete(true);
+      return;
+    }
+
+    try {
+      const response = await axios.get(`${BILLING_SERVICE_URL}/api/subscriptions/current/${user.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (response.data && response.data.subscription) {
+        const sub = response.data.subscription;
+        setUserSubscription(sub);
+        
+        // Update permissions based on plan
+        if (sub.plan) {
+          setUserPermissions({
+            projects: sub.plan.projects,
+            teams: sub.plan.teams,
+            chat: !!sub.plan.chat,
+            priority: !!sub.plan.priority,
+            analytics: !!sub.plan.analytics,
+            security: !!sub.plan.security,
+          });
+        }
+      } else {
+        // Fallback to free plan permissions if no subscription found
+        setUserSubscription(null);
+        setUserPermissions(defaultPermissions);
+      }
+    } catch (error) {
+      console.error('Error fetching subscription:', error);
+      setUserPermissions(defaultPermissions);
+    } finally {
+      setAuthCheckComplete(true);
+    }
+  }, [token, user]);
+
+  const fetchPlans = useCallback(async () => {
+    try {
+      setPlansLoading(true);
+      const response = await axios.get(`${BILLING_SERVICE_URL}/api/plans`);
+      if (response.data && response.data.plans) {
+        setPlans(response.data.plans);
+      }
+    } catch (error) {
+      console.error('Error fetching plans:', error);
+    } finally {
+      setPlansLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPlans();
+  }, [fetchPlans]);
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetchUserSubscription();
+    } else if (!authLoading) {
+      setAuthCheckComplete(true);
+      setUserSubscription(null);
+      setUserPermissions(defaultPermissions);
+    }
+  }, [isAuthenticated, user, authLoading, fetchUserSubscription]);
+
+  const updateLastMessage = useCallback((roomId: string, message: Message) => {
     setLastMessages(prev => ({
       ...prev,
       [roomId]: message
     }));
-  };
+  }, []);
 
-  // Function to mark a last message as read
-  const markLastMessageAsRead = (roomId: string, messageId: string) => {
+  const markLastMessageAsRead = useCallback((roomId: string, userId: string) => {
     setLastMessages(prev => {
-      // Only update if the message ID matches the last message for this room
-      if (prev[roomId] && prev[roomId]._id === messageId) {
-        // Create a new message object with updated readBy array
-        const updatedMessage = {
-          ...prev[roomId],
-          readBy: [
-            ...(prev[roomId].readBy || []),
-            { userId: user?.id || '', readAt: new Date() }
-          ]
-        };
+      const message = prev[roomId];
+      if (!message) return prev;
 
-        return {
-          ...prev,
-          [roomId]: updatedMessage
-        };
-      }
-      return prev;
+      // Check if user already in readBy
+      const alreadyRead = message.readBy.some(read => 
+        (typeof read === 'object' ? read.userId : read) === userId
+      );
+
+      if (alreadyRead) return prev;
+
+      return {
+        ...prev,
+        [roomId]: {
+          ...message,
+          readBy: [...message.readBy, { userId, readAt: new Date() }]
+        }
+      };
     });
-  };
+  }, []);
 
-  // Check authentication status
-  useEffect(() => {
-    // Only run on client side
-    if (typeof window !== 'undefined') {
-      if (token) {
-        dispatch(fetchUser())
-          .finally(() => {
-            setAuthCheckComplete(true);
-          });
-      } else {
-        setAuthCheckComplete(true);
-      }
-    }
-  }, [dispatch, token]);
-
-  // Initialize data when user is authenticated
-  useEffect(() => {
-    getPlans();
-    if (user?.id && token) {
-      initTeamsFunc();
-      initProjectFunc();
-      getUserInvitations();
-      getUserTasks();
-      getUserNotifications();
-    }
-  }, [user?.id, token]);
-
-  // Teams initialization with permission limits
-  const initTeamsFunc = async () => {
-    dispatch(setTeamsLoading(true));
-    try {
-      const res = await axios.get(PROJECT_SERVICE_URL + '/api/teams/member/' + user?.id, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-
-      if (res.status === 200) {
-        let teams = res.data.teams;
-        
-        // Apply permission limits if needed
-        if (userPermissions && userPermissions.teams !== -1) {
-          // Sort by updated_at before limiting
-          teams = teams
-            .sort((a: Team, b: Team) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
-            .slice(0, userPermissions.teams);
-        }
-        
-        dispatch(initTeams(teams));
-      }
-    } catch (err) {
-      console.log(err);
-    } finally {
-      dispatch(setTeamsLoading(false));
-    }
-  };
-
-  // Projects initialization with permission limits
-  const initProjectFunc = async () => {
-    dispatch(setProjectLoading(true));
-    try {
-      const res = await axios.get(PROJECT_SERVICE_URL + "/api/projects/user-with-teams/" + user?.id, {
-        headers: {
-          Authorization: "Bearer " + token
-        }
-      });
-
-      if (res.status === 200) {
-        let projects = res.data.projects;
-        
-        // Apply permission limits if needed
-        if (userPermissions && userPermissions.projects !== -1) {
-          // Sort by updated_at before limiting
-          projects = projects
-            .sort((a: Project, b: Project) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
-            .slice(0, userPermissions.projects);
-        }
-        
-        dispatch(initProjects(projects));
-      }
-    } catch (err) {
-      console.log(err);
-    } finally {
-      dispatch(setProjectLoading(false));
-    }
-  };
-
-  // Get user invitations
-  const getUserInvitations = async () => {
-    try {
-      const res = await axios.get(NOTIFICATION_SERVICE_URL + "/api/invitations/user/" + user?.id, {
-        headers: {
-          Authorization: "Bearer " + token
-        }
-      });
-
-      if (res.status === 200) {
-        dispatch(initInvitations(res.data));
-      }
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
-  // Get user tasks
-  const getUserTasks = async () => {
-    try {
-      const res = await axios.get(TASK_SERVICE_URL + "/api/tasks/user/" + user?.id, {
-        headers: {
-          Authorization: "Bearer " + token
-        }
-      });
-
-      if (res.status === 200) {
-        dispatch(initTasks(res.data.data));
-      }
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
-  const getUserNotifications = async () => {
-    try {
-      const res = await axios.get(NOTIFICATION_SERVICE_URL + "/api/notifications/user/" + user?.id, {
-        headers: {
-          Authorization: "Bearer " + token
-        }
-      });
-
-      if (res.status === 200) {
-        dispatch(initNotifications(res.data));
-      }
-    } catch (err) {
-      console.log(err);
-    }
-  }
-
-  const getPlans = async () => {
-    setPlansLoading(true);
-    setPermissionsLoading(true);
-    try {
-      const res = await axios.get(BILLING_SERVICE_URL + "/api/plans/active");
-
-      if (res.status === 200) {
-        setPlans(res.data.plans);
-      }
-
-      // Only fetch subscription if user is logged in
-      if (user?.id && token) {
-        const usrRes = await axios.get(BILLING_SERVICE_URL + "/api/subscriptions/user/" + user?.id + "/active", {
-          headers: { Authorization: "Bearer " + token }
-        });
-
-        if (usrRes.status === 200) {
-          if (usrRes.data.subscription) {
-            // Convert end_date string to Date object for comparison
-            const endDate = new Date(usrRes.data.subscription.end_date);
-            const currentDate = new Date();
-            
-            if (endDate > currentDate) {
-              setUserSubscription(usrRes.data.subscription);
-              setUserPermissions({
-                projects: usrRes.data.subscription.plan.projects,
-                teams: usrRes.data.subscription.plan.teams,
-                chat: usrRes.data.subscription.plan.chat,
-                priority: usrRes.data.subscription.plan.priority,
-                analytics: usrRes.data.subscription.plan.analytics,
-                security: usrRes.data.subscription.plan.security,
-              });
-            } else {
-              // Subscription has expired - set default permissions
-              setUserSubscription(null);
-              setUserPermissions({
-                projects: 3,
-                teams: 1,
-                chat: false,
-                priority: false,
-                analytics: false,
-                security: false,
-              });
-            }
-          } else {
-            // No subscription - set default permissions
-            setUserPermissions({
-              projects: 3,
-              teams: 1,
-              chat: false,
-              priority: false,
-              analytics: false,
-              security: false,
-            });
-          }
-        }
-      } else {
-        // Set default permissions for non-authenticated users
-        setUserPermissions({
-          projects: 3,
-          teams: 1,
-          chat: false,
-          priority: false,
-          analytics: false,
-          security: false,
-        });
-      }
-    } catch (err) {
-      console.log(err);
-    } finally {
-      setPlansLoading(false);
-      setPermissionsLoading(false);
-    }
-  }
-
-  // Calculate the overall loading state
-  const isLoading = userLoading || !authCheckComplete || (!!user?.id && (plansLoading || permissionsLoading));
-
-  // Context value
-  const contextValue: AppContextType = {
-    isLoading,
+  const value = {
     authCheckComplete,
-    isAuthenticated: !!token,
+    isAuthenticated,
+    isLoading: authLoading,
+    userSubscription,
+    userPermissions,
+    setUserSubscription,
+    setUserPermissions,
+    plans,
+    plansLoading,
     lastMessages,
     updateLastMessage,
     markLastMessageAsRead,
-    plans,
-    plansLoading,
-    userSubscription,
-    userPermissions,
-    setUserPermissions,
-    setUserSubscription
   };
 
-  return (
-    <AppContext.Provider value={contextValue}>
-      {children}
-    </AppContext.Provider>
-  );
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
-
-export default AppContext;

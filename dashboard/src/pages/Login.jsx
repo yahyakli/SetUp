@@ -4,12 +4,12 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { SunIcon, MoonIcon } from '@heroicons/react/24/outline';
 import logo from '/SULogo.png';
+import { toast } from 'react-toastify';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
-  const [error, setError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const { login, token, loading } = useAuth();
   const navigate = useNavigate();
@@ -23,18 +23,17 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    
     if (!email || !password) {
-      setError('Please enter both email and password');
+      toast.error('Please enter both email and password');
       return;
     }
-    
     setIsLoggingIn(true);
     const success = await login({ email, password, rememberMe });
     setIsLoggingIn(false);
-    
     if (!success) {
+      toast.error('Invalid email or password');
+    } else {
+      toast.success('Login successful!');
     }
   };
 
@@ -118,10 +117,6 @@ const Login = () => {
               </span>
             </label>
           </div>
-
-          {error && (
-            <div className="text-red-500 text-sm text-center">{error}</div>
-          )}
 
           <div>
             <button

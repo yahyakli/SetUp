@@ -6,7 +6,8 @@ import LineChart from '../../components/dashboard/LineChart';
 import BarChart from '../../components/dashboard/BarChart';
 import PieChart from '../../components/dashboard/PieChart';
 import { useApp } from '../../context/AppContext';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { Switch } from '@headlessui/react';
 
 const Overview = () => {
   const { users, loadingUsers, projects, loadingProjects, teams, loadingTeams, income, loadingIncome, invoices, loadingInvoices, teamMembers, loadingTeamMembers } = useApp();
@@ -17,12 +18,30 @@ const Overview = () => {
   const [monthlyLabels, setMonthlyLabels] = useState([]);
   const [teamDistributionLabels, setTeamDistributionLabels] = useState([]);
   const [teamDistributionData, setTeamDistributionData] = useState([]);
+  const [useFakeData, setUseFakeData] = useState(false);
+  const [fakeUserGrowthData, setFakeUserGrowthData] = useState([]);
+  const [fakeProjectsData, setFakeProjectsData] = useState([]);
+  const [fakeIncomeData, setFakeIncomeData] = useState([]);
+  const [fakeStats, setFakeStats] = useState([
+    { title: 'Total Users', value: 0, icon: UsersIcon },
+    { title: 'Total Projects', value: 0, icon: BriefcaseIcon },
+    { title: 'Total Teams', value: 0, icon: UserGroupIcon },
+    { title: 'Total Income', value: 0, icon: CurrencyDollarIcon },
+  ]);
+  const fakeDataGenerated = useRef(false);
   
+  // Use either real or fake data based on the switch
+  const dataUsers = users;
+  const dataProjects = projects;
+  const dataInvoices = invoices;
+  const dataTeamMembers = teamMembers;
   useEffect(() => {
-    // Set loading to false even if arrays are empty but loading states are done
-    const dataLoading = loadingUsers || loadingProjects || loadingTeams || loadingIncome || loadingInvoices || loadingTeamMembers;
-    setLoading(dataLoading);
-  }, [loadingUsers, loadingProjects, loadingTeams, loadingIncome, loadingInvoices, loadingTeamMembers]);
+    if (useFakeData) {
+      setLoading(false);
+    } else {
+      setLoading(loadingUsers || loadingProjects || loadingTeams || loadingIncome || loadingInvoices || loadingTeamMembers);
+    }
+  }, [useFakeData, loadingUsers, loadingProjects, loadingTeams, loadingIncome, loadingInvoices, loadingTeamMembers]);
   
   // Calculate monthly labels (used by all charts)
   useEffect(() => {
@@ -46,9 +65,10 @@ const Overview = () => {
     setMonthlyLabels(labels);
   }, []);
   
-  // Calculate user growth data based on real user creation dates
+  // Calculate user growth data based on real or fake user creation dates
   useEffect(() => {
-    if (users.length > 0 && monthlyLabels.length > 0) {
+    if (useFakeData) return;
+    if (dataUsers.length > 0 && monthlyLabels.length > 0) {
       // Get current date and calculate date 12 months ago
       const currentDate = new Date();
       const oneYearAgo = new Date();
@@ -62,7 +82,7 @@ const Overview = () => {
       let userCount = 0;
       
       // Sort users by creation date
-      const sortedUsers = [...users].sort((a, b) => {
+      const sortedUsers = [...dataUsers].sort((a, b) => {
         return new Date(a.createdAt) - new Date(b.createdAt);
       });
       
@@ -102,11 +122,12 @@ const Overview = () => {
       // Set default data for empty users array
       setUserGrowthData(Array(12).fill(0));
     }
-  }, [users, monthlyLabels]);
+  }, [useFakeData, dataUsers, monthlyLabels]);
   
-  // Calculate projects data based on real project creation dates
+  // Calculate projects data based on real or fake project creation dates
   useEffect(() => {
-    if (projects.length > 0 && monthlyLabels.length > 0) {
+    if (useFakeData) return;
+    if (dataProjects.length > 0 && monthlyLabels.length > 0) {
       // Get current date and calculate date 12 months ago
       const currentDate = new Date();
       const oneYearAgo = new Date();
@@ -118,7 +139,7 @@ const Overview = () => {
       const monthData = Array(12).fill(0);
       
       // Count projects created in each month
-      projects.forEach(project => {
+      dataProjects.forEach(project => {
         // Handle different date formats (both "created_at" and "createdAt")
         const creationDateStr = project.created_at || project.createdAt;
         if (!creationDateStr) return;
@@ -144,11 +165,12 @@ const Overview = () => {
       // Set default data for empty projects array
       setProjectsData(Array(12).fill(0));
     }
-  }, [projects, monthlyLabels]);
+  }, [useFakeData, dataProjects, monthlyLabels]);
   
-  // Calculate monthly income data based on real invoice data
+  // Calculate monthly income data based on real or fake invoice data
   useEffect(() => {
-    if (invoices.length > 0 && monthlyLabels.length > 0) {
+    if (useFakeData) return;
+    if (dataInvoices.length > 0 && monthlyLabels.length > 0) {
       // Get current date and calculate date 12 months ago
       const currentDate = new Date();
       const oneYearAgo = new Date();
@@ -160,7 +182,7 @@ const Overview = () => {
       const monthData = Array(12).fill(0);
       
       // Sum invoice amounts for each month
-      invoices.forEach(invoice => {
+      dataInvoices.forEach(invoice => {
         // Handle different date formats (both "created_at" and "createdAt")
         const creationDateStr = invoice.created_at || invoice.createdAt;
         if (!creationDateStr) return;
@@ -192,15 +214,16 @@ const Overview = () => {
       // Set default data for empty invoices array
       setIncomeData(Array(12).fill(0));
     }
-  }, [invoices, monthlyLabels]);
+  }, [useFakeData, dataInvoices, monthlyLabels]);
   
-  // Calculate team distribution data based on team member roles
+  // Calculate team distribution data based on real or fake team member roles
   useEffect(() => {
-    if (teamMembers && teamMembers.length > 0) {
+    if (useFakeData) return;
+    if (dataTeamMembers && dataTeamMembers.length > 0) {
       // Count occurrences of each role
       const roleCount = {};
       
-      teamMembers.forEach(member => {
+      dataTeamMembers.forEach(member => {
         if (member.role) {
           // Capitalize first letter of role for consistent display
           const role = member.role.charAt(0).toUpperCase() + member.role.slice(1).toLowerCase();
@@ -233,15 +256,72 @@ const Overview = () => {
       setTeamDistributionLabels(['No Data']);
       setTeamDistributionData([1]);
     }
-  }, [teamMembers]);
+  }, [useFakeData, dataTeamMembers]);
   
-  // Mock data for stats
-  const stats = [
+  // Helper to generate smooth random data
+  function generateSmoothData(length, start, minStep, maxStep, min, max) {
+    let arr = [start];
+    for (let i = 1; i < length; i++) {
+      let prev = arr[i - 1];
+      let step = (Math.random() * (maxStep - minStep) + minStep) * (Math.random() > 0.5 ? 1 : -1);
+      let next = Math.max(min, Math.min(max, Math.round(prev + step)));
+      arr.push(next);
+    }
+    return arr;
+  }
+
+  // Generate fake data only once per fake mode session
+  useEffect(() => {
+    if (useFakeData && !fakeDataGenerated.current) {
+      // User Growth: always increasing, but with some months flat or small jumps
+      let userGrowth = [Math.floor(Math.random() * 10) + 10];
+      for (let i = 1; i < 12; i++) {
+        userGrowth.push(userGrowth[i - 1] + Math.floor(Math.random() * 15 + 5));
+      }
+      setFakeUserGrowthData(userGrowth);
+
+      // Projects: up and down
+      setFakeProjectsData(generateSmoothData(12, 5, 0, 5, 2, 20));
+
+      // Income: up and down, but generally trending up
+      let income = [Math.floor(Math.random() * 500) + 500];
+      for (let i = 1; i < 12; i++) {
+        let step = Math.floor(Math.random() * 500) * (Math.random() > 0.3 ? 1 : -1);
+        let next = Math.max(500, income[i - 1] + step);
+        income.push(next);
+      }
+      setFakeIncomeData(income);
+
+      // Team distribution: random but fixed for session
+      let teamDist = Array(5).fill(0).map(() => Math.floor(Math.random() * 10) + 1);
+
+      // Stats: based on last values
+      setFakeStats([
+        { title: 'Total Users', value: userGrowth[11], icon: UsersIcon },
+        { title: 'Total Projects', value: fakeProjectsData.length > 0 ? fakeProjectsData.reduce((a, b) => a + b, 0) : 100, icon: BriefcaseIcon },
+        { title: 'Total Teams', value: teamDist.reduce((a, b) => a + b, 0), icon: UserGroupIcon },
+        { title: 'Total Income', value: income.reduce((a, b) => a + b, 0), icon: CurrencyDollarIcon },
+      ]);
+
+      fakeDataGenerated.current = true;
+    }
+    if (!useFakeData) {
+      fakeDataGenerated.current = false;
+    }
+  }, [useFakeData]);
+
+  // Use static fake data or real calculated data for rendering
+  const stats = useFakeData ? fakeStats : [
     { title: 'Total Users', value: users.length || 0, icon: UsersIcon },
     { title: 'Total Projects', value: projects.length || 0, icon: BriefcaseIcon },
     { title: 'Total Teams', value: teams.length || 0, icon: UserGroupIcon },
     { title: 'Total Income', value: income || 0, icon: CurrencyDollarIcon },
   ];
+  const userGrowthChartData = useFakeData ? fakeUserGrowthData : userGrowthData;
+  const projectsChartData = useFakeData ? fakeProjectsData : projectsData;
+  const incomeChartData = useFakeData ? fakeIncomeData : incomeData;
+  const teamDistLabels = useFakeData ? ['Developer', 'Designer', 'Manager', 'QA', 'DevOps'] : teamDistributionLabels;
+  const teamDistData = useFakeData ? [10, 5, 3, 2, 1] : teamDistributionData;
 
   // Loading skeleton component
   const LoadingSkeleton = () => (
@@ -292,6 +372,27 @@ const Overview = () => {
 
   return (
     <div className="space-y-6">
+      {/* Switch for real/fake data using Headless UI */}
+      <div className="flex items-center mb-4">
+        <Switch.Group>
+          <div className="flex items-center space-x-3">
+            <Switch
+              checked={useFakeData}
+              onChange={setUseFakeData}
+              className={`${useFakeData ? 'bg-blue-600' : 'bg-gray-200'}
+                relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none`}
+            >
+              <span
+                className={`${useFakeData ? 'translate-x-6' : 'translate-x-1'}
+                  inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+              />
+            </Switch>
+            <Switch.Label className="text-sm font-medium cursor-pointer">
+              Show Demo Data (Full Charts)
+            </Switch.Label>
+          </div>
+        </Switch.Group>
+      </div>
       <h1 className="text-2xl font-bold">Dashboard Overview</h1>
       
       {/* Stats Cards */}
@@ -310,12 +411,12 @@ const Overview = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <LineChart 
           title="User Growth" 
-          data={userGrowthData} 
+          data={userGrowthChartData} 
           labels={monthlyLabels} 
         />
         <BarChart 
           title="Projects by Month" 
-          data={projectsData} 
+          data={projectsChartData} 
           labels={monthlyLabels} 
         />
       </div>
@@ -324,13 +425,13 @@ const Overview = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <LineChart 
           title="Monthly Income ($)" 
-          data={incomeData} 
+          data={incomeChartData} 
           labels={monthlyLabels} 
         />
         <PieChart 
           title="Team Member Roles" 
-          data={teamDistributionData} 
-          labels={teamDistributionLabels} 
+          data={teamDistData} 
+          labels={teamDistLabels} 
         />
       </div>
     </div>

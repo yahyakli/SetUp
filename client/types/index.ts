@@ -17,8 +17,8 @@ export interface Invitation {
   teamName: string;
   role: string;
   status: string;
-  created_at: Date;
-  updated_at: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Project {

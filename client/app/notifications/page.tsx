@@ -222,7 +222,7 @@ function NotificationsContent() {
                   <CardContent>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">
-                        {new Date(invitation.created_at).toLocaleString('en-US', {
+                        {new Date(invitation.createdAt).toLocaleString('en-US', {
                           year: 'numeric',
                           month: 'short',
                           day: 'numeric',

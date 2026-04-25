@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef } from 'react';
-import Banner from '@/public/banner.jpg';
+import Banner from '@/public/banner.png';
 
 import {
   Card,
